@@ -1,28 +1,9 @@
-# Life Canvas OS - Python Backend Dependencies
-
-# Web ���
-fastapi==0.104.1
-uvicorn==0.24.0
-
-# ���ݿ�
-sqlalchemy==2.0.23
-
-# ������֤
-pydantic==2.5.0
-pydantic-settings==2.1.0
-
-# ��ȫ��
-passlib[bcrypt]==1.7.4
-cryptography==41.0.7
-
-# AI SDK (֧�� DeepSeek/����)
-openai==1.3.5
-
-# HTTP �ͻ���
-httpx==0.25.2
-
-# ��������
-python-dotenv==1.0.0
-
-# ������ߣ�����ʱʹ�ã�
-pyinstaller
+fastapi>=0.104.1
+uvicorn>=0.24.0
+sqlalchemy>=2.0.23
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+openai>=1.3.5
+python-dotenv>=1.0.0
+passlib[bcrypt]>=1.7.4
+pyinstaller>=6.0.0
