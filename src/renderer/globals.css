@@ -100,35 +100,90 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --radius: var(--radius);
+  --sidebar: var(--sidebar);
+  --sidebar-foreground: var(--sidebar-foreground);
+  --sidebar-primary: var(--sidebar-primary);
+  --sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --sidebar-accent: var(--sidebar-accent);
+  --sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --sidebar-border: var(--sidebar-border);
+  --sidebar-ring: var(--sidebar-ring);
+
+  /* Apple UI Colors */
+  --color-apple-bgMain: var(--apple-bgMain);
+  --color-apple-bgSidebar: var(--apple-bgSidebar);
+  --color-apple-textMain: var(--apple-textMain);
+  --color-apple-textSec: var(--apple-textSec);
+  --color-apple-textTer: var(--apple-textTer);
+  --color-apple-accent: var(--apple-accent);
+  --color-apple-border: var(--apple-border);
+  --color-apple-success: var(--apple-success);
+  --color-apple-error: var(--apple-error);
+
+  --shadow-apple-soft: 0 2px 8px rgba(0,0,0,0.05);
+  --shadow-apple-lg: 0 10px 40px rgba(0,0,0,0.08);
+}
+
+:root {
+  /* Apple UI Colors (Light) */
+  --apple-bgMain: #FAFAFC;
+  --apple-bgSidebar: #F5F5F7;
+  --apple-textMain: #1D1D1F;
+  --apple-textSec: #86868B;
+  --apple-textTer: #AEAEB2;
+  --apple-accent: #0A84FF;
+  --apple-border: #EFEFF4;
+  --apple-success: #34C759;
+  --apple-error: #FF3B30;
+}
+
+/* Custom UI Components */
+.liquid-glass {
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Light mode default */
+  background: #FFFFFF;
+  border: 1px solid #EFEFF4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.dark .liquid-glass {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
+
+.sidebar-glass {
+  /* Light mode default */
+  background: rgba(245, 245, 247, 0.85);
+}
+
+.dark .sidebar-glass {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    @apply antialiased;
   }
-
   body {
     @apply bg-background text-foreground;
-  }
-
-  html,
-  body {
-    user-select: none;
-    scroll-behavior: smooth;
-    -webkit-app-region: no-drag;
-    -webkit-font-smoothing: antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 }
