@@ -1,149 +1,142 @@
-"""认证相关API接口"""
-from fastapi import APIRouter, HTTPException
+"""认证相关 API 接口"""
+from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 from typing import Optional
-import datetime
-import hashlib
+from datetime import datetime
+from sqlalchemy.orm import Session
 import json
-import os
 
-router = APIRouter(prefix="/api/auth", tags=["authentication"])
-
-# PIN码存储文件
-PIN_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "pin.json")
-
-
-class PinVerifyRequest(BaseModel):
-    """PIN码验证请求模型"""
-    pin: str
-
-
-class PinSetRequest(BaseModel):
-    """设置PIN码请求模型"""
-    pin: str
+from backend.db.session import get_db
+from backend.services.auth_service import AuthService
+from backend.schemas.user import (
+    PinSetupRequest,
+    PinVerifyRequest,
+    PinChangeRequest,
+    PinSetupResponse,
+    PinVerifyResponse,
+    AuthStatusResponse,
+    LockResponse,
+)
+from backend.schemas.common import success_response
 
 
-class AuthResponse(BaseModel):
-    """认证响应模型"""
-    message: str
-    timestamp: str
-    data: dict
+router = APIRouter(prefix="/api/pin", tags=["authentication"])
 
 
-def ensure_data_dir():
-    """确保数据目录存在"""
-    data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
+# ============ API 路由 ============
 
-
-def get_stored_pin():
-    """获取存储的PIN码"""
-    ensure_data_dir()
-    if os.path.exists(PIN_FILE):
-        try:
-            with open(PIN_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return data.get('pin_hash')
-        except:
-            return None
-    return None
-
-def set_stored_pin(pin: str):
-    """存储PIN码（哈希处理）"""
-    ensure_data_dir()
-    pin_hash = hashlib.sha256(pin.encode()).hexdigest()
-    with open(PIN_FILE, 'w', encoding='utf-8') as f:
-        json.dump({'pin_hash': pin_hash}, f)
-    return pin_hash
-
-def verify_pin(pin: str) -> bool:
-    """验证PIN码"""
-    stored_hash = get_stored_pin()
-    if not stored_hash:
-        return False
-    pin_hash = hashlib.sha256(pin.encode()).hexdigest()
-    return pin_hash == stored_hash
-
-
-@router.post("/verify", response_model=AuthResponse)
-async def verify_pin_code(request: PinVerifyRequest):
+@router.post("/setup")
+async def setup_pin(
+    request: PinSetupRequest,
+    db: Session = Depends(get_db)
+):
     """
-    验证PIN码
+    设置 PIN 码（首次）
 
-    Args:
-        request: 包含PIN码的请求对象
-
-    Returns:
-        认证响应，包含验证结果
+    验证规则：6 位数字
     """
-    is_valid = verify_pin(request.pin)
-    if not is_valid:
-        raise HTTPException(status_code=401, detail="PIN码验证失败")
+    data, status_code = AuthService.setup_pin(db, request.pin)
 
-    return AuthResponse(
-        message="PIN码验证成功",
-        timestamp=datetime.datetime.now().isoformat(),
-        data={
-            "status": "success",
-            "authenticated": True,
-            "timestamp": datetime.datetime.now().isoformat()
-        }
+    if status_code >= 400:
+        raise HTTPException(
+            status_code=status_code,
+            detail=data
+        )
+
+    return success_response(
+        data=data,
+        message="PIN 设置成功",
+        code=status_code
     )
 
 
-@router.post("/set", response_model=AuthResponse)
-async def set_pin_code(request: PinSetRequest):
+@router.post("/verify")
+async def verify_pin_code(
+    request: PinVerifyRequest,
+    db: Session = Depends(get_db)
+):
     """
-    设置PIN码
-
-    Args:
-        request: 包含新PIN码的请求对象
-
-    Returns:
-        设置响应，包含操作结果
+    验证 PIN 码
     """
-    if len(request.pin) < 4:
-        raise HTTPException(status_code=400, detail="PIN码必须至少4位数字")
+    data, status_code = AuthService.verify_pin(db, request.pin)
 
-    set_stored_pin(request.pin)
+    if status_code >= 400:
+        raise HTTPException(
+            status_code=status_code,
+            detail=data
+        )
 
-    return AuthResponse(
-        message="PIN码设置成功",
-        timestamp=datetime.datetime.now().isoformat(),
-        data={
-            "status": "success",
-            "pin_set": True,
-            "timestamp": datetime.datetime.now().isoformat()
-        }
+    return success_response(
+        data=data,
+        message="验证成功"
     )
 
 
-@router.get("/status", response_model=AuthResponse)
-async def get_auth_status():
+@router.post("/change")
+async def change_pin(
+    request: PinChangeRequest,
+    db: Session = Depends(get_db)
+):
     """
-    获取认证状态
-
-    Returns:
-        认证状态响应，包含是否已设置PIN码
+    修改 PIN 码
     """
-    has_pin = get_stored_pin() is not None
+    data, status_code = AuthService.change_pin(db, request.old_pin, request.new_pin)
 
-    return AuthResponse(
-        message="认证状态获取成功",
-        timestamp=datetime.datetime.now().isoformat(),
-        data={
-            "status": "success",
-            "has_pin_set": has_pin,
-            "timestamp": datetime.datetime.now().isoformat()
-        }
+    if status_code >= 400:
+        raise HTTPException(
+            status_code=status_code,
+            detail=data
+        )
+
+    return success_response(
+        data=data,
+        message="PIN 修改成功"
     )
 
 
-# IPC通信处理器
+@router.post("/lock")
+async def lock_app(db: Session = Depends(get_db)):
+    """
+    锁定应用
+    """
+    # 这个接口主要用于前端状态管理
+    # 实际锁定由前端控制
+    return success_response(
+        data=LockResponse(locked_at=datetime.now()).model_dump(),
+        message="应用已锁定"
+    )
+
+
+@router.get("/status")
+async def get_pin_status(db: Session = Depends(get_db)):
+    """
+    获取 PIN 状态
+    """
+    data = AuthService.get_pin_status(db)
+
+    return success_response(
+        data=data,
+        message="状态获取成功"
+    )
+
+
+# ============ IPC 通信处理器 ============
+
+import asyncio
+
+def _run_async(coro):
+    """在新事件循环中运行异步函数"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
 def handle_auth_action(action: str, params: dict) -> dict:
     """
-    处理IPC通信中的认证相关操作
+    处理 IPC 通信中的认证相关操作
 
     Args:
         action: 操作类型
@@ -152,57 +145,64 @@ def handle_auth_action(action: str, params: dict) -> dict:
     Returns:
         操作结果
     """
-    if action == 'verify_pin':
-        pin = params.get('pin', '')
-        is_valid = verify_pin(pin)
-        if is_valid:
-            return {
-                'action': 'verify_pin',
-                'status': 'ok',
-                'data': {
-                    'authenticated': True,
-                    'timestamp': datetime.datetime.now().isoformat()
+    from backend.db.session import SessionLocal
+
+    db = SessionLocal()
+    try:
+        if action == 'verify_pin':
+            pin = params.get('pin', '')
+            request = PinVerifyRequest(pin=pin)
+            try:
+                result = _run_async(verify_pin_code(request, db))
+                return {
+                    'action': 'verify_pin',
+                    'status': 'ok',
+                    'data': result['data']
                 }
-            }
+            except HTTPException as e:
+                return {
+                    'action': 'verify_pin',
+                    'status': 'error',
+                    'error': e.detail
+                }
+
+        elif action == 'set_pin':
+            pin = params.get('pin', '')
+            request = PinSetupRequest(pin=pin)
+            try:
+                result = _run_async(setup_pin(request, db))
+                return {
+                    'action': 'set_pin',
+                    'status': 'ok',
+                    'data': result['data']
+                }
+            except HTTPException as e:
+                return {
+                    'action': 'set_pin',
+                    'status': 'error',
+                    'error': e.detail
+                }
+
+        elif action == 'get_auth_status':
+            try:
+                result = _run_async(get_pin_status(db))
+                return {
+                    'action': 'get_auth_status',
+                    'status': 'ok',
+                    'data': result['data']
+                }
+            except HTTPException as e:
+                return {
+                    'action': 'get_auth_status',
+                    'status': 'error',
+                    'error': e.detail
+                }
+
         else:
             return {
-                'action': 'verify_pin',
+                'action': action,
                 'status': 'error',
-                'error': 'Invalid PIN code'
+                'error': '未知的认证操作'
             }
-
-    elif action == 'set_pin':
-        pin = params.get('pin', '')
-        if len(pin) < 4:
-            return {
-                'action': 'set_pin',
-                'status': 'error',
-                'error': 'PIN码必须至少4位数字'
-            }
-        set_stored_pin(pin)
-        return {
-            'action': 'set_pin',
-            'status': 'ok',
-            'data': {
-                'pin_set': True,
-                'timestamp': datetime.datetime.now().isoformat()
-            }
-        }
-
-    elif action == 'get_auth_status':
-        has_pin = get_stored_pin() is not None
-        return {
-            'action': 'get_auth_status',
-            'status': 'ok',
-            'data': {
-                'has_pin_set': has_pin,
-                'timestamp': datetime.datetime.now().isoformat()
-            }
-        }
-
-    else:
-        return {
-            'action': action,
-            'status': 'error',
-            'error': '未知的认证操作'
-        }
+    finally:
+        db.close()

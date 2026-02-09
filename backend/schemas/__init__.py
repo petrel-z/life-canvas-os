@@ -1,7 +1,143 @@
-# backend/schemas/__init__.py
+"""Schema 模块"""
+from .common import (
+    ApiResponse,
+    PaginatedParams,
+    PaginatedResponse,
+    ValidationError,
+    ErrorResponse,
+    success_response,
+    error_response,
+)
 
-# 假设 user.py 里定义了 UserUpdate 和 AIConfigUpdate
-from .user import UserUpdate, AIConfigUpdate
+from .user import (
+    UserBase,
+    UserCreate,
+    UserUpdate,
+    UserResponse,
+    UserSettingsBase,
+    UserSettingsUpdate,
+    UserSettingsResponse,
+    AIConfigBase,
+    AIConfigCreate,
+    AIConfigUpdate,
+    AIConfigResponse,
+    PinSetupRequest,
+    PinVerifyRequest,
+    PinChangeRequest,
+    PinVerifyResponse,
+    PinSetupResponse,
+    AuthStatusResponse,
+    LockResponse,
+)
 
-# 将来如果有 record.py，也可以加：
-# from .record import RecordCreate, RecordRead
+from .system import (
+    SystemType,
+    SystemBase,
+    SystemCreate,
+    SystemUpdate,
+    SystemResponse,
+    SystemScoreUpdate,
+    SystemScoreUpdateResponse,
+    SystemLogBase,
+    SystemLogCreate,
+    SystemLogResponse,
+    SystemActionBase,
+    SystemActionCreate,
+    SystemActionUpdate,
+    SystemActionResponse,
+    SystemActionDeleteResponse,
+    SystemListParams,
+    SystemLogListParams,
+)
+
+from .journal import (
+    MoodType,
+    DiaryBase,
+    DiaryCreate,
+    DiaryUpdate,
+    DiaryResponse,
+    DiaryDeleteResponse,
+    DiaryListParams,
+    DiaryAttachmentBase,
+    DiaryAttachmentResponse,
+    DiaryEditHistoryResponse,
+)
+
+from .insight import (
+    AIProvider,
+    InsightBase,
+    InsightCreate,
+    InsightResponse,
+    InsightGenerateRequest,
+    InsightGenerateResponse,
+    InsightListParams,
+    InsightItem,
+)
+
+__all__ = [
+    # Common
+    "ApiResponse",
+    "PaginatedParams",
+    "PaginatedResponse",
+    "ValidationError",
+    "ErrorResponse",
+    "success_response",
+    "error_response",
+    # User
+    "UserBase",
+    "UserCreate",
+    "UserUpdate",
+    "UserResponse",
+    "UserSettingsBase",
+    "UserSettingsUpdate",
+    "UserSettingsResponse",
+    "AIConfigBase",
+    "AIConfigCreate",
+    "AIConfigUpdate",
+    "AIConfigResponse",
+    "PinSetupRequest",
+    "PinVerifyRequest",
+    "PinChangeRequest",
+    "PinVerifyResponse",
+    "PinSetupResponse",
+    "AuthStatusResponse",
+    "LockResponse",
+    # System
+    "SystemType",
+    "SystemBase",
+    "SystemCreate",
+    "SystemUpdate",
+    "SystemResponse",
+    "SystemScoreUpdate",
+    "SystemScoreUpdateResponse",
+    "SystemLogBase",
+    "SystemLogCreate",
+    "SystemLogResponse",
+    "SystemActionBase",
+    "SystemActionCreate",
+    "SystemActionUpdate",
+    "SystemActionResponse",
+    "SystemActionDeleteResponse",
+    "SystemListParams",
+    "SystemLogListParams",
+    # Journal
+    "MoodType",
+    "DiaryBase",
+    "DiaryCreate",
+    "DiaryUpdate",
+    "DiaryResponse",
+    "DiaryDeleteResponse",
+    "DiaryListParams",
+    "DiaryAttachmentBase",
+    "DiaryAttachmentResponse",
+    "DiaryEditHistoryResponse",
+    # Insight
+    "AIProvider",
+    "InsightBase",
+    "InsightCreate",
+    "InsightResponse",
+    "InsightGenerateRequest",
+    "InsightGenerateResponse",
+    "InsightListParams",
+    "InsightItem",
+]

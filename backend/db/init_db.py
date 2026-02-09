@@ -1,46 +1,136 @@
+"""数据库初始化脚本（增强版）"""
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect
 from backend.db.base import Base
 from backend.db.session import engine, SessionLocal
-from backend.models.user import User
-from backend.models.dimension import Dimension
-from backend.models.record import DailyRecord
-# 导入所有模型确保它们被 SQLAlchemy 注册
 
-def init_db(db: Session):
+# 导入所有模型确保它们被 SQLAlchemy 注册
+from backend.models.user import User, UserSettings
+from backend.models.dimension import System, SystemLog, SystemAction, SYSTEM_TYPES, DEFAULT_SYSTEM_DETAILS
+from backend.models.diary import Diary, DiaryAttachment, DiaryEditHistory
+from backend.models.insight import Insight
+from backend.models.record import DailyRecord
+
+
+def ensure_database_initialized(db: Session) -> bool:
+    """
+    确保数据库已初始化（如果未初始化则自动初始化）
+
+    Returns:
+        是否进行了初始化操作
+    """
+    # 检查表是否存在
+    inspector = inspect(engine)
+    existing_tables = inspector.get_table_names()
+
+    # 如果没有任何表，需要初始化
+    if len(existing_tables) == 0:
+        print("[INFO] No database tables found. Initializing database...")
+        init_db(db)
+        return True
+
+    # 检查关键表是否存在
+    required_tables = ['users', 'systems']
+    missing_tables = [t for t in required_tables if t not in existing_tables]
+
+    if missing_tables:
+        print(f"[INFO] Missing tables: {missing_tables}. Re-initializing...")
+        init_db(db)
+        return True
+
+    # 检查是否有默认用户
+    user = db.query(User).first()
+    if not user:
+        print("[INFO] No default user found. Creating...")
+        _create_default_user(db)
+        return True
+
+    return False
+
+
+def init_db(db: Session) -> None:
+    """初始化数据库（完整版）"""
     # 1. 创建所有表
+    print("[INFO] Creating database tables...")
     Base.metadata.create_all(bind=engine)
 
     # 2. 初始化默认用户
+    _create_default_user(db)
+
+    # 3. 初始化用户设置
+    _create_default_settings(db)
+
+    # 4. 初始化 8 个系统
+    _create_default_systems(db)
+
+    print("\n[SUCCESS] Database initialization completed!")
+
+
+def _create_default_user(db: Session) -> User:
+    """创建默认用户"""
     user = db.query(User).first()
     if not user:
-        user = User(username="Owner", preferences={"theme": "system"})
+        user = User(
+            username="Owner",
+            display_name="用户",
+            preferences={"theme": "dark"}
+        )
         db.add(user)
         db.commit()
         db.refresh(user)
-        print(f"Created default user: {user.username}")
+        print(f"[OK] Created default user: {user.username}")
+    return user
 
-    # 3. 初始化 8 个子系统维度
-    # 检查是否已存在，不存在则创建
-    existing_dims = db.query(Dimension).count()
-    if existing_dims == 0:
-        default_dimensions = [
-            {"key": "fuel", "name": "饮食系统", "icon": "utensils", "color": "#FF6B6B", "sort_order": 1},
-            {"key": "physical", "name": "运动系统", "icon": "dumbbell", "color": "#4ECDC4", "sort_order": 2},
-            {"key": "intellectual", "name": "读书系统", "icon": "book-open", "color": "#45B7D1", "sort_order": 3},
-            {"key": "output", "name": "工作系统", "icon": "briefcase", "color": "#96CEB4", "sort_order": 4},
-            {"key": "recovery", "name": "梦想系统", "icon": "moon", "color": "#FFEEAD", "sort_order": 5},
-            {"key": "asset", "name": "财务系统", "icon": "wallet", "color": "#D4A5A5", "sort_order": 6},
-            {"key": "connection", "name": "社交系统", "icon": "users", "color": "#9B59B6", "sort_order": 7},
-            {"key": "environment", "name": "环境系统", "icon": "home", "color": "#34495E", "sort_order": 8},
-        ]
-        for dim_data in default_dimensions:
-            dim = Dimension(**dim_data)
-            db.add(dim)
+
+def _create_default_settings(db: Session) -> None:
+    """创建默认用户设置"""
+    user = db.query(User).first()
+    if not user:
+        return
+
+    settings = db.query(UserSettings).filter(UserSettings.user_id == user.id).first()
+    if not settings:
+        settings = UserSettings(user_id=user.id)
+        db.add(settings)
         db.commit()
-        print("初始化 8 个子系统维度.")
+        print(f"[OK] Created default user settings")
+
+
+def _create_default_systems(db: Session) -> None:
+    """创建默认的 8 个系统"""
+    user = db.query(User).first()
+    if not user:
+        return
+
+    existing_systems = db.query(System).filter(System.user_id == user.id).count()
+    if existing_systems == 0:
+        for system_type in SYSTEM_TYPES:
+            system = System(
+                user_id=user.id,
+                type=system_type,
+                score=50,
+                details=DEFAULT_SYSTEM_DETAILS.get(system_type, {})
+            )
+            db.add(system)
+        db.commit()
+        print(f"[OK] Initialized 8 life balance systems: {', '.join(SYSTEM_TYPES)}")
+
+
+def is_database_empty() -> bool:
+    """检查数据库是否为空（无数据）"""
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+    return len(tables) == 0
+
 
 if __name__ == "__main__":
-    print("创建数据库表...")
+    print("Starting database initialization...")
     db = SessionLocal()
-    init_db(db)
-    print("数据库初始化成功!")
+    try:
+        init_db(db)
+    except Exception as e:
+        print(f"Initialization failed: {e}")
+        db.rollback()
+        raise
+    finally:
+        db.close()

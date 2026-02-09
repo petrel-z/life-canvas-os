@@ -1,30 +1,93 @@
+# ====================
 # Python
+# ====================
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Distribution / packaging
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Virtual environments
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+.venv/
 
-# Data
+# ====================
+# Data & Logs
+# ====================
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Data directory
 /data/
 
-# Build
-/build/
-/dist/
+# Logs
+/logs/
+*.log
 
+# ====================
+# Environment
+# ====================
+.env
+.env.local
+.env.*.local
+
+# ====================
 # IDE
-/.vscode/
-/.idea/
+# ====================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
 
+# ====================
 # OS
+# ====================
 Thumbs.db
 .DS_Store
+.directory
 
-# Spec files
-*.spec
+# ====================
+# Temporary files
+# ====================
+*.tmp
+*.temp
+*.bak
+*.backup
 
