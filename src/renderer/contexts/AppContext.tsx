@@ -42,9 +42,13 @@ export function AppProvider({ children }: AppProviderProps) {
     }
   }, [state]);
 
-  // 主题切换逻辑
+  // 主题切换逻辑（带动画）
   useEffect(() => {
     const root = window.document.documentElement;
+
+    // 添加主题切换动画类
+    root.classList.add('theme-transitioning');
+
     const isDark =
       state.theme === 'dark' ||
       (state.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -56,6 +60,13 @@ export function AppProvider({ children }: AppProviderProps) {
       root.classList.add('light');
       root.classList.remove('dark');
     }
+
+    // 动画完成后移除过渡类
+    const timeout = setTimeout(() => {
+      root.classList.remove('theme-transitioning');
+    }, 300); // 与 CSS 过渡时间匹配
+
+    return () => clearTimeout(timeout);
   }, [state.theme]);
 
   // 更新状态
