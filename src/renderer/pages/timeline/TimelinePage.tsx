@@ -1,15 +1,22 @@
-import React, { useMemo, useState } from 'react';
-import { History, Beef, Sparkles, Calendar as CalendarIcon, Clock, Search } from 'lucide-react';
-import { useApp } from '~/renderer/contexts/AppContext';
-import { GlassCard } from '~/renderer/components/GlassCard';
-import { Input } from '~/renderer/components/ui/input';
-import { Badge } from '~/renderer/components/ui/badge';
-import { formatDateCN } from '~/renderer/lib/dateUtils';
+import React, { useMemo, useState } from "react";
+import {
+  History,
+  Beef,
+  Sparkles,
+  Calendar as CalendarIcon,
+  Clock,
+  Search,
+} from "lucide-react";
+import { useApp } from "~/renderer/contexts/AppContext";
+import { GlassCard } from "~/renderer/components/GlassCard";
+import { Input } from "~/renderer/components/ui/input";
+import { Badge } from "~/renderer/components/ui/badge";
+import { formatDateCN } from "~/renderer/lib/dateUtils";
 
 type TimelineEvent = {
   id: string;
   timestamp: number;
-  type: 'journal' | 'fuel' | 'dimension';
+  type: "journal" | "fuel" | "dimension";
   title: string;
   content: string;
   icon: React.ReactNode;
@@ -18,33 +25,35 @@ type TimelineEvent = {
 
 export function TimelinePage() {
   const { state } = useApp();
-  const [filter, setFilter] = useState<'all' | 'journal' | 'fuel'>('all');
-  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<"all" | "journal" | "fuel">("all");
+  const [search, setSearch] = useState("");
 
   const events = useMemo(() => {
     const journalEvents: TimelineEvent[] = state.journals.map((j) => ({
       id: j.id,
       timestamp: j.timestamp,
-      type: 'journal' as const,
-      title: '日记记录',
+      type: "journal" as const,
+      title: "日记记录",
       content: j.content,
       icon: <Sparkles size={16} />,
-      color: 'text-purple-500',
+      color: "text-purple-500",
     }));
 
-    const fuelEvents: TimelineEvent[] = state.fuelSystem.deviations.map((d) => ({
-      id: d.id,
-      timestamp: d.timestamp,
-      type: 'fuel' as const,
-      title: '饮食偏离',
-      content: d.description,
-      icon: <Beef size={16} />,
-      color: 'text-orange-500',
-    }));
+    const fuelEvents: TimelineEvent[] = state.fuelSystem.deviations.map(
+      (d) => ({
+        id: d.id,
+        timestamp: d.timestamp,
+        type: "fuel" as const,
+        title: "饮食偏离",
+        content: d.description,
+        icon: <Beef size={16} />,
+        color: "text-orange-500",
+      }),
+    );
 
     return [...journalEvents, ...fuelEvents]
       .filter((e) => {
-        const matchesFilter = filter === 'all' || e.type === filter;
+        const matchesFilter = filter === "all" || e.type === filter;
         const matchesSearch =
           !search ||
           e.content.toLowerCase().includes(search.toLowerCase()) ||
@@ -70,7 +79,7 @@ export function TimelinePage() {
         <div>
           <h1 className="text-4xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
             <History className="text-blue-500" />
-            审计时间轴
+            时间轴
           </h1>
           <p className="text-apple-textSec dark:text-white/40 mt-1 text-lg">
             跨系统的生命足迹聚合审计。
@@ -80,9 +89,9 @@ export function TimelinePage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex bg-apple-bg2 dark:bg-white/5 p-1 rounded-xl border border-apple-border dark:border-white/10 backdrop-blur-md">
             {[
-              { value: 'all' as const, label: '全部', color: 'blue' },
-              { value: 'journal' as const, label: '日记', color: 'purple' },
-              { value: 'fuel' as const, label: '饮食', color: 'orange' },
+              { value: "all" as const, label: "全部", color: "blue" },
+              { value: "journal" as const, label: "日记", color: "purple" },
+              { value: "fuel" as const, label: "饮食", color: "orange" },
             ].map((f) => (
               <button
                 key={f.value}
@@ -90,7 +99,7 @@ export function TimelinePage() {
                 className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                   filter === f.value
                     ? `bg-white dark:bg-${f.color}-500 text-${f.color}-600 dark:text-white shadow-sm`
-                    : 'text-apple-textSec dark:text-white/40 hover:text-apple-textMain dark:hover:text-white'
+                    : "text-apple-textSec dark:text-white/40 hover:text-apple-textMain dark:hover:text-white"
                 }`}
               >
                 {f.label}
@@ -129,19 +138,27 @@ export function TimelinePage() {
 
                       <GlassCard className="!p-5 hover:translate-x-1 transition-transform border-apple-border dark:border-white/5 hover:border-blue-500/20 dark:hover:border-white/20 shadow-sm">
                         <div className="flex items-start gap-4">
-                          <div className={`p-2 rounded-lg bg-black/5 dark:bg-white/5 ${event.color} border border-apple-border dark:border-white/5`}>
+                          <div
+                            className={`p-2 rounded-lg bg-black/5 dark:bg-white/5 ${event.color} border border-apple-border dark:border-white/5`}
+                          >
                             {event.icon}
                           </div>
                           <div className="flex-1 space-y-1">
                             <div className="flex justify-between items-center">
-                              <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] uppercase tracking-wider"
+                              >
                                 {event.title}
                               </Badge>
                               <span className="text-[10px] text-apple-textTer dark:text-white/20 font-mono">
-                                {new Date(event.timestamp).toLocaleTimeString('zh-CN', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
+                                {new Date(event.timestamp).toLocaleTimeString(
+                                  "zh-CN",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )}
                               </span>
                             </div>
                             <p className="text-apple-textSec dark:text-white/80 text-sm leading-relaxed line-clamp-3">

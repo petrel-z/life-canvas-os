@@ -35,6 +35,7 @@ Phase 5: ░░░░░░░░░░░░░░░░░░░░   0% (集�
 ### 1.1 样式系统配置
 
 #### 已安装的依赖 ✅
+
 - [x] lucide-react（图标库）
 - [x] recharts（图表库）
 - [x] class-variance-authority（样式变体管理）
@@ -45,9 +46,11 @@ Phase 5: ░░░░░░░░░░░░░░░░░░░░   0% (集�
 - [x] date-fns（日期处理）
 
 #### shadcn/ui 组件添加
+
 使用 `npx shadcn@latest add <component>` 添加需要的组件：
 
 **基础组件（必需）**：
+
 - [ ] button - 按钮组件
 - [ ] input - 输入框
 - [ ] textarea - 文本域
@@ -62,11 +65,13 @@ Phase 5: ░░░░░░░░░░░░░░░░░░░░   0% (集�
 - [ ] dropdown-menu - 下拉菜单
 
 **表单组件（用于设置页面）**：
+
 - [ ] form - 表单容器
 - [ ] checkbox - 复选框
 - [ ] radio-group - 单选框组
 
 **其他有用组件**：
+
 - [ ] avatar - 头像（侧边栏用户卡片）
 - [ ] badge - 徽章（标签显示）
 - [ ] separator - 分隔线
@@ -74,30 +79,26 @@ Phase 5: ░░░░░░░░░░░░░░░░░░░░   0% (集�
 - [ ] tooltip - 工具提示
 
 #### 自定义颜色系统
+
 **文件**：`tailwind.config.js` / `src/renderer/globals.css`
 
 需要添加 Apple 风格的颜色变量：
+
 ```css
 /* 浅色模式 */
---apple-bgMain: #FAFAFC
---apple-bg2: #F5F5F7
---apple-bgSidebar: #EBEBED
---apple-textMain: #1D1D1F
---apple-textSec: #86868B
---apple-textTer: #AFB1B6
---apple-border: #E5E5EA
---apple-accent: #0A84FF
-
-/* 深色模式 */
---apple-bgMain-dark: #000000
---apple-textMain-dark: #FFFFFF
-/* ... 其他深色变量 */
+--apple-bgMain: #fafafc --apple-bg2: #f5f5f7 --apple-bgSidebar: #ebebed
+  --apple-textMain: #1d1d1f --apple-textSec: #86868b --apple-textTer: #afb1b6
+  --apple-border: #e5e5ea --apple-accent: #0a84ff /* 深色模式 */
+  --apple-bgMain-dark: #000000 --apple-textMain-dark: #ffffff
+  /* ... 其他深色变量 */;
 ```
 
 #### 动画工具类
+
 **文件**：`src/renderer/globals.css`
 
 添加玻璃拟态效果和动画类：
+
 ```css
 .sidebar-glass {
   backdrop-filter: blur(20px);
@@ -113,10 +114,18 @@ Phase 5: ░░░░░░░░░░░░░░░░░░░░   0% (集�
 }
 
 /* animate-in 动画系列 */
-.animate-in { animation-fill-mode: both; }
-.fade-in { animation: fade-in 0.5s ease-out; }
-.zoom-in-95 { animation: zoom-in-95 0.5s ease-out; }
-.slide-in-from-bottom-4 { animation: slide-in 0.7s ease-out; }
+.animate-in {
+  animation-fill-mode: both;
+}
+.fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+.zoom-in-95 {
+  animation: zoom-in-95 0.5s ease-out;
+}
+.slide-in-from-bottom-4 {
+  animation: slide-in 0.7s ease-out;
+}
 ```
 
 ---
@@ -126,6 +135,7 @@ Phase 5: ░░░░░░░░░░░░░░░░░░░░   0% (集�
 > 说明：基础 UI 组件使用 shadcn/ui，这里只列出项目特定的自定义组件
 
 #### GlassCard 组件（需优化）
+
 **文件**：`src/renderer/components/GlassCard.tsx`
 
 - [ ] 优化浅色/深色模式适配
@@ -135,6 +145,7 @@ Phase 5: ░░░░░░░░░░░░░░░░░░░░   0% (集�
 - [ ] **是否与 shadcn/ui Card 组件整合？需要决策**
 
 #### 需要的自定义组件
+
 - [ ] `src/renderer/components/layout/Sidebar.tsx` - 侧边栏（使用 shadcn/ui 组件构建）
 - [ ] `src/renderer/components/layout/MainLayout.tsx` - 主布局
 - [ ] `src/renderer/components/layout/PageHeader.tsx` - 页面头部
@@ -168,34 +179,36 @@ Phase 5: ░░░░░░░░░░░░░░░░░░░░   0% (集�
 ### 2.1 应用状态管理
 
 #### 全局 Context
+
 **文件**：`src/renderer/contexts/AppContext.tsx`
 
 使用 React Context 管理全局状态：
+
 ```typescript
 interface AppState {
   // 用户信息
-  user: UserProfile
+  user: UserProfile;
 
   // 八个维度评分
-  dimensions: Record<DimensionType, number>
+  dimensions: Record<DimensionType, number>;
 
   // 饮食系统数据
-  fuelSystem: FuelSystemData
+  fuelSystem: FuelSystemData;
 
   // 日记列表
-  journals: JournalEntry[]
+  journals: JournalEntry[];
 
   // 锁定状态
-  isLocked: boolean
+  isLocked: boolean;
 
   // 主题设置
-  theme: 'light' | 'dark' | 'auto'
+  theme: "light" | "dark" | "auto";
 
   // AI 配置
-  aiConfig: AIConfig
+  aiConfig: AIConfig;
 
   // 系统配置
-  systemConfig: SystemConfig
+  systemConfig: SystemConfig;
 }
 ```
 
@@ -210,9 +223,11 @@ interface AppState {
 ### 2.2 主应用结构
 
 #### App.tsx 重构
+
 **文件**：`src/renderer/App.tsx`
 
 参考 UI 设计的 App.tsx，实现：
+
 - [ ] 状态管理集成
 - [ ] 主题切换逻辑（监听系统主题）
 - [ ] 锁屏/解锁逻辑
@@ -220,6 +235,7 @@ interface AppState {
 - [ ] 路由集成
 
 #### PinLockScreen 组件
+
 **文件**：`src/renderer/components/auth/PinLockScreen.tsx`
 
 - [ ] 4 位 PIN 码输入界面
@@ -233,9 +249,11 @@ interface AppState {
 ### 2.3 布局组件
 
 #### Sidebar 组件
+
 **文件**：`src/renderer/components/layout/Sidebar.tsx`
 
 参考 UI 设计的侧边栏：
+
 - [ ] Logo 和版本号显示
 - [ ] 导航菜单（5个主要项目）
 - [ ] 当前页面高亮
@@ -244,13 +262,15 @@ interface AppState {
 - [ ] 锁定按钮
 
 导航菜单项：
+
 1. 全局总览（Dashboard）
 2. 饮食系统（Fuel System）
 3. 生活日记（Journal）
-4. 审计时间轴（Timeline）
+4. 时间轴（Timeline）
 5. 系统设置（Settings）
 
 #### MainLayout 组件
+
 **文件**：`src/renderer/components/layout/MainLayout.tsx`
 
 - [ ] 集成 Sidebar
@@ -259,6 +279,7 @@ interface AppState {
 - [ ] 响应式布局
 
 #### PageHeader 组件
+
 **文件**：`src/renderer/components/layout/PageHeader.tsx`
 
 - [ ] 页面标题
@@ -272,6 +293,7 @@ interface AppState {
 **文件**：`src/renderer/routes.tsx`
 
 更新路由结构：
+
 ```typescript
 <HashRouter>
   <Routes>
@@ -305,6 +327,7 @@ interface AppState {
 参考 UI：`views/Dashboard.tsx`
 
 功能清单：
+
 - [ ] 欢迎信息（用户名）
 - [ ] 平衡总分显示
 - [ ] **八维雷达图**（使用 Recharts）
@@ -340,6 +363,7 @@ interface AppState {
 参考 UI：`views/FuelSystem.tsx`
 
 功能清单：
+
 - [ ] 页面标题和描述
 - [ ] **一致性评分卡片**
   - [ ] 实时计算（100 - 偏离次数 × 5）
@@ -372,6 +396,7 @@ interface AppState {
 参考 UI：`views/Journal.tsx`
 
 功能清单：
+
 - [ ] 页面标题
 - [ ] **新建日记按钮**
 - [ ] **日记列表**
@@ -392,6 +417,7 @@ interface AppState {
   - [ ] 引导创建日记
 
 #### JournalEditor（日记编辑器）
+
 **文件**：`src/renderer/pages/journal/JournalEditorPage.tsx`
 
 - [ ] 标题输入
@@ -405,13 +431,14 @@ interface AppState {
 
 ---
 
-### 3.4 Timeline（审计时间轴）
+### 3.4 Timeline（时间轴）
 
 **文件**：`src/renderer/pages/timeline/TimelinePage.tsx`
 
 参考 UI：`views/TimelineView.tsx`
 
 功能清单：
+
 - [ ] 页面标题
 - [ ] **时间轴视图**
   - [ ] 按日期分组
@@ -440,9 +467,11 @@ interface AppState {
 参考 UI：`views/SettingsView.tsx`
 
 功能清单：
+
 - [ ] Tabs 导航
 
 #### 基本信息设置 Tab
+
 - [ ] display_name 输入
 - [ ] birthday 日期选择器
 - [ ] mbti 选择器（16 种类型）
@@ -450,6 +479,7 @@ interface AppState {
 - [ ] life_expectancy 滑块（50-120 岁）
 
 #### 外观设置 Tab
+
 - [ ] theme 选择（light/dark/auto）
 - [ ] language 选择（中文/English）
 - [ ] auto_save_enabled 开关
@@ -458,12 +488,14 @@ interface AppState {
 - [ ] show_weekday 开关
 
 #### AI 配置 Tab
+
 - [ ] provider 选择（DeepSeek/豆包）
 - [ ] api_key 输入（密码类型）
 - [ ] frequency_limit 滑块
 - [ ] 测试连接按钮
 
 #### 安全设置 Tab
+
 - [ ] 修改 PIN 功能
 - [ ] 确认旧 PIN
 - [ ] 输入新 PIN
@@ -481,9 +513,11 @@ interface AppState {
 虽然 UI 设计中只实现了 FuelSystem，但需要为其他 7 个子系统创建类似的页面：
 
 #### SystemDetailPage（通用子系统详情页）
+
 **文件**：`src/renderer/pages/systems/SystemDetailPage.tsx`
 
 支持所有 8 种系统类型：
+
 1. FUEL - 饮食系统（已有独立页面）
 2. PHYSICAL - 运动系统
 3. INTELLECTUAL - 认知系统
@@ -494,6 +528,7 @@ interface AppState {
 8. ENVIRONMENT - 环境系统
 
 每个系统需要：
+
 - [ ] 系统评分显示和调整（+/- 按钮）
 - [ ] 系统特定的数据结构
 - [ ] 日志记录
@@ -503,36 +538,43 @@ interface AppState {
 ### 4.2 子系统特定功能
 
 #### PhysicalSystem（运动系统）
+
 - [ ] 运动计划记录
 - [ ] 维护指数追踪
 - [ ] 运动日志
 
 #### IntellectualSystem（认知系统）
+
 - [ ] 读书进度追踪
 - [ ] 学习笔记
 - [ ] 思想火花记录
 
 #### OutputSystem（产出系统）
+
 - [ ] OKR 目标管理
 - [ ] 产出记录
 - [ ] 专注时间统计
 
 #### RecoverySystem（梦想系统）
+
 - [ ] 梦想清单
 - [ ] 睡眠质量记录
 - [ ] 恢复活动追踪
 
 #### AssetSystem（财务系统）
+
 - [ ] 资产记录
 - [ ] 收支记录
 - [ ] 财务目标
 
 #### ConnectionSystem（社交系统）
+
 - [ ] 社交能量记录
 - [ ] 人际关系管理
 - [ ] 社交活动日志
 
 #### EnvironmentSystem（环境系统）
+
 - [ ] 空间管理任务
 - [ ] 环境改善记录
 - [ ] 维护提醒
@@ -546,6 +588,7 @@ interface AppState {
 虽然不实现后端，但需要准备好 API 调用的结构：
 
 #### API 客户端
+
 **文件**：`src/renderer/lib/api.ts`
 
 - [ ] 创建 API 基础配置
@@ -555,6 +598,7 @@ interface AppState {
 - [ ] TypeScript 类型定义
 
 #### TanStack Query 集成
+
 **文件**：`src/renderer/queries/`
 
 - [ ] 设置 QueryClient
@@ -609,17 +653,20 @@ interface AppState {
 ## 📋 开发优先级
 
 ### 第一优先级（P0）- 核心功能
+
 1. Phase 1: 样式系统 + 基础组件
 2. Phase 2: 核心布局（Sidebar, MainLayout）
 3. Phase 3: Dashboard 页面
 4. Phase 3: FuelSystem 页面
 
 ### 第二优先级（P1）- 主要功能
+
 5. Phase 3: Journal 页面
 6. Phase 3: Settings 页面
 7. Phase 3: Timeline 页面
 
 ### 第三优先级（P2）- 扩展功能
+
 8. Phase 4: 其他子系统页面
 9. Phase 5: 动画与交互优化
 10. Phase 5: 性能优化
@@ -629,9 +676,11 @@ interface AppState {
 ## 🛠️ 技术栈说明
 
 ### shadcn/ui 集成
+
 本项目使用 **shadcn/ui**（New York 风格）作为基础组件库：
 
 **优势**：
+
 - ✅ 基于 Radix UI，无障碍支持完善
 - ✅ 完全可定制，直接拥有组件代码
 - ✅ 与 TailwindCSS 完美集成
@@ -639,6 +688,7 @@ interface AppState {
 - ✅ 减少重复工作，专注业务逻辑
 
 **使用方式**：
+
 ```bash
 # 添加组件
 npx shadcn@latest add button
@@ -648,11 +698,13 @@ npx shadcn@latest add input
 ```
 
 **自定义组件策略**：
+
 - 基础 UI（按钮、输入框、对话框等）→ 使用 shadcn/ui
 - 项目特定组件（Sidebar、系统卡片等）→ 自定义开发
 - 可使用 shadcn/ui 组件作为构建块
 
 ### 其他核心库
+
 - **Recharts** - 雷达图和数据可视化
 - **@uiw/react-md-editor** - Markdown 编辑器（日记功能）
 - **TanStack Query** - 服务端状态管理（为 API 集成准备）
@@ -664,6 +716,7 @@ npx shadcn@latest add input
 ## 🔧 开发规范
 
 ### 代码风格
+
 - 使用 TypeScript 严格模式
 - 函数组件 + Hooks
 - 组件命名：PascalCase
@@ -672,6 +725,7 @@ npx shadcn@latest add input
 - 使用 Biome 格式化
 
 ### 组件使用原则
+
 ```typescript
 // ✅ 推荐：使用 shadcn/ui 组件
 import { Button } from '~/components/ui/button'
@@ -698,6 +752,7 @@ export const MyCustomCard = () => {
 ```
 
 ### 组件结构
+
 ```tsx
 // 1. 导入
 import React, { useState } from 'react'
@@ -721,12 +776,14 @@ export const ComponentName: React.FC<Props> = ({ ... }) => {
 ```
 
 ### 样式规范
+
 - 优先使用 TailwindCSS 类名
 - 复杂样式使用 CSS 模块或 styled-components
 - 响应式设计使用 Tailwind 的响应式前缀
 - 深色模式使用 `dark:` 前缀
 
 ### 状态管理规范
+
 - 全局状态使用 Context
 - 局部状态使用 useState
 - 服务端状态使用 TanStack Query
@@ -737,6 +794,7 @@ export const ComponentName: React.FC<Props> = ({ ... }) => {
 ## 📚 参考资源
 
 ### UI 设计参考
+
 - UI 设计路径：`/Users/petrel/electron-app/life-canvas-os-ui`
 - 核心文件：
   - `App.tsx` - 主应用结构
@@ -750,6 +808,7 @@ export const ComponentName: React.FC<Props> = ({ ... }) => {
   - `types.ts` - 类型定义
 
 ### 技术文档
+
 - [TailwindCSS 文档](https://tailwindcss.com/)
 - [Recharts 文档](https://recharts.org/)
 - [Lucide Icons](https://lucide.dev/)
@@ -761,6 +820,7 @@ export const ComponentName: React.FC<Props> = ({ ... }) => {
 ## ✅ 验收标准
 
 ### 功能完整性
+
 - [ ] 所有 5 个主要页面可正常访问
 - [ ] 侧边栏导航正常工作
 - [ ] 主题切换功能正常
@@ -768,18 +828,21 @@ export const ComponentName: React.FC<Props> = ({ ... }) => {
 - [ ] 数据可以正常保存到 localStorage
 
 ### UI 一致性
+
 - [ ] 所有页面与 UI 设计一致
 - [ ] 玻璃拟态效果正确显示
 - [ ] 浅色/深色模式无样式问题
 - [ ] 动画流畅自然
 
 ### 代码质量
+
 - [ ] TypeScript 无类型错误
 - [ ] ESLint 无警告
 - [ ] 组件结构清晰
 - [ ] 代码可维护性高
 
 ### 性能
+
 - [ ] 首屏加载时间 < 2s
 - [ ] 路由切换流畅
 - [ ] 无明显卡顿
