@@ -1,6 +1,4 @@
 /** biome-ignore-all lint/suspicious/noTemplateCurlyInString: <> */
-import type { Configuration } from 'electron-builder'
-
 import {
   main,
   name,
@@ -57,4 +55,4 @@ export default {
     icon: `${resources}/build/icons/icon.ico`,
     target: ['zip', 'portable'],
   },
-} satisfies Configuration
+}

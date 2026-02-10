@@ -25,6 +25,7 @@ import { Button } from "~/renderer/components/ui/button";
 import { Switch } from "~/renderer/components/ui/switch";
 import { Slider } from "~/renderer/components/ui/slider";
 import { Badge } from "~/renderer/components/ui/badge";
+import { TagInput } from "~/renderer/components/ui/tag-input";
 import {
   Tabs,
   TabsContent,
@@ -39,7 +40,6 @@ export function SettingsPage() {
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "success" | "error"
   >("idle");
-  const [newValue, setNewValue] = useState("");
 
   const lifeProgress = calculateLifeProgress(state.user.birthday, state.user.lifespan);
 
@@ -49,27 +49,6 @@ export function SettingsPage() {
       setTestStatus(state.aiConfig.apiKey ? "success" : "error");
       setTimeout(() => setTestStatus("idle"), 3000);
     }, 1500);
-  };
-
-  const addValue = () => {
-    if (newValue.trim() && !state.user.values.includes(newValue)) {
-      updateState({
-        user: {
-          ...state.user,
-          values: [...state.user.values, newValue.trim()],
-        },
-      });
-      setNewValue("");
-    }
-  };
-
-  const removeValue = (val: string) => {
-    updateState({
-      user: {
-        ...state.user,
-        values: state.user.values.filter((v) => v !== val),
-      },
-    });
   };
 
   const handleExport = () => {
@@ -215,41 +194,13 @@ export function SettingsPage() {
 
             <div className="space-y-4 mb-8">
               <Label className="text-base font-semibold">核心价值观</Label>
-              <div className="flex flex-wrap gap-2">
-                {state.user.values.map((val) => (
-                  <Badge
-                    key={val}
-                    variant="secondary"
-                    className="px-3 py-1.5 bg-apple-accent/5 text-apple-accent border border-apple-accent/10"
-                  >
-                    {val}
-                    <button
-                      onClick={() => removeValue(val)}
-                      className="ml-2 hover:text-destructive transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </Badge>
-                ))}
-                <div className="relative flex-1 min-w-[140px]">
-                  <Input
-                    type="text"
-                    value={newValue}
-                    onChange={(e) => setNewValue(e.target.value)}
-                    placeholder="按回车添加..."
-                    onKeyDown={(e) => e.key === "Enter" && addValue()}
-                    className="h-9 border-dashed"
-                  />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={addValue}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2"
-                  >
-                    <Plus size={16} />
-                  </Button>
-                </div>
-              </div>
+              <TagInput
+                value={state.user.values}
+                onChange={(values) =>
+                  updateState({ user: { ...state.user, values } })
+                }
+                placeholder="按回车添加..."
+              />
             </div>
 
             <div className="pt-6 border-t border-apple-border dark:border-white/5 space-y-4">

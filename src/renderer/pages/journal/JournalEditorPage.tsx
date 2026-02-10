@@ -8,6 +8,8 @@ import { Button } from '~/renderer/components/ui/button';
 import { Input } from '~/renderer/components/ui/input';
 import { Textarea } from '~/renderer/components/ui/textarea';
 import { Badge } from '~/renderer/components/ui/badge';
+import { MoodSelector } from '~/renderer/components/ui/mood-selector';
+import { TagInput } from '~/renderer/components/ui/tag-input';
 import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
 import type { DimensionType } from '~/shared/types';
 
@@ -25,21 +27,9 @@ export function JournalEditorPage() {
   const [content, setContent] = useState(existingEntry?.content || '');
   const [mood, setMood] = useState<MoodType>(existingEntry?.mood || 'good');
   const [tags, setTags] = useState<string[]>(existingEntry?.tags || []);
-  const [tagInput, setTagInput] = useState('');
   const [linkedDimensions, setLinkedDimensions] = useState<DimensionType[]>(
     existingEntry?.linkedDimensions || [],
   );
-
-  const handleAddTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput('');
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((t) => t !== tagToRemove));
-  };
 
   const handleToggleDimension = (dimType: DimensionType) => {
     setLinkedDimensions((prev) =>
@@ -115,24 +105,7 @@ export function JournalEditorPage() {
               <label className="text-sm font-medium text-apple-textSec dark:text-white/60 mb-3 block">
                 选择情绪
               </label>
-              <div className="flex gap-4">
-                {MOODS.map((m) => (
-                  <button
-                    key={m.type}
-                    onClick={() => setMood(m.type)}
-                    className={`flex-1 p-4 rounded-xl transition-all flex flex-col items-center gap-2 ${
-                      mood === m.type
-                        ? 'bg-apple-bg2 dark:bg-white/10 scale-105 shadow-md'
-                        : 'opacity-50 hover:opacity-80 hover:scale-105'
-                    }`}
-                  >
-                    <span className="text-3xl">{m.emoji()}</span>
-                    <span className="text-xs font-medium text-apple-textSec dark:text-white/60">
-                      {m.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <MoodSelector value={mood} onChange={setMood} variant="emoji" />
             </div>
 
             <div>
@@ -152,32 +125,7 @@ export function JournalEditorPage() {
               <label className="text-sm font-medium text-apple-textSec dark:text-white/60 mb-3 block">
                 标签
               </label>
-              <div className="flex gap-2 flex-wrap">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-sm px-3 py-1">
-                    {tag}
-                    <button
-                      onClick={() => handleRemoveTag(tag)}
-                      className="ml-2 hover:text-destructive"
-                    >
-                      <X size={14} />
-                    </button>
-                  </Badge>
-                ))}
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    placeholder="添加标签"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
-                    className="w-32 h-8 bg-black/5 dark:bg-white/5"
-                  />
-                  <Button size="sm" variant="outline" onClick={handleAddTag}>
-                    添加
-                  </Button>
-                </div>
-              </div>
+              <TagInput value={tags} onChange={setTags} placeholder="添加标签..." />
             </div>
 
             <div>

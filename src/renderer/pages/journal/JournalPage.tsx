@@ -6,8 +6,11 @@ import { GlassCard } from '~/renderer/components/GlassCard';
 import { Input } from '~/renderer/components/ui/input';
 import { Button } from '~/renderer/components/ui/button';
 import { Badge } from '~/renderer/components/ui/badge';
+import { MoodSelector } from '~/renderer/components/ui/mood-selector';
+import { SearchInput } from '~/renderer/components/ui/search-input';
 import { MOODS, type MoodType } from '~/renderer/lib/constants';
 import { formatDateCN, formatTimeCN, formatWeekdayCN } from '~/renderer/lib/dateUtils';
+import { groupByDate } from '~/renderer/lib/arrayUtils';
 import type { DimensionType } from '~/shared/types';
 
 export function JournalPage() {
@@ -37,14 +40,7 @@ export function JournalPage() {
   );
 
   // 按日期分组
-  const groupedJournals = filteredJournals.reduce((acc, journal) => {
-    const date = formatDateCN(journal.timestamp);
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(journal);
-    return acc;
-  }, {} as Record<string, typeof filteredJournals>);
+  const groupedJournals = groupByDate(filteredJournals, formatDateCN);
 
   // 计算情绪分布
   const moodDistribution = state.journals.reduce(
@@ -80,22 +76,7 @@ export function JournalPage() {
           <GlassCard title="快速记录">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <div className="flex gap-3">
-                  {MOODS.map((m) => (
-                    <button
-                      key={m.type}
-                      onClick={() => setMood(m.type)}
-                      className={`p-2 rounded-xl transition-all ${
-                        mood === m.type
-                          ? 'bg-apple-bg2 dark:bg-white/10 scale-110 shadow-sm'
-                          : 'opacity-40 hover:opacity-100'
-                      }`}
-                      title={m.label}
-                    >
-                      <m.icon className={m.color} size={28} />
-                    </button>
-                  ))}
-                </div>
+                <MoodSelector value={mood} onChange={setMood} variant="icon" />
                 <div className="text-xs text-apple-textTer dark:text-white/30 font-medium">
                   {formatWeekdayCN(Date.now())}
                 </div>
@@ -181,16 +162,11 @@ export function JournalPage() {
 
         <div className="space-y-6">
           <GlassCard title="搜索">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-apple-textSec dark:text-white/30" size={18} />
-              <Input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="搜索回忆..."
-                className="pl-10 bg-black/5 dark:bg-white/5 border-apple-border dark:border-white/10"
-              />
-            </div>
+            <SearchInput
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="搜索回忆..."
+            />
           </GlassCard>
 
           <GlassCard title="数据统计">
