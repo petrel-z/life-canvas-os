@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Trash2, Edit, Calendar } from 'lucide-react';
+import { ArrowLeft, Trash2, Edit, Calendar, LockKeyhole } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { Button } from '~/renderer/components/ui/button';
 import { Badge } from '~/renderer/components/ui/badge';
+import { PinVerifyDialog } from '~/renderer/components/auth/PinVerifyDialog';
 import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
 import { formatDateTimeCN } from '~/renderer/lib/dateUtils';
 import MDEditor from '@uiw/react-md-editor';
@@ -13,9 +14,18 @@ export function JournalDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { state, updateState } = useApp();
+  const [isPinVerified, setIsPinVerified] = useState(false);
+  const [showPinDialog, setShowPinDialog] = useState(false);
+
+  // 检查会话中是否已验证 PIN
+  useEffect(() => {
+    const verified = sessionStorage.getItem('pin-verified') === 'true';
+    setIsPinVerified(verified);
+  }, []);
 
   const entry = state.journals.find((j) => j.id === id);
 
+  // 日记不存在
   if (!entry) {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-apple-textTer dark:text-white/20">
@@ -25,6 +35,49 @@ export function JournalDetailPage() {
             返回列表
           </Button>
         </Link>
+      </div>
+    );
+  }
+
+  // 私密日记，需要验证 PIN
+  if (entry.isPrivate && !isPinVerified) {
+    // 自动显示 PIN 验证弹窗
+    if (!showPinDialog) {
+      setTimeout(() => setShowPinDialog(true), 100);
+    }
+
+    const handleClose = () => {
+      setShowPinDialog(false);
+      // 返回日记列表
+      navigate('/journal');
+    };
+
+    const handleVerify = async (pin: string) => {
+      const response = await fetch('http://127.0.0.1:8000/api/pin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        sessionStorage.setItem('pin-verified', 'true');
+        setIsPinVerified(true);
+        setShowPinDialog(false);
+        return true;
+      } else {
+        return false;
+      }
+    };
+
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-apple-textSec dark:text-white/40">
+        <PinVerifyDialog
+          isOpen={showPinDialog}
+          onClose={handleClose}
+          onVerify={handleVerify}
+        />
       </div>
     );
   }
@@ -57,11 +110,9 @@ export function JournalDetailPage() {
             </Button>
           </Link>
           <div>
-            {entry.title && (
-              <h1 className="text-2xl font-bold text-apple-textMain dark:text-white">
-                {entry.title}
-              </h1>
-            )}
+            <h1 className="text-2xl font-bold text-apple-textMain dark:text-white">
+              {entry.title || '新建日记'}
+            </h1>
           </div>
         </div>
         <div className="flex gap-2">

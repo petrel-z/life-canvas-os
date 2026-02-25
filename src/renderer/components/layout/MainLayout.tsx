@@ -60,7 +60,7 @@ export function MainLayout() {
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* 主内容区域 */}
-      <main className="flex-1 h-screen overflow-y-auto relative z-0">
+      <main className="flex-1 h-screen overflow-y-auto">
         <div className="max-w-7xl mx-auto px-10 py-12">
           <Outlet />
         </div>

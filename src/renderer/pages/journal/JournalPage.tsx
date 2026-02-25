@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, Search, Calendar, Plus } from 'lucide-react';
+import { Sparkles, Search, Calendar, Plus, Lock, EyeOff, LockKeyhole } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { Input } from '~/renderer/components/ui/input';
 import { Button } from '~/renderer/components/ui/button';
 import { Badge } from '~/renderer/components/ui/badge';
+import { Switch } from '~/renderer/components/ui/switch';
 import { MoodSelector } from '~/renderer/components/ui/mood-selector';
 import { SearchInput } from '~/renderer/components/ui/search-input';
 import { MOODS, type MoodType } from '~/renderer/lib/constants';
@@ -18,21 +19,25 @@ export function JournalPage() {
   const [content, setContent] = useState('');
   const [mood, setMood] = useState<MoodType>('good');
   const [search, setSearch] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const addEntry = () => {
     if (!content.trim()) return;
     const entry = {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
+      title: '新建日记',
       content,
       mood,
       tags: [] as string[],
       attachments: [] as string[],
       linkedDimensions: [] as DimensionType[],
+      isPrivate,
     };
     updateState({ journals: [entry, ...state.journals] });
     setContent('');
     setMood('good');
+    setIsPrivate(false);
   };
 
   const filteredJournals = state.journals.filter((j) =>
@@ -89,7 +94,23 @@ export function JournalPage() {
                 className="w-full h-40 bg-black/5 dark:bg-white/5 border border-apple-border dark:border-white/10 rounded-2xl p-5 text-apple-textMain dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none text-base leading-relaxed shadow-inner"
               />
 
-              <div className="flex justify-end">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isPrivate ? (
+                    <Lock className="text-purple-500" size={16} />
+                  ) : (
+                    <EyeOff className="text-apple-textTer dark:text-white/20" size={16} />
+                  )}
+                  <span className="text-xs text-apple-textSec dark:text-white/40">
+                    私密日记
+                  </span>
+                  <Switch
+                    checked={isPrivate}
+                    onCheckedChange={setIsPrivate}
+                    className="data-[state=checked]:bg-purple-500"
+                  />
+                </div>
+
                 <Button
                   onClick={addEntry}
                   disabled={!content.trim()}
@@ -125,8 +146,13 @@ export function JournalPage() {
                             </div>
                             <div className="flex-1 space-y-2">
                               <div className="flex justify-between items-start">
-                                <div className="text-xs font-bold text-apple-textTer dark:text-white/20 uppercase tracking-widest">
-                                  {formatTimeCN(j.timestamp)}
+                                <div className="flex items-center gap-2">
+                                  <div className="text-xs font-bold text-apple-textTer dark:text-white/20 uppercase tracking-widest">
+                                    {formatTimeCN(j.timestamp)}
+                                  </div>
+                                  {j.isPrivate && (
+                                    <LockKeyhole className="text-purple-500" size={14} />
+                                  )}
                                 </div>
                                 {j.tags && j.tags.length > 0 && (
                                   <div className="flex gap-1">
@@ -138,9 +164,14 @@ export function JournalPage() {
                                   </div>
                                 )}
                               </div>
-                              <p className="text-apple-textSec dark:text-white/80 leading-relaxed line-clamp-3">
-                                {j.content}
-                              </p>
+                              <div className="space-y-1">
+                                <h4 className="text-sm font-semibold text-apple-textMain dark:text-white line-clamp-1">
+                                  {j.title || '新建日记'}
+                                </h4>
+                                <p className="text-xs text-apple-textSec dark:text-white/60 leading-relaxed line-clamp-2">
+                                  {j.content}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </Link>

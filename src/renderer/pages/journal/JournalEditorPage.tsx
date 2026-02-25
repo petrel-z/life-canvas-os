@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, X } from 'lucide-react';
+import { ArrowLeft, Save, Lock, Eye, EyeOff } from 'lucide-react';
 import MDEditor from '@uiw/react-md-editor';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
@@ -8,10 +8,12 @@ import { Button } from '~/renderer/components/ui/button';
 import { Input } from '~/renderer/components/ui/input';
 import { Textarea } from '~/renderer/components/ui/textarea';
 import { Badge } from '~/renderer/components/ui/badge';
+import { Switch } from '~/renderer/components/ui/switch';
 import { MoodSelector } from '~/renderer/components/ui/mood-selector';
 import { TagInput } from '~/renderer/components/ui/tag-input';
 import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
 import type { DimensionType } from '~/shared/types';
+import { toast } from '~/renderer/lib/toast';
 
 export function JournalEditorPage() {
   const navigate = useNavigate();
@@ -30,6 +32,24 @@ export function JournalEditorPage() {
   const [linkedDimensions, setLinkedDimensions] = useState<DimensionType[]>(
     existingEntry?.linkedDimensions || [],
   );
+  const [isPrivate, setIsPrivate] = useState(existingEntry?.isPrivate || false);
+  const [pinStatus, setPinStatus] = useState<{ has_pin_set: boolean } | null>(null);
+
+  // 检查 PIN 状态
+  useEffect(() => {
+    const checkPinStatus = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/pin/status');
+        const result = await response.json();
+        if (response.ok) {
+          setPinStatus(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to check PIN status:', error);
+      }
+    };
+    checkPinStatus();
+  }, []);
 
   const handleToggleDimension = (dimType: DimensionType) => {
     setLinkedDimensions((prev) =>
@@ -39,18 +59,47 @@ export function JournalEditorPage() {
     );
   };
 
+  const handlePrivateToggle = (checked: boolean) => {
+    if (checked && !pinStatus?.has_pin_set) {
+      // 未设置 PIN，显示提示并跳转
+      toast.error('需要设置 PIN 码', {
+        description: '私密日记功能需要先设置 PIN 码保护',
+      });
+
+      // 保存当前草稿
+      const draft = {
+        title,
+        content,
+        mood,
+        tags,
+        linkedDimensions,
+        isPrivate: false, // 暂时设为 false
+      };
+      localStorage.setItem('journal-draft', JSON.stringify(draft));
+
+      // 跳转到 PIN 设置页
+      setTimeout(() => {
+        navigate('/settings/pin', { state: { returnUrl: '/journal/new' } });
+      }, 500);
+      return;
+    }
+
+    setIsPrivate(checked);
+  };
+
   const handleSave = () => {
     if (!content.trim()) return;
 
     const entry = {
       id: isEditing ? id! : crypto.randomUUID(),
       timestamp: existingEntry?.timestamp || Date.now(),
-      title: title.trim(),
+      title: title.trim() || '新建日记',
       content,
       mood,
       tags,
       attachments: [] as string[],
       linkedDimensions,
+      isPrivate,
     };
 
     if (isEditing) {
@@ -155,6 +204,36 @@ export function JournalEditorPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-apple-bg2 dark:bg-white/5 rounded-xl border border-apple-border dark:border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/10">
+                  {isPrivate ? (
+                    <Lock className="text-purple-500" size={18} />
+                  ) : (
+                    <EyeOff className="text-apple-textTer dark:text-white/30" size={18} />
+                  )}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-apple-textMain dark:text-white">
+                    私密日记
+                  </div>
+                  <div className="text-xs text-apple-textSec dark:text-white/40">
+                    {isPrivate
+                      ? '需要 PIN 码才能查看此日记'
+                      : pinStatus?.has_pin_set
+                      ? '开启后需要 PIN 码才能查看'
+                      : '需要先设置 PIN 码'}
+                  </div>
+                </div>
+              </div>
+              <Switch
+                checked={isPrivate}
+                onCheckedChange={handlePrivateToggle}
+                disabled={!pinStatus?.has_pin_set && !isPrivate}
+                className={isPrivate ? 'data-[state=checked]:bg-purple-500' : ''}
+              />
             </div>
           </div>
         </GlassCard>
