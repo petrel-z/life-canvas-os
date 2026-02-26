@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   User,
   Cpu,
@@ -17,7 +17,11 @@ import {
   Moon,
   Smartphone,
   ChevronRight,
+  Shield,
+  KeyRound,
+  AlertTriangle,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useApp } from "~/renderer/contexts/AppContext";
 import { GlassCard } from "~/renderer/components/GlassCard";
 import { Input } from "~/renderer/components/ui/input";
@@ -40,8 +44,25 @@ export function SettingsPage() {
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "success" | "error"
   >("idle");
+  const [pinStatus, setPinStatus] = useState<{ has_pin_set: boolean } | null>(null);
 
   const lifeProgress = calculateLifeProgress(state.user.birthday, state.user.lifespan);
+
+  // 检查 PIN 状态
+  useEffect(() => {
+    const checkPinStatus = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/pin/status');
+        const result = await response.json();
+        if (response.ok) {
+          setPinStatus(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to check PIN status:', error);
+      }
+    };
+    checkPinStatus();
+  }, []);
 
   const handleTestAI = () => {
     setTestStatus("testing");
@@ -398,6 +419,97 @@ export function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="security" className="space-y-5">
+          {/* PIN 设置提醒 */}
+          {pinStatus && !pinStatus.has_pin_set && (
+            <GlassCard className="!p-6 bg-gradient-to-r from-purple-500/5 to-indigo-500/5 border-purple-500/20">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-purple-500/10 text-purple-500 shrink-0">
+                  <Shield size={24} />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div>
+                    <div className="text-base font-semibold text-apple-textMain dark:text-white">
+                      设置 PIN 码保护私密日记
+                    </div>
+                    <div className="text-sm text-apple-textSec dark:text-white/50 mt-1">
+                      您还没有设置 PIN 码。设置后，您可以将日记标记为私密，只有通过 PIN 验证才能查看。
+                    </div>
+                  </div>
+                  <Link to="/settings/pin">
+                    <Button className="bg-purple-500 hover:bg-purple-600 text-white">
+                      立即设置 PIN 码
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </GlassCard>
+          )}
+
+          {/* PIN 管理 - 已设置时显示 */}
+          {pinStatus && pinStatus.has_pin_set && (
+            <GlassCard className="space-y-4 !p-8">
+              <div className="flex items-center gap-3 pb-4 border-b border-apple-border dark:border-white/5">
+                <div className="p-2 rounded-lg bg-purple-500/10">
+                  <Shield className="text-purple-500" size={20} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-apple-textMain dark:text-white">
+                    PIN 码管理
+                  </div>
+                  <div className="text-xs text-apple-textSec dark:text-white/40">
+                    管理您的私密日记保护设置
+                  </div>
+                </div>
+              </div>
+
+              <Link to="/settings/pin/change" className="block">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start h-auto py-4 px-5"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-purple-500/5 text-purple-500">
+                      <KeyRound size={20} />
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="text-sm font-semibold">修改 PIN 码</div>
+                      <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
+                        更改您的私密日记保护密码
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    size={16}
+                    className="ml-auto text-apple-textTer shrink-0"
+                  />
+                </Button>
+              </Link>
+
+              <Link to="/settings/pin/delete" className="block">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start h-auto py-4 px-5 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-destructive/5 text-destructive">
+                      <AlertTriangle size={20} />
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="text-sm font-semibold">删除 PIN 码</div>
+                      <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
+                        移除私密日记保护
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    size={16}
+                    className="ml-auto text-apple-textTer shrink-0"
+                  />
+                </Button>
+              </Link>
+            </GlassCard>
+          )}
+
           <GlassCard className="space-y-4 !p-8">
             <Button
               variant="outline"

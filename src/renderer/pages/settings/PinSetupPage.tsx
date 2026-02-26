@@ -26,8 +26,8 @@ export function PinSetupPage() {
 
   const handleSubmit = async () => {
     // 验证
-    if (pin.length !== 4) {
-      toast.error('请输入 4 位数字 PIN');
+    if (pin.length !== 6) {
+      toast.error('请输入 6 位数字 PIN');
       return;
     }
     if (pin !== confirmPin) {
@@ -48,6 +48,9 @@ export function PinSetupPage() {
       const result = await response.json();
 
       if (response.ok) {
+        // 标记 PIN 设置已完成
+        localStorage.setItem('pin-setup-status', 'completed');
+
         toast.success('PIN 设置成功', {
           description: '您现在可以使用私密日记功能了',
         });
@@ -74,18 +77,18 @@ export function PinSetupPage() {
   };
 
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // 只允许数字，最多 4 位
-    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+    // 只允许数字，最多 6 位
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
     setPin(value);
   };
 
   const handleConfirmPinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
     setConfirmPin(value);
   };
 
-  const isPinValid = pin.length === 4;
-  const isConfirmValid = confirmPin.length === 4 && pin === confirmPin;
+  const isPinValid = pin.length === 6;
+  const isConfirmValid = confirmPin.length === 6 && pin === confirmPin;
 
   return (
     <div className="min-h-screen bg-apple-bgMain dark:bg-black flex items-center justify-center p-6">
@@ -116,7 +119,7 @@ export function PinSetupPage() {
               设置 PIN 码
             </h1>
             <p className="text-apple-textSec dark:text-white/40 text-sm mt-2">
-              PIN 码用于保护您的私密日记
+              PIN 码用于保护您的私密日记（6 位数字）
             </p>
           </div>
         </GlassCard>
@@ -132,10 +135,10 @@ export function PinSetupPage() {
               <Input
                 type={showPin ? 'text' : 'tel'}
                 inputMode="numeric"
-                placeholder="••••"
+                placeholder="••••••"
                 value={pin}
                 onChange={handlePinChange}
-                maxLength={4}
+                maxLength={6}
                 className="text-center text-2xl tracking-[0.5em] h-14"
               />
               <button
@@ -149,7 +152,7 @@ export function PinSetupPage() {
 
             {/* 强度指示器 */}
             <div className="flex gap-1">
-              {[1, 2, 3, 4].map((i) => (
+              {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div
                   key={i}
                   className={`h-1.5 flex-1 rounded-full transition-all ${
@@ -171,10 +174,10 @@ export function PinSetupPage() {
               <Input
                 type={showConfirmPin ? 'text' : 'tel'}
                 inputMode="numeric"
-                placeholder="••••"
+                placeholder="••••••"
                 value={confirmPin}
                 onChange={handleConfirmPinChange}
-                maxLength={4}
+                maxLength={6}
                 className="text-center text-2xl tracking-[0.5em] h-14"
                 disabled={!isPinValid}
               />
@@ -209,7 +212,7 @@ export function PinSetupPage() {
           <div className="flex items-start gap-3 p-4 bg-apple-accent/5 dark:bg-purple-500/5 rounded-xl border border-apple-accent/10 dark:border-purple-500/10">
             <Lock className="text-purple-500 shrink-0 mt-0.5" size={16} />
             <div className="text-xs text-apple-textSec dark:text-white/60 space-y-1">
-              <p>• PIN 码必须是 4 位数字</p>
+              <p>• PIN 码必须是 6 位数字</p>
               <p>• 请妥善保管 PIN 码，丢失后无法找回</p>
               <p>• 设置后可随时在设置中修改</p>
             </div>

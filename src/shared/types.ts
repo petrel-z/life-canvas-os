@@ -50,6 +50,7 @@ export interface JournalEntry {
   tags: string[];
   attachments: string[];
   linkedDimensions?: DimensionType[];
+  isPrivate?: boolean;
 }
 
 export interface AppState {
