@@ -4,45 +4,95 @@
 
 import { API_BASE_URL } from './config';
 
+// 类型定义
+export type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
+
 export interface JournalCreateRequest {
   title: string;
   content: string;
-  mood: string;
-  tags: string[];
-  linkedDimensions: string[];
-  isPrivate: boolean;
-  attachments: string[];
+  mood?: MoodType;
+  tags?: string;
+  related_system?: string;
+  is_private?: boolean;
 }
 
-export interface JournalUpdateRequest extends Partial<JournalCreateRequest> {}
+export interface JournalUpdateRequest {
+  title?: string;
+  content?: string;
+  mood?: MoodType;
+  tags?: string;
+  related_system?: string;
+  is_private?: boolean;
+}
+
+export interface JournalResponse {
+  id: number;
+  user_id: number;
+  title: string;
+  content: string;
+  mood: MoodType | null;
+  tags: string | null;
+  related_system: string | null;
+  is_private: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaginatedJournalsResponse {
+  items: JournalResponse[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+export interface JournalListParams {
+  page?: number;
+  page_size?: number;
+  mood?: MoodType;
+  related_system?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+}
 
 export const journalApi = {
-  list(): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/journals`);
+  list(params?: JournalListParams): Promise<Response> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params?.mood) queryParams.append('mood', params.mood);
+    if (params?.related_system) queryParams.append('related_system', params.related_system);
+    if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
+    if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
+
+    const url = `${API_BASE_URL}/api/journal${queryParams.toString() ? `?${queryParams}` : ''}`;
+    return fetch(url);
   },
 
-  get(id: string): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/journals/${id}`);
+  get(id: number): Promise<Response> {
+    return fetch(`${API_BASE_URL}/api/journal/${id}`);
   },
 
   create(data: JournalCreateRequest): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/journals`, {
+    return fetch(`${API_BASE_URL}/api/journal`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
   },
 
-  update(id: string, data: JournalUpdateRequest): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/journals/${id}`, {
-      method: 'PUT',
+  update(id: number, data: JournalUpdateRequest): Promise<Response> {
+    return fetch(`${API_BASE_URL}/api/journal/${id}`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
   },
 
-  delete(id: string): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/journals/${id}`, {
+  delete(id: number): Promise<Response> {
+    return fetch(`${API_BASE_URL}/api/journal/${id}`, {
       method: 'DELETE',
     });
   },

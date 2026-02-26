@@ -168,35 +168,7 @@ export const INITIAL_STATE: AppState = {
       },
     ],
   },
-  journals: [
-    {
-      id: "j-1",
-      timestamp: now,
-      content:
-        "今天完成了 Life Canvas OS 的初步构建。看着那些雷达图，我第一次感觉到生活是可以被这样优雅地量化的。",
-      mood: "great",
-      tags: ["成就感", "OS"],
-      attachments: [],
-    },
-    {
-      id: "j-2",
-      timestamp: now - oneDay,
-      content:
-        "阴雨天。在咖啡馆读完了《反脆弱》。书里提到的系统冗余和压力测试，其实在个人成长模型中也同样适用。",
-      mood: "good",
-      tags: ["阅读", "思考"],
-      attachments: [],
-    },
-    {
-      id: "j-3",
-      timestamp: now - 2 * oneDay,
-      content:
-        "感觉最近的工作产出进入了瓶颈期。也许我需要调整一下 Output 维度的评价指标，不要只关注时长，而要关注深度的结果。",
-      mood: "neutral",
-      tags: ["复盘"],
-      attachments: [],
-    },
-  ],
+  journals: [],
   isLocked: true, // Default to locked for security demo
   theme: "auto",
   language: "zh",

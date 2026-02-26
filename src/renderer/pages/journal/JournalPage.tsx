@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, Search, Calendar, Plus, Lock, EyeOff, LockKeyhole } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
-import { Input } from '~/renderer/components/ui/input';
 import { Button } from '~/renderer/components/ui/button';
 import { Badge } from '~/renderer/components/ui/badge';
 import { Switch } from '~/renderer/components/ui/switch';
@@ -12,35 +11,100 @@ import { SearchInput } from '~/renderer/components/ui/search-input';
 import { MOODS, type MoodType } from '~/renderer/lib/constants';
 import { formatDateCN, formatTimeCN, formatWeekdayCN } from '~/renderer/lib/dateUtils';
 import { groupByDate } from '~/renderer/lib/arrayUtils';
-import type { DimensionType } from '~/shared/types';
+import type { DimensionType, JournalEntry } from '~/shared/types';
+import { useJournalApi } from '~/renderer/hooks/useJournalApi';
+
+const PAGE_SIZE = 10;
 
 export function JournalPage() {
   const { state, updateState } = useApp();
+  const { listJournals, createJournal } = useJournalApi();
   const [content, setContent] = useState('');
   const [mood, setMood] = useState<MoodType>('good');
   const [search, setSearch] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
 
-  const addEntry = () => {
-    if (!content.trim()) return;
-    const entry = {
-      id: crypto.randomUUID(),
-      timestamp: Date.now(),
-      title: '新建日记',
-      content,
-      mood,
-      tags: [] as string[],
-      attachments: [] as string[],
-      linkedDimensions: [] as DimensionType[],
-      isPrivate,
+  // 使用 ref 避免重复调用
+  const isLoadingRef = useRef(false);
+
+  // 加载日记列表（首次加载）
+  useEffect(() => {
+    const loadJournals = async () => {
+      if (isLoadingRef.current) return;
+      isLoadingRef.current = true;
+
+      try {
+        setIsLoading(true);
+        const result = await listJournals({ page: 1, page_size: PAGE_SIZE });
+        setJournals(result.items);
+        setHasNext(result.has_next);
+        setCurrentPage(1);
+      } catch (error) {
+        console.error('Failed to load journals:', error);
+      } finally {
+        setIsLoading(false);
+        isLoadingRef.current = false;
+      }
     };
-    updateState({ journals: [entry, ...state.journals] });
-    setContent('');
-    setMood('good');
-    setIsPrivate(false);
+
+    loadJournals();
+  }, []); // 空依赖数组，只在组件挂载时执行一次
+
+  // 加载更多
+  const loadMore = async () => {
+    if (isLoadingMore || !hasNext) return;
+
+    try {
+      setIsLoadingMore(true);
+      const nextPage = currentPage + 1;
+      const result = await listJournals({ page: nextPage, page_size: PAGE_SIZE });
+      setJournals((prev) => [...prev, ...result.items]);
+      setHasNext(result.has_next);
+      setCurrentPage(nextPage);
+    } catch (error) {
+      console.error('Failed to load more journals:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
   };
 
-  const filteredJournals = state.journals.filter((j) =>
+  const addEntry = async () => {
+    if (!content.trim() || isSaving) return;
+
+    setIsSaving(true);
+
+    try {
+      const entry = {
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        title: '新建日记',
+        content,
+        mood,
+        tags: [] as string[],
+        attachments: [] as string[],
+        linkedDimensions: [] as DimensionType[],
+        isPrivate,
+      };
+
+      const created = await createJournal(entry);
+      setJournals((prev) => [created, ...prev]);
+      setContent('');
+      setMood('good');
+      setIsPrivate(false);
+    } catch (error) {
+      console.error('Failed to create journal:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const filteredJournals = journals.filter((j) =>
     j.content.toLowerCase().includes(search.toLowerCase()),
   );
 
@@ -48,13 +112,21 @@ export function JournalPage() {
   const groupedJournals = groupByDate(filteredJournals, formatDateCN);
 
   // 计算情绪分布
-  const moodDistribution = state.journals.reduce(
+  const moodDistribution = journals.reduce(
     (acc, j) => {
       acc[j.mood] = (acc[j.mood] || 0) + 1;
       return acc;
     },
     {} as Record<MoodType, number>,
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-apple-textSec dark:text-white/40">加载中...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -113,10 +185,10 @@ export function JournalPage() {
 
                 <Button
                   onClick={addEntry}
-                  disabled={!content.trim()}
+                  disabled={!content.trim() || isSaving}
                   className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50"
                 >
-                  保存日记
+                  {isSaving ? '保存中...' : '保存日记'}
                 </Button>
               </div>
             </div>
@@ -139,7 +211,7 @@ export function JournalPage() {
                         key={j.id}
                         className="group border-apple-border dark:border-white/5 hover:border-purple-500/20 cursor-pointer"
                       >
-                        <Link to={`/journal/${j.id}`} className="block">
+                        <Link to={`/journal/${j.id}`} state={{ isPrivate: j.isPrivate }} className="block">
                           <div className="flex gap-5">
                             <div className="flex flex-col items-center gap-2 pt-1">
                               {MoodIcon && <MoodIcon className={moodObj?.color} size={24} />}
@@ -168,9 +240,15 @@ export function JournalPage() {
                                 <h4 className="text-sm font-semibold text-apple-textMain dark:text-white line-clamp-1">
                                   {j.title || '新建日记'}
                                 </h4>
-                                <p className="text-xs text-apple-textSec dark:text-white/60 leading-relaxed line-clamp-2">
-                                  {j.content}
-                                </p>
+                                {j.isPrivate ? (
+                                  <p className="text-xs text-apple-textTer dark:text-white/30 italic leading-relaxed">
+                                    此日记为私密日记，需要 PIN 码才能查看
+                                  </p>
+                                ) : (
+                                  <p className="text-xs text-apple-textSec dark:text-white/60 leading-relaxed line-clamp-2">
+                                    {j.content}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -182,10 +260,23 @@ export function JournalPage() {
               </div>
             ))}
 
-            {filteredJournals.length === 0 && (
+            {filteredJournals.length === 0 && !isLoading && (
               <div className="flex flex-col items-center justify-center py-16 text-apple-textTer dark:text-white/20">
                 <Sparkles size={48} className="mb-3 opacity-50" />
                 <p className="text-lg">开始记录您的第一篇日记吧</p>
+              </div>
+            )}
+
+            {hasNext && filteredJournals.length > 0 && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={loadMore}
+                  disabled={isLoadingMore}
+                  className="min-w-[120px]"
+                >
+                  {isLoadingMore ? '加载中...' : '加载更多'}
+                </Button>
               </div>
             )}
           </div>
@@ -205,7 +296,7 @@ export function JournalPage() {
               <div className="flex justify-between items-center text-sm">
                 <span className="text-apple-textSec dark:text-white/40">日记总数</span>
                 <span className="text-apple-textMain dark:text-white font-bold">
-                  {state.journals.length}
+                  {journals.length}
                 </span>
               </div>
 
@@ -216,8 +307,8 @@ export function JournalPage() {
                 <div className="space-y-2">
                   {MOODS.map((m) => {
                     const count = moodDistribution[m.type] || 0;
-                    const percentage = state.journals.length
-                      ? Math.round((count / state.journals.length) * 100)
+                    const percentage = journals.length
+                      ? Math.round((count / journals.length) * 100)
                       : 0;
                     return (
                       <div key={m.type} className="flex items-center gap-2 text-xs">

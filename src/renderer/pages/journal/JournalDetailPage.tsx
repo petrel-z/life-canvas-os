@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, Trash2, Edit, Calendar, LockKeyhole } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
@@ -10,38 +10,71 @@ import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
 import { formatDateTimeCN } from '~/renderer/lib/dateUtils';
 import MDEditor from '@uiw/react-md-editor';
 import { pinApi } from '~/renderer/api';
+import { useJournalApi } from '~/renderer/hooks/useJournalApi';
+import type { JournalEntry } from '~/shared/types';
 
 export function JournalDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { state, updateState } = useApp();
+  const location = useLocation();
+  const { getJournal, deleteJournal } = useJournalApi();
   const [isPinVerified, setIsPinVerified] = useState(false);
   const [showPinDialog, setShowPinDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [entry, setEntry] = useState<JournalEntry | null>(null);
+
+  // 从路由状态获取是否私密（如果有的话）
+  const isPrivateFromList = location.state?.isPrivate || false;
+
+  // 使用 ref 避免重复调用
+  const isLoadingRef = useRef(false);
+  const getJournalRef = useRef(getJournal);
+
+  // 更新 ref
+  useEffect(() => {
+    getJournalRef.current = getJournal;
+  }, [getJournal]);
 
   // 检查会话中是否已验证 PIN
   useEffect(() => {
     const verified = sessionStorage.getItem('pin-verified') === 'true';
     setIsPinVerified(verified);
+    // 如果是私密日记且未验证 PIN，则不需要显示加载状态
+    if (isPrivateFromList && !verified) {
+      setIsLoading(false);
+    }
   }, []);
 
-  const entry = state.journals.find((j) => j.id === id);
+  // 加载日记详情
+  const loadJournal = async () => {
+    if (!id || isLoadingRef.current) return;
+    isLoadingRef.current = true;
 
-  // 日记不存在
-  if (!entry) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 text-apple-textTer dark:text-white/20">
-        <p>日记不存在</p>
-        <Link to="/journal">
-          <Button variant="outline" className="mt-4">
-            返回列表
-          </Button>
-        </Link>
-      </div>
-    );
-  }
+    try {
+      setIsLoading(true);
+      const journalData = await getJournalRef.current(id);
+      setEntry(journalData);
+    } catch (error) {
+      console.error('Failed to load journal:', error);
+      setEntry(null);
+    } finally {
+      setIsLoading(false);
+      isLoadingRef.current = false;
+    }
+  };
 
-  // 私密日记，需要验证 PIN
-  if (entry.isPrivate && !isPinVerified) {
+  // 根据私密状态决定是否加载
+  useEffect(() => {
+    // 如果非私密，或已经验证 PIN，则立即加载
+    if (!isPrivateFromList || isPinVerified) {
+      loadJournal();
+    }
+  }, [id, isPinVerified]); // 依赖 isPinVerified 以便验证后加载
+
+  // 私密日记，需要验证 PIN（使用从列表页传递的信息）
+  // 这个判断要在加载中判断之前，因为私密日记未验证时 entry 为 null 是正常的
+  if (isPrivateFromList && !isPinVerified && !isLoading) {
     // 自动显示 PIN 验证弹窗
     if (!showPinDialog) {
       setTimeout(() => setShowPinDialog(true), 100);
@@ -49,7 +82,6 @@ export function JournalDetailPage() {
 
     const handleClose = () => {
       setShowPinDialog(false);
-      // 返回日记列表
       navigate('/journal');
     };
 
@@ -64,6 +96,8 @@ export function JournalDetailPage() {
         sessionStorage.setItem('pin-verified', 'true');
         setIsPinVerified(true);
         setShowPinDialog(false);
+        // PIN 验证成功后，加载日记详情
+        await loadJournal();
         return true;
       } catch {
         return false;
@@ -81,17 +115,47 @@ export function JournalDetailPage() {
     );
   }
 
+  // 加载中
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-apple-textSec dark:text-white/40">加载中...</div>
+      </div>
+    );
+  }
+
+  // 日记不存在
+  if (!entry) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-apple-textTer dark:text-white/20">
+        <p>日记不存在</p>
+        <Link to="/journal">
+          <Button variant="outline" className="mt-4">
+            返回列表
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
   const moodObj = MOODS.find((m) => m.type === entry.mood);
+  const MoodIcon = moodObj?.icon;
   const linkedDims = entry.linkedDimensions
     ? DIMENSIONS.filter((d) => entry.linkedDimensions?.includes(d.type))
     : [];
 
-  const handleDelete = () => {
-    if (confirm('确定要删除这篇日记吗？')) {
-      updateState({
-        journals: state.journals.filter((j) => j.id !== id),
-      });
+  const handleDelete = async () => {
+    if (!confirm('确定要删除这篇日记吗？')) return;
+
+    setIsDeleting(true);
+
+    try {
+      await deleteJournal(id!);
       navigate('/journal');
+    } catch (error) {
+      console.error('Failed to delete journal:', error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -122,6 +186,7 @@ export function JournalDetailPage() {
             variant="outline"
             size="icon"
             onClick={handleDelete}
+            disabled={isDeleting}
             className="hover:bg-destructive/10 hover:text-destructive"
             title="删除"
           >
@@ -134,7 +199,7 @@ export function JournalDetailPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-apple-border dark:border-white/5">
             <div className="flex items-center gap-4">
-              <span className="text-4xl">{moodObj?.emoji()}</span>
+              <span className="text-4xl">{MoodIcon && <MoodIcon className={moodObj?.color} size={40} />}</span>
               <div>
                 <div className="text-sm font-medium text-apple-textTer dark:text-white/30 uppercase tracking-widest">
                   {moodObj?.label}
@@ -145,6 +210,9 @@ export function JournalDetailPage() {
                 </div>
               </div>
             </div>
+            {entry.isPrivate && (
+              <LockKeyhole className="text-purple-500" size={20} />
+            )}
           </div>
 
           <div data-color-mode="auto">
@@ -154,32 +222,23 @@ export function JournalDetailPage() {
             />
           </div>
 
-          {entry.tags && entry.tags.length > 0 && (
+          {linkedDims.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-4 border-t border-apple-border dark:border-white/5">
-              {entry.tags.map((tag) => (
-                <Badge key={tag} variant="secondary">
-                  {tag}
+              {linkedDims.map((dim) => (
+                <Badge key={dim.type} className={dim.color}>
+                  {dim.label}
                 </Badge>
               ))}
             </div>
           )}
 
-          {linkedDims.length > 0 && (
-            <div className="pt-4 border-t border-apple-border dark:border-white/5">
-              <div className="text-xs text-apple-textTer dark:text-white/20 uppercase font-bold mb-3 tracking-widest">
-                关联维度
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {linkedDims.map((dim) => (
-                  <Badge
-                    key={dim.type}
-                    className="text-white"
-                    style={{ backgroundColor: dim.color }}
-                  >
-                    {dim.label}
-                  </Badge>
-                ))}
-              </div>
+          {entry.tags && entry.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-4 border-t border-apple-border dark:border-white/5">
+              {entry.tags.map((tag: string) => (
+                <Badge key={tag} variant="secondary">
+                  {tag}
+                </Badge>
+              ))}
             </div>
           )}
         </div>

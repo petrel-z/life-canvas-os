@@ -12,29 +12,57 @@ import { Switch } from '~/renderer/components/ui/switch';
 import { MoodSelector } from '~/renderer/components/ui/mood-selector';
 import { TagInput } from '~/renderer/components/ui/tag-input';
 import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
-import type { DimensionType } from '~/shared/types';
+import type { DimensionType, JournalEntry } from '~/shared/types';
 import { toast } from '~/renderer/lib/toast';
 import { pinApi } from '~/renderer/api';
+import { useJournalApi } from '~/renderer/hooks/useJournalApi';
 
 export function JournalEditorPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { state, updateState } = useApp();
+  const { createJournal, updateJournal, getJournal } = useJournalApi();
   const isEditing = Boolean(id);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
-  const existingEntry = isEditing
-    ? state.journals.find((j) => j.id === id)
-    : null;
-
-  const [title, setTitle] = useState(existingEntry?.title || '');
-  const [content, setContent] = useState(existingEntry?.content || '');
-  const [mood, setMood] = useState<MoodType>(existingEntry?.mood || 'good');
-  const [tags, setTags] = useState<string[]>(existingEntry?.tags || []);
-  const [linkedDimensions, setLinkedDimensions] = useState<DimensionType[]>(
-    existingEntry?.linkedDimensions || [],
-  );
-  const [isPrivate, setIsPrivate] = useState(existingEntry?.isPrivate || false);
+  const [existingEntry, setExistingEntry] = useState<JournalEntry | null>(null);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [mood, setMood] = useState<MoodType>('good');
+  const [tags, setTags] = useState<string[]>([]);
+  const [linkedDimensions, setLinkedDimensions] = useState<DimensionType[]>([]);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [pinStatus, setPinStatus] = useState<{ has_pin_set: boolean } | null>(null);
+
+  // 加载日记详情（编辑模式）
+  useEffect(() => {
+    const loadJournal = async () => {
+      if (!isEditing || !id) return;
+
+      try {
+        setIsLoadingData(true);
+        const journalData = await getJournal(id);
+        setExistingEntry(journalData);
+
+        // 回显数据
+        setTitle(journalData.title || '');
+        setContent(journalData.content);
+        setMood(journalData.mood);
+        setTags(journalData.tags || []);
+        setLinkedDimensions(journalData.linkedDimensions || []);
+        setIsPrivate(journalData.isPrivate || false);
+      } catch (error) {
+        console.error('Failed to load journal:', error);
+        toast.error('加载日记失败');
+        navigate('/journal');
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    loadJournal();
+  }, [isEditing, id, getJournal, navigate]);
 
   // 检查 PIN 状态
   useEffect(() => {
@@ -89,35 +117,52 @@ export function JournalEditorPage() {
     setIsPrivate(checked);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!content.trim()) return;
 
-    const entry = {
-      id: isEditing ? id! : crypto.randomUUID(),
-      timestamp: existingEntry?.timestamp || Date.now(),
-      title: title.trim() || '新建日记',
-      content,
-      mood,
-      tags,
-      attachments: [] as string[],
-      linkedDimensions,
-      isPrivate,
-    };
+    setIsLoading(true);
 
-    if (isEditing) {
-      updateState({
-        journals: state.journals.map((j) => (j.id === id ? entry : j)),
-      });
-    } else {
-      updateState({ journals: [entry, ...state.journals] });
+    try {
+      const entry = {
+        id: isEditing ? id! : crypto.randomUUID(),
+        timestamp: existingEntry?.timestamp || Date.now(),
+        title: title.trim() || '新建日记',
+        content,
+        mood,
+        tags,
+        attachments: [] as string[],
+        linkedDimensions,
+        isPrivate,
+      };
+
+      if (isEditing) {
+        const updated = await updateJournal(id!, entry);
+        setExistingEntry(updated); // 更新本地数据
+      } else {
+        const created = await createJournal(entry);
+        setExistingEntry(created);
+      }
+
+      navigate('/journal');
+    } catch (error) {
+      console.error('Failed to save journal:', error);
+    } finally {
+      setIsLoading(false);
     }
-
-    navigate('/journal');
   };
 
   const handleCancel = () => {
     navigate('/journal');
   };
+
+  // 加载中
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-apple-textSec dark:text-white/40">加载中...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-5xl mx-auto">
@@ -134,9 +179,9 @@ export function JournalEditorPage() {
           <Button variant="outline" onClick={handleCancel}>
             取消
           </Button>
-          <Button onClick={handleSave} disabled={!content.trim()} className="bg-purple-500 hover:bg-purple-600">
+          <Button onClick={handleSave} disabled={!content.trim() || isLoading} className="bg-purple-500 hover:bg-purple-600">
             <Save size={18} className="mr-2" />
-            保存
+            {isLoading ? '保存中...' : '保存'}
           </Button>
         </div>
       </header>
