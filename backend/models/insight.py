@@ -1,7 +1,7 @@
 """AI 洞察模型"""
 from sqlalchemy import Column, Integer, String, Text, JSON, DateTime, ForeignKey
-from sqlalchemy.sql import func
 from backend.db.base import Base
+from backend.db.session import localnow_func
 
 
 class Insight(Base):
@@ -22,8 +22,8 @@ class Insight(Base):
     # 使用的 AI 提供商
     provider_used = Column(String, nullable=False)  # deepseek, doubao, openai
 
-    generated_at = Column(DateTime, server_default=func.now())
-    created_at = Column(DateTime, server_default=func.now())
+    generated_at = Column(DateTime, server_default=localnow_func())
+    created_at = Column(DateTime, server_default=localnow_func())
 
 
 # AI 提供商枚举

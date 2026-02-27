@@ -1,5 +1,5 @@
 """用户相关 Schema"""
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, computed_field
 from typing import Optional, Literal
 from datetime import datetime, date
 
@@ -42,6 +42,19 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: datetime
 
+    # 时间戳字段（前端使用，无时区歧义）
+    @computed_field
+    @property
+    def created_at_ts(self) -> int:
+        """创建时间戳（毫秒）"""
+        return int(self.created_at.timestamp() * 1000)
+
+    @computed_field
+    @property
+    def updated_at_ts(self) -> int:
+        """更新时间戳（毫秒）"""
+        return int(self.updated_at.timestamp() * 1000)
+
     class Config:
         from_attributes = True
 
@@ -78,6 +91,19 @@ class UserSettingsResponse(UserSettingsBase):
     created_at: datetime
     updated_at: datetime
 
+    # 时间戳字段（前端使用，无时区歧义）
+    @computed_field
+    @property
+    def created_at_ts(self) -> int:
+        """创建时间戳（毫秒）"""
+        return int(self.created_at.timestamp() * 1000)
+
+    @computed_field
+    @property
+    def updated_at_ts(self) -> int:
+        """更新时间戳（毫秒）"""
+        return int(self.updated_at.timestamp() * 1000)
+
     class Config:
         from_attributes = True
 
@@ -111,6 +137,13 @@ class AIConfigResponse(BaseModel):
     model_name: Optional[str] = None
     api_key_masked: str = Field(description="掩码后的 API Key，如 sk-****...")
     updated_at: datetime
+
+    # 时间戳字段（前端使用，无时区歧义）
+    @computed_field
+    @property
+    def updated_at_ts(self) -> int:
+        """更新时间戳（毫秒）"""
+        return int(self.updated_at.timestamp() * 1000)
 
     class Config:
         from_attributes = True

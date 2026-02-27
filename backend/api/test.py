@@ -4,14 +4,9 @@ from pydantic import BaseModel
 from typing import Optional
 import datetime
 
+from backend.schemas.common import success_response
+
 router = APIRouter(prefix="/api/test", tags=["test"])
-
-
-class TestResponse(BaseModel):
-    """测试响应模型"""
-    message: str
-    timestamp: str
-    data: dict
 
 
 class TestRequest(BaseModel):
@@ -20,31 +15,27 @@ class TestRequest(BaseModel):
     count: Optional[int] = 0
 
 
-@router.get("/hello", response_model=TestResponse)
+@router.get("/hello")
 async def hello_world():
     """简单的 Hello World 接口"""
-    return TestResponse(
-        message="Hello from Python Backend!",
-        timestamp=datetime.datetime.now().isoformat(),
+    return success_response(
         data={
-            "status": "success",
             "backend": "FastAPI",
             "version": "0.0.1"
-        }
+        },
+        message="Hello from Python Backend!"
     )
 
 
-@router.post("/echo", response_model=TestResponse)
+@router.post("/echo")
 async def echo_test(request: TestRequest):
     """回显测试接口"""
-    return TestResponse(
-        message=f"Hello, {request.name}!",
-        timestamp=datetime.datetime.now().isoformat(),
+    return success_response(
         data={
             "received_name": request.name,
-            "received_count": request.count,
-            "status": "echo successful"
-        }
+            "received_count": request.count
+        },
+        message=f"Hello, {request.name}!"
     )
 
 
@@ -54,13 +45,15 @@ async def get_system_info():
     import platform
     import sys
 
-    return {
-        "python_version": sys.version,
-        "platform": platform.system(),
-        "platform_release": platform.release(),
-        "platform_version": platform.version(),
-        "architecture": platform.machine(),
-        "processor": platform.processor(),
-        "fastapi_running": True,
-        "timestamp": datetime.datetime.now().isoformat()
-    }
+    return success_response(
+        data={
+            "python_version": sys.version,
+            "platform": platform.system(),
+            "platform_release": platform.release(),
+            "platform_version": platform.version(),
+            "architecture": platform.machine(),
+            "processor": platform.processor(),
+            "fastapi_running": True
+        },
+        message="获取系统信息成功"
+    )

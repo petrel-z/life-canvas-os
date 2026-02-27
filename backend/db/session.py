@@ -1,5 +1,5 @@
 """数据库会话管理（增强版）"""
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, event
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 from contextlib import contextmanager
@@ -27,6 +27,42 @@ engine = create_engine(
     echo=False,  # 生产环境关闭 SQL 日志
     future=True  # 使用 SQLAlchemy 2.0 风格
 )
+
+
+# 为 SQLite 配置本地时间（而非 UTC）
+@event.listens_for(engine, "connect")
+def set_sqlite_local_time(dbapi_conn, connection_record):
+    """配置 SQLite 使用本地时间"""
+    if "sqlite" in settings.DATABASE_URL:
+        from datetime import datetime
+
+        # 创建本地时间函数（返回 ISO 格式字符串）
+        def local_now():
+            """返回当前本地时间（ISO 格式字符串）"""
+            return datetime.now().isoformat()
+
+        # 注册到 SQLite
+        dbapi_conn.create_function("localnow", 0, local_now)
+
+        # 优化 SQLite 性能
+        cursor = dbapi_conn.cursor()
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL")
+        except Exception:
+            pass
+        cursor.close()
+
+
+# 创建本地时间函数（用于模型中的 server_default）
+from sqlalchemy import func
+
+# 定义一个使用本地时间的函数（仅适用于 SQLite）
+if "sqlite" in settings.DATABASE_URL:
+    # SQLite 使用自定义函数
+    localnow_func = func.localnow
+else:
+    # 其他数据库使用本地时间的函数
+    localnow_func = func.now
 
 SessionLocal = sessionmaker(
     autocommit=False,

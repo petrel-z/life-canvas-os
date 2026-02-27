@@ -92,6 +92,8 @@ venv.bak/
 # ====================
 # Database files
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 life_canvas.db

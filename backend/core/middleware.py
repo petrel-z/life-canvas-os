@@ -20,8 +20,8 @@ class RateLimiter:
         # 限流配置（每分钟请求数）
         self.rate_limits = {
             "default": 60,  # 默认 60 次/分钟
-            "auth": 5,  # 认证接口 5 次/分钟
-            "sensitive": 10  # 敏感操作 10 次/分钟
+            "auth": 10,  # 认证接口 5 次/分钟
+            "sensitive": 15  # 敏感操作 10 次/分钟
         }
 
     def is_allowed(self, ip: str, endpoint_type: str = "default") -> tuple[bool, dict]:

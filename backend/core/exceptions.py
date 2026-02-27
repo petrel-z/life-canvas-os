@@ -1,7 +1,7 @@
 """全局异常处理"""
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
+from fastapi.exceptions import RequestValidationError, HTTPException
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import traceback
 import logging
@@ -184,6 +184,39 @@ async def sqlalchemy_exception_handler(
     )
 
 
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """统一处理 HTTPException，确保所有错误响应格式一致"""
+
+    # 获取 detail 内容
+    detail = exc.detail
+
+    # 如果 detail 已经是统一格式（包含 code, message, timestamp），直接返回
+    if isinstance(detail, dict):
+        if "code" in detail and "message" in detail:
+            return JSONResponse(
+                status_code=exc.status_code,
+                content=detail
+            )
+        # 否则转换为统一格式
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=create_error_response(
+                code=exc.status_code,
+                message=str(detail.get("message", detail)),
+                data=detail.get("data")
+            )
+        )
+
+    # detail 是字符串或其他类型，转换为统一格式
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=create_error_response(
+            code=exc.status_code,
+            message=str(detail)
+        )
+    )
+
+
 async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """处理所有未捕获的异常"""
     logger.error(f"Unhandled exception: {str(exc)}", extra={
@@ -204,6 +237,9 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 def setup_exception_handlers(app):
     """设置全局异常处理器"""
+
+    # HTTPException 处理器（必须在其他处理器之前注册）
+    app.add_exception_handler(HTTPException, http_exception_handler)
 
     # 应用自定义异常
     app.add_exception_handler(AppException, app_exception_handler)

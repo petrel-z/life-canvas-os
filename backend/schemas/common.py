@@ -1,4 +1,7 @@
-"""通用 Schema（统一响应格式）"""
+"""通用 Schema（统一响应格式）
+
+统一响应体格式：code, message, data（可选）
+"""
 from pydantic import BaseModel, Field
 from typing import Any, Optional, Generic, TypeVar
 from datetime import datetime
@@ -7,7 +10,16 @@ T = TypeVar("T")
 
 
 class ApiResponse(BaseModel, Generic[T]):
-    """统一 API 响应格式"""
+    """统一 API 响应格式
+
+    所有 API 接口必须使用此格式返回数据
+
+    Args:
+        code: 业务状态码（200 成功，4xx 客户端错误，5xx 服务器错误）
+        message: 提示信息
+        data: 业务数据（可选）
+        timestamp: 时间戳（毫秒）
+    """
     code: int = Field(default=200, description="业务状态码")
     message: str = Field(default="success", description="提示信息")
     data: Optional[T] = Field(default=None, description="业务数据")
@@ -65,16 +77,26 @@ class ValidationError(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    """错误响应格式"""
+    """错误响应格式（与 ApiResponse 保持一致的结构）"""
     code: int
     message: str
     data: Optional[dict] = Field(default=None, description="错误详情")
     timestamp: int = Field(default_factory=lambda: int(datetime.now().timestamp() * 1000))
 
 
-# 创建便捷工厂函数
+# ============ 便捷工厂函数 ============
+
 def success_response(data: Any = None, message: str = "success", code: int = 200) -> dict:
-    """创建成功响应"""
+    """创建成功响应
+
+    Args:
+        data: 业务数据
+        message: 提示信息
+        code: 业务状态码
+
+    Returns:
+        标准响应字典 {code, message, data, timestamp}
+    """
     return {
         "code": code,
         "message": message,
@@ -84,7 +106,16 @@ def success_response(data: Any = None, message: str = "success", code: int = 200
 
 
 def error_response(message: str, code: int = 400, data: Any = None) -> dict:
-    """创建错误响应"""
+    """创建错误响应
+
+    Args:
+        message: 错误信息
+        code: 错误状态码
+        data: 错误详情（可选）
+
+    Returns:
+        标准响应字典 {code, message, data, timestamp}
+    """
     response = {
         "code": code,
         "message": message,

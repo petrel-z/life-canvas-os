@@ -1,5 +1,5 @@
 """日记相关 Schema"""
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, computed_field
 from typing import Optional, Literal, List, Any, Dict
 from datetime import datetime
 
@@ -41,6 +41,19 @@ class DiaryResponse(DiaryBase):
     created_at: datetime
     updated_at: datetime
 
+    # 时间戳字段（前端使用，无时区歧义）
+    @computed_field
+    @property
+    def created_at_ts(self) -> int:
+        """创建时间戳（毫秒）"""
+        return int(self.created_at.timestamp() * 1000)
+
+    @computed_field
+    @property
+    def updated_at_ts(self) -> int:
+        """更新时间戳（毫秒）"""
+        return int(self.updated_at.timestamp() * 1000)
+
     class Config:
         from_attributes = True
 
@@ -76,6 +89,13 @@ class DiaryAttachmentResponse(DiaryAttachmentBase):
     diary_id: int
     created_at: datetime
 
+    # 时间戳字段（前端使用，无时区歧义）
+    @computed_field
+    @property
+    def created_at_ts(self) -> int:
+        """创建时间戳（毫秒）"""
+        return int(self.created_at.timestamp() * 1000)
+
     class Config:
         from_attributes = True
 
@@ -88,6 +108,13 @@ class DiaryEditHistoryResponse(BaseModel):
     title_snapshot: str
     content_snapshot: str
     created_at: datetime
+
+    # 时间戳字段（前端使用，无时区歧义）
+    @computed_field
+    @property
+    def created_at_ts(self) -> int:
+        """创建时间戳（毫秒）"""
+        return int(self.created_at.timestamp() * 1000)
 
     class Config:
         from_attributes = True

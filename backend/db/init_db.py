@@ -6,7 +6,14 @@ from backend.db.session import engine, SessionLocal
 
 # 导入所有模型确保它们被 SQLAlchemy 注册
 from backend.models.user import User, UserSettings
-from backend.models.dimension import System, SystemLog, SystemAction, SYSTEM_TYPES, DEFAULT_SYSTEM_DETAILS
+from backend.models.dimension import (
+    System,
+    SystemLog,
+    SystemAction,
+    MealDeviation,
+    SYSTEM_TYPES,
+    DEFAULT_SYSTEM_DETAILS
+)
 from backend.models.diary import Diary, DiaryAttachment, DiaryEditHistory
 from backend.models.insight import Insight
 from backend.models.record import DailyRecord

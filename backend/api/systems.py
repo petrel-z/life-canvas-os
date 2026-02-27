@@ -1,47 +1,90 @@
-"""系统管理 API 接口（八维系统）"""
+"""饮食系统 API 接口"""
 from fastapi import APIRouter, HTTPException, Depends, status, Query
 from sqlalchemy.orm import Session
-from typing import Optional, Literal
+from typing import Optional
 
 from backend.db.session import get_db
 from backend.services.system_service import SystemService
 from backend.schemas.system import (
-    SystemResponse,
-    SystemScoreUpdate,
-    SystemScoreUpdateResponse,
-    SystemLogCreate,
-    SystemLogResponse,
-    SystemActionCreate,
-    SystemActionUpdate,
-    SystemActionResponse,
-    SystemActionDeleteResponse,
+    FuelBaseline,
+    FuelBaselineUpdate,
+    FuelStatistics,
+    MealDeviationCreate,
+    MealDeviationUpdate,
+    MealDeviationResponse,
 )
 from backend.schemas.common import success_response, error_response
 
 
-router = APIRouter(prefix="/api/systems", tags=["systems"])
+router = APIRouter(prefix="/api/diet", tags=["diet-system"])
 
 
-# ============ 系统 CRUD ============
+# ============ 饮食基准管理 ============
 
-@router.get("")
-async def get_systems(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    sort_by: str = Query("score"),
-    sort_order: Literal["asc", "desc"] = Query("desc"),
+@router.get("/baseline")
+async def get_diet_baseline(db: Session = Depends(get_db)):
+    """
+    获取饮食基准
+
+    返回用户设置的早餐、午餐、晚餐和口味基准
+    """
+    data, status_code = SystemService.get_fuel_baseline(db)
+
+    if status_code >= 400:
+        raise HTTPException(
+            status_code=status_code,
+            detail=data
+        )
+
+    return success_response(
+        data=data["data"],
+        message=data["message"],
+        code=data["code"]
+    )
+
+
+@router.put("/baseline")
+async def update_diet_baseline(
+    request: FuelBaselineUpdate,
     db: Session = Depends(get_db)
 ):
     """
-    获取所有系统列表
+    更新饮食基准
+
+    支持部分更新，可以只更新某些字段
+    - breakfast: 早餐基准
+    - lunch: 午餐基准
+    - dinner: 晚餐基准
+    - taste: 口味偏好列表
     """
-    data, status_code = SystemService.get_systems(
-        db,
-        page=page,
-        page_size=page_size,
-        sort_by=sort_by,
-        sort_order=sort_order
+    data, status_code = SystemService.update_fuel_baseline(db, request)
+
+    if status_code >= 400:
+        raise HTTPException(
+            status_code=status_code,
+            detail=data
+        )
+
+    return success_response(
+        data=data["data"],
+        message=data["message"],
+        code=data["code"]
     )
+
+
+# ============ 偏离事件管理 ============
+
+@router.post("/deviations")
+async def create_deviation(
+    request: MealDeviationCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    创建偏离事件
+
+    记录饮食偏离基准的事件，只需填写偏离描述
+    """
+    data, status_code = SystemService.create_meal_deviation(db, request)
 
     if status_code >= 400:
         raise HTTPException(
@@ -51,100 +94,30 @@ async def get_systems(
 
     return success_response(
         data=data,
-        message="获取系统列表成功"
-    )
-
-
-@router.get("/{system_type}")
-async def get_system_detail(
-    system_type: str,
-    db: Session = Depends(get_db)
-):
-    """
-    获取系统详情
-    """
-    data, status_code = SystemService.get_system_detail(db, system_type)
-
-    if status_code >= 400:
-        raise HTTPException(
-            status_code=status_code,
-            detail=data
-        )
-
-    return success_response(
-        data=data,
-        message="获取系统详情成功"
-    )
-
-
-@router.patch("/{system_type}/score")
-async def update_system_score(
-    system_type: str,
-    request: SystemScoreUpdate,
-    db: Session = Depends(get_db)
-):
-    """
-    更新系统评分
-    """
-    data, status_code = SystemService.update_system_score(db, system_type, request.score)
-
-    if status_code >= 400:
-        raise HTTPException(
-            status_code=status_code,
-            detail=data
-        )
-
-    return success_response(
-        data=data,
-        message="评分更新成功"
-    )
-
-
-# ============ 系统日志 ============
-
-@router.post("/{system_type}/logs")
-async def create_system_log(
-    system_type: str,
-    request: SystemLogCreate,
-    db: Session = Depends(get_db)
-):
-    """
-    添加日志
-    """
-    data, status_code = SystemService.create_system_log(db, system_type, request)
-
-    if status_code >= 400:
-        raise HTTPException(
-            status_code=status_code,
-            detail=data
-        )
-
-    return success_response(
-        data=data,
-        message="日志创建成功",
+        message="偏离事件创建成功",
         code=status_code
     )
 
 
-@router.get("/{system_type}/logs")
-async def get_system_logs(
-    system_type: str,
+@router.get("/deviations")
+async def get_deviations(
+    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    sort_by: str = Query("created_at"),
-    sort_order: Literal["asc", "desc"] = Query("desc"),
     db: Session = Depends(get_db)
 ):
     """
-    获取日志列表
+    获取偏离事件列表
+
+    支持按日期范围过滤
     """
-    data, status_code = SystemService.get_system_logs(
+    data, status_code = SystemService.get_meal_deviations(
         db,
-        system_type,
+        start_date=start_date,
+        end_date=end_date,
         page=page,
-        page_size=page_size,
-        sort_by=sort_by,
-        sort_order=sort_order
+        page_size=page_size
     )
 
     if status_code >= 400:
@@ -155,22 +128,19 @@ async def get_system_logs(
 
     return success_response(
         data=data,
-        message="获取日志列表成功"
+        message="获取偏离事件成功"
     )
 
 
-# ============ 系统行动项 ============
-
-@router.post("/{system_type}/actions")
-async def create_system_action(
-    system_type: str,
-    request: SystemActionCreate,
+@router.get("/deviations/{deviation_id}")
+async def get_deviation(
+    deviation_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    添加行动项
+    获取单个偏离事件详情
     """
-    data, status_code = SystemService.create_system_action(db, system_type, request)
+    data, status_code = SystemService.get_meal_deviation(db, deviation_id)
 
     if status_code >= 400:
         raise HTTPException(
@@ -180,25 +150,24 @@ async def create_system_action(
 
     return success_response(
         data=data,
-        message="行动项创建成功",
-        code=status_code
+        message="获取偏离事件成功"
     )
 
 
-@router.patch("/{system_type}/actions/{action_id}")
-async def update_system_action(
-    system_type: str,
-    action_id: int,
-    request: SystemActionUpdate,
+@router.patch("/deviations/{deviation_id}")
+async def update_deviation(
+    deviation_id: int,
+    request: MealDeviationUpdate,
     db: Session = Depends(get_db)
 ):
     """
-    更新行动项
+    更新偏离事件
+
+    可以更新偏离描述
     """
-    data, status_code = SystemService.update_system_action(
+    data, status_code = SystemService.update_meal_deviation(
         db,
-        system_type,
-        action_id,
+        deviation_id,
         request
     )
 
@@ -210,20 +179,19 @@ async def update_system_action(
 
     return success_response(
         data=data,
-        message="行动项更新成功"
+        message="偏离事件更新成功"
     )
 
 
-@router.delete("/{system_type}/actions/{action_id}")
-async def delete_system_action(
-    system_type: str,
-    action_id: int,
+@router.delete("/deviations/{deviation_id}")
+async def delete_deviation(
+    deviation_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    删除行动项
+    删除偏离事件
     """
-    data, status_code = SystemService.delete_system_action(db, system_type, action_id)
+    data, status_code = SystemService.delete_meal_deviation(db, deviation_id)
 
     if status_code >= 400:
         raise HTTPException(
@@ -233,5 +201,31 @@ async def delete_system_action(
 
     return success_response(
         data=data,
-        message="行动项删除成功"
+        message="偏离事件删除成功"
+    )
+
+
+# ============ 统计信息 ============
+
+@router.get("/statistics")
+async def get_diet_statistics(
+    db: Session = Depends(get_db)
+):
+    """
+    获取饮食统计信息
+
+    包括总偏离次数、本月偏离次数、最近偏离时间等
+    """
+    data, status_code = SystemService.get_fuel_statistics(db)
+
+    if status_code >= 400:
+        raise HTTPException(
+            status_code=status_code,
+            detail=data
+        )
+
+    return success_response(
+        data=data["data"],
+        message=data["message"],
+        code=data["code"]
     )

@@ -1,14 +1,87 @@
 """系统相关 Schema（八维系统）"""
-from pydantic import BaseModel, Field
-from typing import Optional, Literal, Any, Dict
+from pydantic import BaseModel, Field, field_validator, computed_field
+from typing import Optional, Literal, Any, Dict, List
 from datetime import datetime
 
 
 # 系统类型
 SystemType = Literal[
     "FUEL", "PHYSICAL", "INTELLECTUAL", "OUTPUT",
-    "RECOVERY", "ASSET", "CONNECTION", "ENVIRONMENT"
+    "DREAM", "ASSET", "CONNECTION", "ENVIRONMENT"
 ]
+
+
+# ============ 饮食系统 ============
+
+class MealItem(BaseModel):
+    """餐食项"""
+    name: str = Field(..., description="食物名称")
+    amount: str = Field(..., description="分量（如：1碗、200g等）")
+    calories: Optional[int] = Field(None, description="卡路里（可选）")
+
+
+class FuelBaseline(BaseModel):
+    """饮食基准"""
+    breakfast: List[MealItem] = Field(default_factory=list, description="早餐基准")
+    lunch: List[MealItem] = Field(default_factory=list, description="午餐基准")
+    dinner: List[MealItem] = Field(default_factory=list, description="晚餐基准")
+    taste: List[str] = Field(default_factory=list, description="口味偏好（如：清淡、微辣、麻辣等）")
+
+
+class FuelBaselineUpdate(BaseModel):
+    """更新饮食基准"""
+    breakfast: Optional[List[MealItem]] = Field(None, description="早餐基准")
+    lunch: Optional[List[MealItem]] = Field(None, description="午餐基准")
+    dinner: Optional[List[MealItem]] = Field(None, description="晚餐基准")
+    taste: Optional[List[str]] = Field(None, description="口味偏好")
+
+
+# ============ 偏离事件 ============
+
+class MealDeviationCreate(BaseModel):
+    """创建偏离事件"""
+    description: str = Field(..., description="偏离描述，如：多吃了零食、没有吃早餐")
+    occurred_at: Optional[datetime] = Field(None, description="发生时间（默认当前时间）")
+
+
+class MealDeviationUpdate(BaseModel):
+    """更新偏离事件"""
+    description: Optional[str] = Field(None, description="偏离描述")
+
+
+class MealDeviationResponse(BaseModel):
+    """偏离事件响应"""
+    id: int
+    system_id: int
+    description: str
+    occurred_at: datetime
+    created_at: datetime
+
+    # 时间戳字段（前端使用，无时区歧义）
+    @computed_field
+    @property
+    def occurred_at_ts(self) -> int:
+        """发生时间戳（毫秒）"""
+        return int(self.occurred_at.timestamp() * 1000)
+
+    @computed_field
+    @property
+    def created_at_ts(self) -> int:
+        """创建时间戳（毫秒）"""
+        return int(self.created_at.timestamp() * 1000)
+
+    class Config:
+        from_attributes = True
+
+
+class FuelStatistics(BaseModel):
+    """饮食统计"""
+    total_deviations: int = Field(..., description="总偏离次数")
+    monthly_deviations: int = Field(..., description="本月偏离次数")
+    latest_deviation: Optional[datetime] = Field(None, description="最近一次偏离时间")
+
+
+# ============ 系统 ============
 
 
 # ============ 系统 ============

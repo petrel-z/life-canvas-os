@@ -1,27 +1,33 @@
 """
-系统服务 - 八维系统管理业务逻辑
-"""
-from typing import Optional, Tuple, List, Literal
-from sqlalchemy.orm import Session
+饮食系统服务 - 饮食管理业务逻辑
 
-from backend.models.dimension import System, SystemLog, SystemAction, SYSTEM_TYPES, DEFAULT_SYSTEM_DETAILS
+支持功能：
+- 饮食基准的增删改查（早餐、午餐、晚餐、口味）
+- 偏离事件的增删改查
+- 饮食统计信息
+"""
+from typing import Optional, Tuple
+from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+from sqlalchemy import and_
+
+from backend.models.dimension import System, MealDeviation, DEFAULT_SYSTEM_DETAILS
 from backend.models.user import User
 from backend.schemas.system import (
-    SystemResponse,
-    SystemScoreUpdate,
-    SystemScoreUpdateResponse,
-    SystemLogCreate,
-    SystemLogResponse,
-    SystemActionCreate,
-    SystemActionUpdate,
-    SystemActionResponse,
-    SystemActionDeleteResponse,
+    FuelBaseline,
+    FuelBaselineUpdate,
+    FuelStatistics,
+    MealItem,
+    MealDeviationCreate,
+    MealDeviationUpdate,
+    MealDeviationResponse,
 )
-from backend.schemas.common import error_response, PaginatedResponse
+from backend.schemas.common import error_response, success_response, PaginatedResponse
+import json
 
 
 class SystemService:
-    """系统服务类"""
+    """饮食系统服务类"""
 
     @staticmethod
     def get_user(db: Session) -> Optional[User]:
@@ -29,19 +35,19 @@ class SystemService:
         return db.query(User).first()
 
     @staticmethod
-    def get_or_create_system(db: Session, user_id: int, system_type: str) -> System:
-        """获取或创建系统"""
+    def get_or_create_fuel_system(db: Session, user_id: int) -> System:
+        """获取或创建饮食系统"""
         system = db.query(System).filter(
             System.user_id == user_id,
-            System.type == system_type
+            System.type == "FUEL"
         ).first()
 
         if not system:
             system = System(
                 user_id=user_id,
-                type=system_type,
+                type="FUEL",
                 score=50,
-                details=DEFAULT_SYSTEM_DETAILS.get(system_type, {})
+                details=DEFAULT_SYSTEM_DETAILS.get("FUEL", {})
             )
             db.add(system)
             db.commit()
@@ -49,314 +55,336 @@ class SystemService:
 
         return system
 
-    @staticmethod
-    def ensure_all_systems_exist(db: Session, user_id: int):
-        """确保所有系统都已创建"""
-        for system_type in SYSTEM_TYPES:
-            SystemService.get_or_create_system(db, user_id, system_type)
+    # ============ 饮食基准管理 ============
 
     @staticmethod
-    def get_systems(
-        db: Session,
-        page: int = 1,
-        page_size: int = 20,
-        sort_by: str = "score",
-        sort_order: Literal["asc", "desc"] = "desc"
-    ) -> Tuple[dict, int]:
+    def get_fuel_baseline(db: Session) -> Tuple[dict, int]:
         """
-        获取所有系统列表
+        获取饮食基准
 
         Returns:
             (response_data, status_code)
         """
         user = SystemService.get_user(db)
         if not user:
-            # 如果用户不存在，先创建
-            from backend.services.auth_service import AuthService
-            user = AuthService.create_default_user(db)
+            return error_response(message="用户不存在", code=404), 404
 
-        # 确保所有系统存在
-        SystemService.ensure_all_systems_exist(db, user.id)
+        system = SystemService.get_or_create_fuel_system(db, user.id)
 
-        # 构建查询
-        query = db.query(System).filter(System.user_id == user.id)
+        # 获取当前基准配置
+        details = system.details or {}
+        baseline = FuelBaseline(
+            breakfast=_parse_meal_items(details.get("baseline_breakfast", "[]")),
+            lunch=_parse_meal_items(details.get("baseline_lunch", "[]")),
+            dinner=_parse_meal_items(details.get("baseline_dinner", "[]")),
+            taste=details.get("baseline_taste", [])
+        )
 
-        # 排序
-        order_column = getattr(System, sort_by, System.created_at)
-        if sort_order == "desc":
-            query = query.order_by(order_column.desc())
-        else:
-            query = query.order_by(order_column.asc())
-
-        # 分页
-        total = query.count()
-        offset = (page - 1) * page_size
-        systems = query.offset(offset).limit(page_size).all()
-
-        # 转换为响应格式
-        items = [SystemResponse.model_validate(s) for s in systems]
-        paginated = PaginatedResponse.create(items, total, page, page_size)
-
-        return paginated.model_dump(), 200
+        return success_response(
+            data=baseline.model_dump(),
+            message="获取饮食基准成功"
+        ), 200
 
     @staticmethod
-    def get_system_detail(db: Session, system_type: str) -> Tuple[dict, int]:
+    def update_fuel_baseline(db: Session, request: FuelBaselineUpdate) -> Tuple[dict, int]:
         """
-        获取系统详情
+        更新饮食基准
 
         Returns:
             (response_data, status_code)
         """
-        # 验证系统类型
-        if system_type not in SYSTEM_TYPES:
-            return error_response(
-                message="系统不存在",
-                code=404,
-                data={
-                    "resource": "System",
-                    "identifier": system_type
-                }
-            ), 404
-
         user = SystemService.get_user(db)
         if not user:
-            return error_response(
-                message="用户不存在",
-                code=404
-            ), 404
+            return error_response(message="用户不存在", code=404), 404
 
-        system = SystemService.get_or_create_system(db, user.id, system_type)
+        system = SystemService.get_or_create_fuel_system(db, user.id)
 
-        return SystemResponse.model_validate(system).model_dump(), 200
+        # 获取当前配置
+        details = system.details or {}
 
-    @staticmethod
-    def update_system_score(db: Session, system_type: str, score: int) -> Tuple[dict, int]:
-        """
-        更新系统评分
+        # 更新指定的基准
+        if request.breakfast is not None:
+            details["baseline_breakfast"] = json.dumps([item.model_dump() for item in request.breakfast], ensure_ascii=False)
+        if request.lunch is not None:
+            details["baseline_lunch"] = json.dumps([item.model_dump() for item in request.lunch], ensure_ascii=False)
+        if request.dinner is not None:
+            details["baseline_dinner"] = json.dumps([item.model_dump() for item in request.dinner], ensure_ascii=False)
+        if request.taste is not None:
+            details["baseline_taste"] = request.taste
 
-        Returns:
-            (response_data, status_code)
-        """
-        if system_type not in SYSTEM_TYPES:
-            return error_response(
-                message="系统不存在",
-                code=404
-            ), 404
-
-        user = SystemService.get_user(db)
-        if not user:
-            return error_response(
-                message="用户不存在",
-                code=404
-            ), 404
-
-        system = SystemService.get_or_create_system(db, user.id, system_type)
-        old_score = system.score
-        system.score = score
+        system.details = details
         db.commit()
         db.refresh(system)
 
-        return SystemScoreUpdateResponse(
-            id=system.id,
-            type=system_type,
-            old_score=old_score,
-            new_score=score,
-            updated_at=system.updated_at
-        ).model_dump(), 200
+        return SystemService.get_fuel_baseline(db)
+
+    # ============ 偏离事件管理 ============
 
     @staticmethod
-    def create_system_log(db: Session, system_type: str, request: SystemLogCreate) -> Tuple[dict, int]:
+    def create_meal_deviation(db: Session, request: MealDeviationCreate) -> Tuple[dict, int]:
         """
-        添加日志
+        创建偏离事件
 
         Returns:
             (response_data, status_code)
         """
-        if system_type not in SYSTEM_TYPES:
-            return error_response(
-                message="系统不存在",
-                code=404
-            ), 404
-
         user = SystemService.get_user(db)
         if not user:
-            return error_response(
-                message="用户不存在",
-                code=404
-            ), 404
+            return error_response(message="用户不存在", code=404), 404
 
-        system = SystemService.get_or_create_system(db, user.id, system_type)
+        system = SystemService.get_or_create_fuel_system(db, user.id)
 
-        log = SystemLog(
+        deviation = MealDeviation(
             system_id=system.id,
-            label=request.label,
-            value=request.value,
-            meta_data=request.meta_data
+            description=request.description,
+            occurred_at=request.occurred_at or datetime.now()
         )
-        db.add(log)
+        db.add(deviation)
         db.commit()
-        db.refresh(log)
+        db.refresh(deviation)
 
-        return SystemLogResponse.model_validate(log).model_dump(), 201
+        # 更新系统统计
+        SystemService._update_fuel_statistics(db, system)
+
+        return MealDeviationResponse.model_validate(deviation).model_dump(), 201
 
     @staticmethod
-    def get_system_logs(
+    def get_meal_deviations(
         db: Session,
-        system_type: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
         page: int = 1,
-        page_size: int = 20,
-        sort_by: str = "created_at",
-        sort_order: Literal["asc", "desc"] = "desc"
+        page_size: int = 20
     ) -> Tuple[dict, int]:
         """
-        获取日志列表
+        获取偏离事件列表
+
+        Args:
+            start_date: 开始日期 (YYYY-MM-DD)
+            end_date: 结束日期 (YYYY-MM-DD)
 
         Returns:
             (response_data, status_code)
         """
-        if system_type not in SYSTEM_TYPES:
-            return error_response(
-                message="系统不存在",
-                code=404
-            ), 404
-
         user = SystemService.get_user(db)
         if not user:
-            return error_response(
-                message="用户不存在",
-                code=404
-            ), 404
+            return error_response(message="用户不存在", code=404), 404
 
-        system = SystemService.get_or_create_system(db, user.id, system_type)
+        system = SystemService.get_or_create_fuel_system(db, user.id)
 
         # 构建查询
-        query = db.query(SystemLog).filter(SystemLog.system_id == system.id)
+        query = db.query(MealDeviation).filter(MealDeviation.system_id == system.id)
+
+        # 日期范围过滤
+        if start_date:
+            try:
+                target_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+                query = query.filter(MealDeviation.occurred_at >= target_date)
+            except ValueError:
+                return error_response(message="开始日期格式错误，请使用 YYYY-MM-DD 格式", code=400), 400
+
+        if end_date:
+            try:
+                target_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+                next_date = target_date + timedelta(days=1)
+                query = query.filter(MealDeviation.occurred_at < next_date)
+            except ValueError:
+                return error_response(message="结束日期格式错误，请使用 YYYY-MM-DD 格式", code=400), 400
 
         # 排序
-        order_column = getattr(SystemLog, sort_by, SystemLog.created_at)
-        if sort_order == "desc":
-            query = query.order_by(order_column.desc())
-        else:
-            query = query.order_by(order_column.asc())
+        query = query.order_by(MealDeviation.occurred_at.desc())
 
         # 分页
         total = query.count()
         offset = (page - 1) * page_size
-        logs = query.offset(offset).limit(page_size).all()
+        deviations = query.offset(offset).limit(page_size).all()
 
-        items = [SystemLogResponse.model_validate(log) for log in logs]
+        items = [MealDeviationResponse.model_validate(d).model_dump() for d in deviations]
         paginated = PaginatedResponse.create(items, total, page, page_size)
 
         return paginated.model_dump(), 200
 
     @staticmethod
-    def create_system_action(db: Session, system_type: str, request: SystemActionCreate) -> Tuple[dict, int]:
+    def get_meal_deviation(db: Session, deviation_id: int) -> Tuple[dict, int]:
         """
-        添加行动项
+        获取单个偏离事件详情
 
         Returns:
             (response_data, status_code)
         """
-        if system_type not in SYSTEM_TYPES:
-            return error_response(
-                message="系统不存在",
-                code=404
-            ), 404
-
         user = SystemService.get_user(db)
         if not user:
-            return error_response(
-                message="用户不存在",
-                code=404
-            ), 404
+            return error_response(message="用户不存在", code=404), 404
 
-        system = SystemService.get_or_create_system(db, user.id, system_type)
+        system = SystemService.get_or_create_fuel_system(db, user.id)
 
-        action = SystemAction(
-            system_id=system.id,
-            text=request.text,
-            completed=1 if request.completed else 0
-        )
-        db.add(action)
-        db.commit()
-        db.refresh(action)
+        deviation = db.query(MealDeviation).filter(
+            MealDeviation.id == deviation_id,
+            MealDeviation.system_id == system.id
+        ).first()
 
-        return SystemActionResponse.model_validate(action).model_dump(), 201
+        if not deviation:
+            return error_response(message="偏离事件不存在", code=404), 404
+
+        return MealDeviationResponse.model_validate(deviation).model_dump(), 200
 
     @staticmethod
-    def update_system_action(
+    def update_meal_deviation(
         db: Session,
-        system_type: str,
-        action_id: int,
-        request: SystemActionUpdate
+        deviation_id: int,
+        request: MealDeviationUpdate
     ) -> Tuple[dict, int]:
         """
-        更新行动项
+        更新偏离事件
 
         Returns:
             (response_data, status_code)
         """
         user = SystemService.get_user(db)
         if not user:
-            return error_response(
-                message="用户不存在",
-                code=404
-            ), 404
+            return error_response(message="用户不存在", code=404), 404
 
-        system = SystemService.get_or_create_system(db, user.id, system_type)
+        system = SystemService.get_or_create_fuel_system(db, user.id)
 
-        action = db.query(SystemAction).filter(
-            SystemAction.id == action_id,
-            SystemAction.system_id == system.id
+        deviation = db.query(MealDeviation).filter(
+            MealDeviation.id == deviation_id,
+            MealDeviation.system_id == system.id
         ).first()
 
-        if not action:
-            return error_response(
-                message="行动项不存在",
-                code=404
-            ), 404
+        if not deviation:
+            return error_response(message="偏离事件不存在", code=404), 404
 
         # 更新字段
-        if request.text is not None:
-            action.text = request.text
-        if request.completed is not None:
-            action.completed = 1 if request.completed else 0
+        if request.description is not None:
+            deviation.description = request.description
 
         db.commit()
-        db.refresh(action)
+        db.refresh(deviation)
 
-        return SystemActionResponse.model_validate(action).model_dump(), 200
+        return MealDeviationResponse.model_validate(deviation).model_dump(), 200
 
     @staticmethod
-    def delete_system_action(db: Session, system_type: str, action_id: int) -> Tuple[dict, int]:
+    def delete_meal_deviation(db: Session, deviation_id: int) -> Tuple[dict, int]:
         """
-        删除行动项
+        删除偏离事件
 
         Returns:
             (response_data, status_code)
         """
         user = SystemService.get_user(db)
         if not user:
-            return error_response(
-                message="用户不存在",
-                code=404
-            ), 404
+            return error_response(message="用户不存在", code=404), 404
 
-        system = SystemService.get_or_create_system(db, user.id, system_type)
+        system = SystemService.get_or_create_fuel_system(db, user.id)
 
-        action = db.query(SystemAction).filter(
-            SystemAction.id == action_id,
-            SystemAction.system_id == system.id
+        deviation = db.query(MealDeviation).filter(
+            MealDeviation.id == deviation_id,
+            MealDeviation.system_id == system.id
         ).first()
 
-        if not action:
-            return error_response(
-                message="行动项不存在",
-                code=404
-            ), 404
+        if not deviation:
+            return error_response(message="偏离事件不存在", code=404), 404
 
-        deleted_id = action.id
-        db.delete(action)
+        deleted_id = deviation.id
+        db.delete(deviation)
         db.commit()
 
-        return SystemActionDeleteResponse(deleted_id=deleted_id).model_dump(), 200
+        # 更新系统统计
+        SystemService._update_fuel_statistics(db, system)
+
+        return {"deleted_id": deleted_id}, 200
+
+    # ============ 统计信息 ============
+
+    @staticmethod
+    def get_fuel_statistics(db: Session) -> Tuple[dict, int]:
+        """
+        获取饮食统计信息
+
+        Returns:
+            (response_data, status_code)
+        """
+        user = SystemService.get_user(db)
+        if not user:
+            return error_response(message="用户不存在", code=404), 404
+
+        system = SystemService.get_or_create_fuel_system(db, user.id)
+
+        # 获取所有偏离事件
+        deviations = db.query(MealDeviation).filter(
+            MealDeviation.system_id == system.id
+        ).all()
+
+        # 计算统计数据
+        total_deviations = len(deviations)
+
+        # 计算本月偏差
+        now = datetime.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        monthly_deviations = sum(
+            1 for d in deviations
+            if d.occurred_at >= month_start
+        )
+
+        # 获取最近一次偏离时间
+        latest_deviation = None
+        if deviations:
+            latest_deviation = max(d.occurred_at for d in deviations)
+
+        stats = FuelStatistics(
+            total_deviations=total_deviations,
+            monthly_deviations=monthly_deviations,
+            latest_deviation=latest_deviation
+        )
+
+        return success_response(
+            data=stats.model_dump(),
+            message="获取饮食统计成功"
+        ), 200
+
+    @staticmethod
+    def _update_fuel_statistics(db: Session, system: System):
+        """
+        更新饮食系统统计（内部方法）
+
+        更新偏离事件统计数据
+        """
+        # 获取偏离事件统计
+        deviations = db.query(MealDeviation).filter(
+            MealDeviation.system_id == system.id
+        ).all()
+
+        total_deviations_count = len(deviations)
+
+        # 计算本月偏差
+        now = datetime.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        monthly_deviations = sum(
+            1 for d in deviations
+            if d.occurred_at >= month_start
+        )
+
+        # 更新系统详情
+        details = system.details or {}
+        details["total_deviations"] = total_deviations_count
+        details["monthly_deviations"] = monthly_deviations
+
+        # 计算一致性分数（偏离越少分数越高）
+        # 基础100分，每次偏离扣2分，最低0分
+        consistency_score = max(0, 100 - total_deviations_count * 2)
+        details["consistency"] = consistency_score
+
+        system.details = details
+        system.score = consistency_score
+        db.commit()
+
+
+# ============ 辅助函数 ============
+
+def _parse_meal_items(json_str: str) -> list[MealItem]:
+    """解析餐食项 JSON 字符串"""
+    try:
+        data = json.loads(json_str)
+        return [MealItem(**item) for item in data]
+    except (json.JSONDecodeError, TypeError):
+        return []

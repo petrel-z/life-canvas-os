@@ -37,6 +37,7 @@ if IS_DEV:
     from backend.api.journals import router as journals_router
     from backend.api.insights import router as insights_router
     from backend.api.data import router as data_router
+    from backend.api.timeline import router as timeline_router
 
     # 导入中间件和异常处理
     from backend.core.middleware import (
@@ -87,6 +88,7 @@ if IS_DEV:
     app.include_router(journals_router, tags=["journals"])
     app.include_router(insights_router, tags=["insights"])
     app.include_router(data_router, tags=["data-management"])
+    app.include_router(timeline_router, tags=["timeline"])
 
     @app.get("/")
     async def root():

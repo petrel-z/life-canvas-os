@@ -86,14 +86,10 @@ class UserService:
                 code=404
             ), 404
 
-        # 确保有设置
-        if not user.settings:
-            settings = UserSettings(user_id=user.id)
-            db.add(settings)
-            db.commit()
-            db.refresh(user)
+        # 获取或创建设置
+        settings = UserService.get_or_create_settings(db, user.id)
 
-        return UserSettingsResponse.model_validate(user.settings).model_dump(), 200
+        return UserSettingsResponse.model_validate(settings).model_dump(), 200
 
     @staticmethod
     def update_user_settings(db: Session, update_data: UserSettingsUpdate) -> Tuple[dict, int]:
@@ -111,23 +107,19 @@ class UserService:
                 code=404
             ), 404
 
-        # 确保有设置
-        if not user.settings:
-            settings = UserSettings(user_id=user.id)
-            db.add(settings)
-            db.commit()
-            db.refresh(user)
+        # 获取或创建设置
+        settings = UserService.get_or_create_settings(db, user.id)
 
         # 更新字段
         update_dict = update_data.model_dump(exclude_unset=True)
         for field, value in update_dict.items():
-            if hasattr(user.settings, field):
-                setattr(user.settings, field, value)
+            if hasattr(settings, field):
+                setattr(settings, field, value)
 
         db.commit()
-        db.refresh(user)
+        db.refresh(settings)
 
-        return UserSettingsResponse.model_validate(user.settings).model_dump(), 200
+        return UserSettingsResponse.model_validate(settings).model_dump(), 200
 
     @staticmethod
     def save_ai_config(db: Session, provider: str, api_key: str, model: Optional[str] = None) -> Tuple[dict, int]:
@@ -147,6 +139,12 @@ class UserService:
 
         # 加密 API Key
         encrypted_key = UserService.encrypt_api_key(api_key)
+
+        if not model:
+            if provider.lower() == "deepseek":
+                model = "deepseek-chat"
+            elif provider.lower() == "doubao":
+                model = "doubao-seed-2-0-lite-260215"
 
         # 保存配置
         ai_config = {

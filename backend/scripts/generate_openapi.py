@@ -21,6 +21,7 @@ def create_app_for_docs():
     from backend.api.journals import router as journals_router
     from backend.api.insights import router as insights_router
     from backend.api.data import router as data_router
+    from backend.api.timeline import router as timeline_router
 
     app = FastAPI(
         title="Life Canvas OS API",
@@ -47,6 +48,7 @@ def create_app_for_docs():
     app.include_router(journals_router, tags=["journals"])
     app.include_router(insights_router, tags=["insights"])
     app.include_router(data_router, tags=["data-management"])
+    app.include_router(timeline_router, tags=["timeline"])
 
     return app
 
@@ -156,6 +158,11 @@ def generate_openapi():
             "name": "health",
             "description": "健康检查接口",
             "x-displayName": "健康检查"
+        },
+        {
+            "name": "timeline",
+            "description": "审计时间轴接口（聚合日记和饮食事件）",
+            "x-displayName": "审计时间轴"
         }
     ]
 
@@ -230,7 +237,10 @@ def enhance_for_apifox(schema: dict, output_path: Path):
         "import_data_api_data_import_post": "导入数据",
         "list_backups_api_data_backups_get": "列出备份",
         "create_backup_api_data_backup_create_post": "创建备份",
-        "health_check_api_data_health_get": "数据健康检查"
+        "health_check_api_data_health_get": "数据健康检查",
+
+        # 审计时间轴
+        "get_timeline_api_timeline_get": "获取审计时间轴"
     }
 
     # 操作 ID 到响应 schema 的映射
@@ -322,7 +332,10 @@ def enhance_for_apifox(schema: dict, output_path: Path):
             "status": {"type": "string"},
             "timestamp": {"type": "string"},
             "database": {"type": "object"}
-        }}
+        }},
+
+        # 审计时间轴
+        "get_timeline_api_timeline_get": {"$ref": "#/components/schemas/TimelineResponse"}
     }
 
     # Apifox 特定扩展
@@ -493,6 +506,38 @@ def enhance_for_apifox(schema: dict, output_path: Path):
                 "system_scores": {"type": "object"},
                 "provider_used": {"type": "string"},
                 "generated_at": {"type": "string", "format": "date-time"}
+            }
+        },
+        "TimelineResponse": {
+            "type": "object",
+            "properties": {
+                "timeline": {
+                    "type": "array",
+                    "items": {"$ref": "#/components/schemas/TimelineDateGroup"}
+                },
+                "total_events": {"type": "integer"},
+                "has_more": {"type": "boolean"}
+            }
+        },
+        "TimelineDateGroup": {
+            "type": "object",
+            "properties": {
+                "date": {"type": "string"},
+                "events": {
+                    "type": "array",
+                    "items": {"$ref": "#/components/schemas/TimelineEventItem"}
+                }
+            }
+        },
+        "TimelineEventItem": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "type": {"type": "string", "enum": ["diary", "diet"]},
+                "title": {"type": "string"},
+                "content": {"type": "string"},
+                "time": {"type": "string"},
+                "timestamp": {"type": "integer"}
             }
         }
     })

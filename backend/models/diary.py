@@ -1,7 +1,7 @@
 """日记模型"""
 from sqlalchemy import Column, Integer, String, Text, JSON, DateTime, ForeignKey
-from sqlalchemy.sql import func
 from backend.db.base import Base
+from backend.db.session import localnow_func
 
 
 class Diary(Base):
@@ -21,8 +21,8 @@ class Diary(Base):
     related_system = Column(String, nullable=True)  # 关联系统类型
     is_private = Column(Integer, default=0)  # 是否私密：0 或 1
 
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, server_default=localnow_func())
+    updated_at = Column(DateTime, server_default=localnow_func(), onupdate=localnow_func())
 
 
 class DiaryAttachment(Base):
@@ -38,7 +38,7 @@ class DiaryAttachment(Base):
     file_type = Column(String(50), nullable=False)  # 文件类型：image, pdf, docx, video
     file_size = Column(Integer, nullable=False)  # 文件大小（字节）
 
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, server_default=localnow_func())
 
 
 class DiaryEditHistory(Base):
@@ -52,7 +52,7 @@ class DiaryEditHistory(Base):
     title_snapshot = Column(String(200), nullable=False)
     content_snapshot = Column(Text, nullable=False)
 
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, server_default=localnow_func())
 
 
 # 情绪类型枚举

@@ -48,6 +48,14 @@ from .system import (
     SystemActionDeleteResponse,
     SystemListParams,
     SystemLogListParams,
+    # Diet System
+    MealItem,
+    FuelBaseline,
+    FuelBaselineUpdate,
+    FuelStatistics,
+    MealDeviationCreate,
+    MealDeviationUpdate,
+    MealDeviationResponse,
 )
 
 from .journal import (
@@ -120,6 +128,14 @@ __all__ = [
     "SystemActionDeleteResponse",
     "SystemListParams",
     "SystemLogListParams",
+    # Diet System
+    "MealItem",
+    "FuelBaseline",
+    "FuelBaselineUpdate",
+    "FuelStatistics",
+    "MealDeviationCreate",
+    "MealDeviationUpdate",
+    "MealDeviationResponse",
     # Journal
     "MoodType",
     "DiaryBase",

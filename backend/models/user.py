@@ -1,7 +1,8 @@
 """用户模型"""
-from sqlalchemy import Column, Integer, String, JSON, DateTime, Date
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, JSON, DateTime, Date, ForeignKey
+from sqlalchemy.orm import relationship
 from backend.db.base import Base
+from backend.db.session import localnow_func
 
 
 class User(Base):
@@ -30,8 +31,11 @@ class User(Base):
     # 结构示例: {"provider": "deepseek", "api_key": "encrypted_key", "model": "deepseek-chat"}
     ai_config = Column(JSON, default={})
 
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, server_default=localnow_func())
+    updated_at = Column(DateTime, server_default=localnow_func(), onupdate=localnow_func())
+
+    # 关系
+    settings = relationship("UserSettings", back_populates="user", uselist=False, foreign_keys="UserSettings.user_id")
 
 
 class UserSettings(Base):
@@ -39,7 +43,7 @@ class UserSettings(Base):
     __tablename__ = "user_settings"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True, default=1)  # 单用户应用，默认为 1
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, default=1)  # 单用户应用，默认为 1
 
     # 外观设置
     theme = Column(String, default="dark")  # light, dark, auto
@@ -57,5 +61,8 @@ class UserSettings(Base):
     show_year_progress = Column(Integer, default=1)  # 0 或 1
     show_weekday = Column(Integer, default=1)  # 0 或 1
 
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, server_default=localnow_func())
+    updated_at = Column(DateTime, server_default=localnow_func(), onupdate=localnow_func())
+
+    # 关系
+    user = relationship("User", back_populates="settings")
