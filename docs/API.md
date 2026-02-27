@@ -15,6 +15,7 @@
 - [用户配置](#用户配置)
 - [日记管理](#日记管理)
 - [AI 洞察](#ai-洞察)
+- [审计时间轴](#审计时间轴)
 - [数据管理](#数据管理)
 - [数据模型](#数据模型)
 
@@ -344,8 +345,10 @@
       "baseline_dinner": "{\"meal\":\"chicken\"}",
       "baseline_snacks": "[]"
     },
-    "created_at": "2026-02-06T10:00:00Z",
-    "updated_at": "2026-02-06T10:00:00Z"
+    "created_at": "2026-02-06T10:00:00",
+    "created_at_ts": 1772173800000,
+    "updated_at": "2026-02-06T10:00:00",
+    "updated_at_ts": 1772173800000
   },
   "timestamp": 1707219200000
 }
@@ -595,6 +598,454 @@
 
 ---
 
+### 9. 获取饮食基准
+
+**接口地址**：`GET /api/diet/baseline`
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "获取饮食基准成功",
+  "data": {
+    "breakfast": [
+      {
+        "name": "燕麦粥",
+        "amount": "1碗",
+        "calories": 300
+      }
+    ],
+    "lunch": [
+      {
+        "name": "鸡胸肉沙拉",
+        "amount": "200g",
+        "calories": 250
+      }
+    ],
+    "dinner": [
+      {
+        "name": "蒸鱼",
+        "amount": "200g",
+        "calories": 200
+      }
+    ],
+    "taste": ["清淡", "微辣"]
+  },
+  "timestamp": 1707219200000
+}
+```
+
+---
+
+### 10. 更新饮食基准
+
+**接口地址**：`PUT /api/diet/baseline`
+
+**请求参数**：
+```json
+{
+  "breakfast": [
+    {
+      "name": "全麦面包",
+      "amount": "2片",
+      "calories": 200
+    }
+  ],
+  "lunch": null,
+  "dinner": null,
+  "taste": ["清淡"]
+}
+```
+
+**参数说明**：只传需要修改的字段，null 表示不修改
+
+**成功响应（200）**：返回更新后的基准配置（格式同上）
+
+---
+
+### 11. 创建饮食偏离事件
+
+**接口地址**：`POST /api/diet/deviations`
+
+**请求参数**：
+```json
+{
+  "description": "加班太累，点了一份麻辣烫宵夜",
+  "occurred_at": "2026-02-26T22:30:00"
+}
+```
+
+**参数说明**：
+- `description`: 必填，偏离描述
+- `occurred_at`: 可选，发生时间（ISO 格式），默认当前时间
+
+**成功响应（201）**：
+```json
+{
+  "code": 201,
+  "message": "创建成功",
+  "data": {
+    "id": 10,
+    "system_id": 1,
+    "description": "加班太累，点了一份麻辣烫宵夜",
+    "occurred_at": "2026-02-26T22:30:00Z",
+    "occurred_at_ts": 1772173800000,
+    "created_at": "2026-02-26T22:30:00Z",
+    "created_at_ts": 1772173800000
+  },
+  "timestamp": 1707219200000
+}
+```
+
+---
+
+### 12. 获取饮食偏离事件列表
+
+**接口地址**：`GET /api/diet/deviations`
+
+**查询参数**：
+```typescript
+?start_date=2026-02-01&end_date=2026-02-28&page=1&page_size=20
+```
+
+**参数说明**：
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| start_date | String | 开始日期（YYYY-MM-DD） |
+| end_date | String | 结束日期（YYYY-MM-DD） |
+| page | Integer | 页码 |
+| page_size | Integer | 每页数量 |
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "items": [
+      {
+        "id": 10,
+        "system_id": 1,
+        "description": "加班太累，点了一份麻辣烫宵夜",
+        "occurred_at": "2026-02-26T22:30:00Z",
+        "occurred_at_ts": 1772173800000,
+        "created_at": "2026-02-26T22:30:00Z",
+        "created_at_ts": 1772173800000
+      }
+    ],
+    "total": 15,
+    "page": 1,
+    "page_size": 20,
+    "total_pages": 1,
+    "has_next": false,
+    "has_prev": false
+  },
+  "timestamp": 1707219200000
+}
+```
+
+---
+
+### 13. 获取饮食偏离事件详情
+
+**接口地址**：`GET /api/diet/deviations/{deviation_id}`
+
+**路径参数**：
+- `deviation_id`: 偏离事件 ID
+
+**成功响应（200）**：返回偏离事件详情（格式同上）
+
+---
+
+### 14. 更新饮食偏离事件
+
+**接口地址**：`PATCH /api/diet/deviations/{deviation_id}`
+
+**请求参数**：
+```json
+{
+  "description": "更新后的描述内容"
+}
+```
+
+**成功响应（200）**：返回更新后的偏离事件
+
+---
+
+### 15. 删除饮食偏离事件
+
+**接口地址**：`DELETE /api/diet/deviations/{deviation_id}`
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "删除成功",
+  "data": {
+    "deleted_id": 10
+  },
+  "timestamp": 1707219200000
+}
+```
+
+---
+
+### 16. 获取饮食统计信息
+
+**接口地址**：`GET /api/diet/statistics`
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "获取饮食统计成功",
+  "data": {
+    "total_deviations": 25,
+    "monthly_deviations": 5,
+    "latest_deviation": "2026-02-26T22:30:00Z"
+  },
+  "timestamp": 1707219200000
+}
+```
+
+---
+
+## 👤 用户配置
+
+**接口地址**：`DELETE /api/systems/{system_type}/actions/{id}`
+
+**路径参数**：
+- `system_type`: 系统类型
+- `id`: 行动项 ID
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "删除成功",
+  "data": {
+    "deleted_id": 456
+  },
+  "timestamp": 1707219200000
+}
+```
+
+---
+
+### 9. 获取饮食基准
+
+**接口地址**：`GET /api/diet/baseline`
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "获取饮食基准成功",
+  "data": {
+    "breakfast": [
+      {
+        "name": "燕麦粥",
+        "amount": "1碗",
+        "calories": 300
+      }
+    ],
+    "lunch": [
+      {
+        "name": "鸡胸肉沙拉",
+        "amount": "200g",
+        "calories": 250
+      }
+    ],
+    "dinner": [
+      {
+        "name": "蒸鱼",
+        "amount": "200g",
+        "calories": 200
+      }
+    ],
+    "taste": ["清淡", "微辣"]
+  },
+  "timestamp": 1707219200000
+}
+```
+
+---
+
+### 10. 更新饮食基准
+
+**接口地址**：`PUT /api/diet/baseline`
+
+**请求参数**：
+```json
+{
+  "breakfast": [
+    {
+      "name": "全麦面包",
+      "amount": "2片",
+      "calories": 200
+    }
+  ],
+  "lunch": null,
+  "dinner": null,
+  "taste": ["清淡"]
+}
+```
+
+**参数说明**：只传需要修改的字段，null 表示不修改
+
+**成功响应（200）**：返回更新后的基准配置（格式同上）
+
+---
+
+### 11. 创建饮食偏离事件
+
+**接口地址**：`POST /api/diet/deviations`
+
+**请求参数**：
+```json
+{
+  "description": "加班太累，点了一份麻辣烫宵夜",
+  "occurred_at": "2026-02-26T22:30:00"
+}
+```
+
+**参数说明**：
+- `description`: 必填，偏离描述
+- `occurred_at`: 可选，发生时间（ISO 格式），默认当前时间
+
+**成功响应（201）**：
+```json
+{
+  "code": 201,
+  "message": "创建成功",
+  "data": {
+    "id": 10,
+    "system_id": 1,
+    "description": "加班太累，点了一份麻辣烫宵夜",
+    "occurred_at": "2026-02-26T22:30:00Z",
+    "occurred_at_ts": 1772173800000,
+    "created_at": "2026-02-26T22:30:00Z",
+    "created_at_ts": 1772173800000
+  },
+  "timestamp": 1707219200000
+}
+```
+
+---
+
+### 12. 获取饮食偏离事件列表
+
+**接口地址**：`GET /api/diet/deviations`
+
+**查询参数**：
+```typescript
+?start_date=2026-02-01&end_date=2026-02-28&page=1&page_size=20
+```
+
+**参数说明**：
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| start_date | String | 开始日期（YYYY-MM-DD） |
+| end_date | String | 结束日期（YYYY-MM-DD） |
+| page | Integer | 页码 |
+| page_size | Integer | 每页数量 |
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "items": [
+      {
+        "id": 10,
+        "system_id": 1,
+        "description": "加班太累，点了一份麻辣烫宵夜",
+        "occurred_at": "2026-02-26T22:30:00Z",
+        "occurred_at_ts": 1772173800000,
+        "created_at": "2026-02-26T22:30:00Z",
+        "created_at_ts": 1772173800000
+      }
+    ],
+    "total": 15,
+    "page": 1,
+    "page_size": 20,
+    "total_pages": 1,
+    "has_next": false,
+    "has_prev": false
+  },
+  "timestamp": 1707219200000
+}
+```
+
+---
+
+### 13. 获取饮食偏离事件详情
+
+**接口地址**：`GET /api/diet/deviations/{deviation_id}`
+
+**路径参数**：
+- `deviation_id`: 偏离事件 ID
+
+**成功响应（200）**：返回偏离事件详情（格式同上）
+
+---
+
+### 14. 更新饮食偏离事件
+
+**接口地址**：`PATCH /api/diet/deviations/{deviation_id}`
+
+**请求参数**：
+```json
+{
+  "description": "更新后的描述内容"
+}
+```
+
+**成功响应（200）**：返回更新后的偏离事件
+
+---
+
+### 15. 删除饮食偏离事件
+
+**接口地址**：`DELETE /api/diet/deviations/{deviation_id}`
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "删除成功",
+  "data": {
+    "deleted_id": 10
+  },
+  "timestamp": 1707219200000
+}
+```
+
+---
+
+### 16. 获取饮食统计信息
+
+**接口地址**：`GET /api/diet/statistics`
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "获取饮食统计成功",
+  "data": {
+    "total_deviations": 25,
+    "monthly_deviations": 5,
+    "latest_deviation": "2026-02-26T22:30:00Z"
+  },
+  "timestamp": 1707219200000
+}
+```
+
+---
+
 ## 👤 用户配置
 
 ### 1. 获取用户信息
@@ -823,8 +1274,10 @@
     "tags": "[\"运动\",\"健康\"]",
     "related_system": "PHYSICAL",
     "is_private": 1,
-    "created_at": "2026-02-06T10:00:00Z",
-    "updated_at": "2026-02-06T10:00:00Z"
+    "created_at": "2026-02-06T10:00:00",
+    "created_at_ts": 1772173800000,
+    "updated_at": "2026-02-06T10:00:00",
+    "updated_at_ts": 1772173800000
   },
   "timestamp": 1707219200000
 }
@@ -1102,6 +1555,124 @@
 
 ---
 
+## 📅 审计时间轴
+
+### 1. 获取审计时间轴
+
+**接口地址**：`GET /api/timeline`
+
+**描述**：聚合日记和饮食偏离事件，按时间排序并按日期分组展示
+
+**查询参数**：
+```typescript
+?type=all&page=1&page_size=30
+```
+
+**参数说明**：
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| type | String | 否 | all | 事件类型过滤：all（全部）、diary（日记）、diet（饮食偏离） |
+| page | Integer | 否 | 1 | 页码，从 1 开始 |
+| page_size | Integer | 否 | 30 | 每页数量，最大 100 |
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "获取审计时间轴成功",
+  "data": {
+    "timeline": [
+      {
+        "date": "2026年02月26日",
+        "events": [
+          {
+            "id": "diet_2",
+            "type": "diet",
+            "title": "饮食偏离记录",
+            "content": "加班太累，忍不住点了一份超大份麻辣烫作为宵夜",
+            "time": "15:28",
+            "timestamp": 1772174229689
+          },
+          {
+            "id": "diary_1",
+            "type": "diary",
+            "title": "写了新日记",
+            "title": "今天完成了 Life Canvas OS 的初步构建",
+            "content": "看着那些雷达图，我第一次感觉到生活是可以被这样优雅地量化的",
+            "time": "16:28",
+            "timestamp": 1772173800000
+          }
+        ]
+      },
+      {
+        "date": "2026年02月25日",
+        "events": [
+          {
+            "id": "diet_1",
+            "type": "diet",
+            "title": "饮食偏离记录",
+            "content": "今天吃了太多甜点，需要调整饮食计划",
+            "time": "12:28",
+            "timestamp": 1772087328957
+          },
+          {
+            "id": "diary_2",
+            "type": "diary",
+            "title": "写了新日记",
+            "content": "阴雨天。在咖啡馆读完了《反脆弱》",
+            "time": "16:28",
+            "timestamp": 1772101680000
+          }
+        ]
+      }
+    ],
+    "total_events": 25,
+    "has_more": true
+  },
+  "timestamp": 1772175057524
+}
+```
+
+**字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| timeline | Array | 日期分组列表 |
+| timeline[].date | String | 日期字符串（格式：YYYY年MM月DD日） |
+| timeline[].events | Array | 该日期下的事件列表 |
+| events[].id | String | 事件唯一标识（格式：type_id，如 diet_1） |
+| events[].type | String | 事件类型（diary 或 diet） |
+| events[].title | String | 事件标题 |
+| events[].content | String | 事件内容 |
+| events[].time | String | 时间字符串（格式：HH:MM） |
+| events[].timestamp | Integer | 毫秒级时间戳，用于排序 |
+| total_events | Integer | 总事件数 |
+| has_more | Boolean | 是否有更多数据 |
+
+**筛选示例**：
+
+```bash
+# 获取全部事件
+GET /api/timeline
+
+# 仅获取日记
+GET /api/timeline?type=diary
+
+# 仅获取饮食偏离事件
+GET /api/timeline?type=diet
+
+# 分页获取
+GET /api/timeline?page=2&page_size=10
+```
+
+**排序说明**：
+- 事件按时间戳降序排列（最新事件在前）
+- 日期分组按日期降序排列（最新日期在前）
+- 同一日期内的事件按时间戳降序排列
+
+---
+
 ## 💾 数据管理
 
 ### 1. 导出数据
@@ -1213,7 +1784,7 @@ type SystemType =
   | "PHYSICAL"     // 运动系统
   | "INTELLECTUAL" // 智力系统
   | "OUTPUT"       // 输出系统
-  | "RECOVERY"     // 恢复系统
+  | "DREAM"        // 梦想系统
   | "ASSET"        // 资产系统
   | "CONNECTION"   // 连接系统
   | "ENVIRONMENT"; // 环境系统
@@ -1267,12 +1838,13 @@ type AIProvider = "deepseek" | "doubao" | "openai";
 ## 📝 注意事项
 
 1. 所有请求和响应使用 JSON 格式
-2. 时间字段使用 ISO 8601 格式（UTC）
-3. 时间戳字段为毫秒级 Unix 时间戳
+2. 时间字段使用 ISO 8601 格式（本地时间）
+3. 时间戳字段为毫秒级 Unix 时间戳（`*_ts` 后缀字段）
 4. 分页默认从第 1 页开始
 5. 更新接口（PATCH）只传需要修改的字段
 6. 开发环境基础 URL：`http://127.0.0.1:8000`
 7. 生产环境使用 IPC 通信
+8. 所有时间均使用本地时区（与用户电脑时区一致）
 
 ---
 

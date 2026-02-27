@@ -36,10 +36,10 @@ def set_sqlite_local_time(dbapi_conn, connection_record):
     if "sqlite" in settings.DATABASE_URL:
         from datetime import datetime
 
-        # 创建本地时间函数
+        # 创建本地时间函数（返回 ISO 格式字符串）
         def local_now():
-            """返回当前本地时间"""
-            return datetime.now()
+            """返回当前本地时间（ISO 格式字符串）"""
+            return datetime.now().isoformat()
 
         # 注册到 SQLite
         dbapi_conn.create_function("localnow", 0, local_now)

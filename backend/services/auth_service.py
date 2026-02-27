@@ -11,6 +11,16 @@ from backend.schemas.user import PinSetupResponse, PinVerifyResponse, AuthStatus
 from backend.schemas.common import error_response
 
 
+def _parse_datetime(dt):
+    """解析日期时间（处理字符串或datetime对象）"""
+    if dt is None:
+        return None
+    if isinstance(dt, str):
+        # SQLite 返回 ISO 格式字符串，需要解析
+        return datetime.fromisoformat(dt)
+    return dt
+
+
 class AuthService:
     """认证服务类"""
 
@@ -91,13 +101,21 @@ class AuthService:
             ), 424
 
         # 检查是否被锁定
-        if user.pin_locked_until and user.pin_locked_until > datetime.now():
-            remaining_seconds = int((user.pin_locked_until - datetime.now()).total_seconds())
-            return error_response(
-                message="PIN 已锁定",
-                code=429,
-                data={"remaining_seconds": remaining_seconds}
-            ), 429
+        locked_until = _parse_datetime(user.pin_locked_until)
+        if locked_until:
+            if locked_until > datetime.now():
+                # 仍在锁定中
+                remaining_seconds = int((locked_until - datetime.now()).total_seconds())
+                return error_response(
+                    message="PIN 已锁定",
+                    code=429,
+                    data={"remaining_seconds": remaining_seconds}
+                ), 429
+            else:
+                # 锁定已过期，重置失败次数和锁定状态
+                user.pin_attempts = 0
+                user.pin_locked_until = None
+                db.commit()
 
         # 验证 PIN
         if AuthService.verify_pin_hash(pin, user.pin_hash):
@@ -183,4 +201,5 @@ class AuthService:
         user = AuthService.get_user(db)
         if not user or not user.pin_locked_until:
             return False
-        return user.pin_locked_until > datetime.now()
+        locked_until = _parse_datetime(user.pin_locked_until)
+        return locked_until and locked_until > datetime.now()
