@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Beef, Plus, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
-import { Button } from '~/components/ui/button';
-import { Textarea } from '~/components/ui/textarea';
-import { Input } from '~/components/ui/input';
+import { Button } from '~/renderer/components/ui/button';
+import { Textarea } from '~/renderer/components/ui/textarea';
+import { Input } from '~/renderer/components/ui/input';
 
 export function FuelSystemPage() {
   const { state, updateState } = useApp();
@@ -15,7 +15,7 @@ export function FuelSystemPage() {
   const addDeviation = () => {
     if (!newDeviation.trim()) return;
     const deviation = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       timestamp: Date.now(),
       description: newDeviation,
       type: 'other' as const,

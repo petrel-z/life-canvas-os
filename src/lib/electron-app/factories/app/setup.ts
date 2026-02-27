@@ -1,8 +1,8 @@
 import { app, BrowserWindow } from 'electron'
 
-import { PLATFORM, ENVIRONMENT } from 'shared/constants'
+import { PLATFORM, ENVIRONMENT } from '~/shared/constants'
 import { ignoreConsoleWarnings } from '../../utils'
-import { makeAppId } from 'shared/utils'
+import { makeAppId } from '~/shared/utils'
 
 ignoreConsoleWarnings(['Manifest version 2 is deprecated'])
 

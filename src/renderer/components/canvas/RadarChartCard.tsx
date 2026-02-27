@@ -11,7 +11,11 @@ import { useApp } from '~/renderer/contexts/AppContext';
 import { DIMENSIONS } from '~/renderer/lib/constants';
 import { GlassCard } from '~/renderer/components/GlassCard';
 
-export function RadarChartCard() {
+export interface RadarChartCardProps {
+  className?: string;
+}
+
+export function RadarChartCard({ className }: RadarChartCardProps) {
   const { state } = useApp();
 
   // 准备雷达图数据
@@ -27,7 +31,7 @@ export function RadarChartCard() {
   const isDarkMode = document.documentElement.classList.contains('dark');
 
   return (
-    <GlassCard className="lg:col-span-2 min-h-[450px] relative overflow-hidden" title="八维生命平衡模型">
+    <GlassCard className={`lg:col-span-2 min-h-[450px] relative overflow-hidden ${className || ''}`} title="八维生命平衡模型">
       <div className="absolute inset-x-6 top-14 bottom-6">
         <ResponsiveContainer width="100%" height="100%" debounce={50}>
           <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>

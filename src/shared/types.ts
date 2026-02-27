@@ -1,16 +1,8 @@
 import type { BrowserWindow, IpcMainInvokeEvent } from 'electron'
 
-import type { registerRoute } from 'lib/electron-router-dom'
-
 export type BrowserWindowOrNull = Electron.BrowserWindow | null
 
-type Route = Parameters<typeof registerRoute>[0]
-
-export interface WindowProps extends Electron.BrowserWindowConstructorOptions {
-  id: Route['id']
-  query?: Route['query']
-}
-
+// Window management types for IPC window creation
 export interface WindowCreationByIPC {
   channel: string
   window(): BrowserWindowOrNull
@@ -52,11 +44,13 @@ export interface FuelSystemData {
 export interface JournalEntry {
   id: string;
   timestamp: number;
+  title?: string;
   content: string;
   mood: 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
   tags: string[];
   attachments: string[];
-  dimensionRefs?: DimensionType[];
+  linkedDimensions?: DimensionType[];
+  isPrivate?: boolean;
 }
 
 export interface AppState {

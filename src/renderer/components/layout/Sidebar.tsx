@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, LogOut, Sparkles } from 'lucide-react';
+import { ChevronRight, Lock, Sparkles } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '~/renderer/components/ui/avatar';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { NAV_ITEMS } from '~/renderer/lib/constants';
@@ -31,7 +31,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   return (
     <aside className="w-72 sidebar-glass liquid-glass h-screen border-r border-apple-border dark:border-white/5 flex flex-col p-6 z-10">
       {/* Logo */}
-      <div className="flex items-center gap-3 mb-10 group cursor-pointer">
+      {/* <div className="flex items-center gap-3 mb-10 group cursor-pointer">
         <div className="w-10 h-10 rounded-xl bg-apple-accent shadow-[0_0_20px_rgba(10,132,255,0.2)] flex items-center justify-center text-white">
           <Sparkles size={24} />
         </div>
@@ -43,7 +43,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             V1.0.0 TAHOE
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* 导航菜单 */}
       <nav className="flex-1 space-y-2">
@@ -66,31 +66,31 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         ))}
       </nav>
 
-      {/* 用户信息卡片 */}
-      <div className="mt-auto space-y-4">
-        <GlassCard className="!p-4 bg-white dark:bg-white/5 border border-apple-border dark:border-none shadow-apple-soft">
-          <div className="flex items-center gap-3">
-            <Avatar className="w-10 h-10 rounded-full bg-apple-bgSidebar dark:bg-indigo-500/20 border border-apple-border dark:border-indigo-500/30">
-              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${state.user.name}`} />
-              <AvatarFallback>{state.user.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold truncate text-apple-textMain dark:text-white">
-                {state.user.name}
-              </div>
-              <div className="text-[10px] text-apple-textTer dark:text-white/30 truncate">
-                {state.user.mbti} • {state.user.lifespan}岁
-              </div>
+      {/* 用户信息 */}
+      <div className="mt-auto pt-6 border-t border-apple-border dark:border-white/10">
+        <div className="flex items-center gap-3 px-2">
+          <Avatar className="w-11 h-11 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 border-2 border-white dark:border-white/20 shadow-lg">
+            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${state.user.name}`} />
+            <AvatarFallback className="bg-gradient-to-br from-apple-accent to-blue-600 text-white font-bold text-base">
+              {state.user.name.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold truncate text-apple-textMain dark:text-white">
+              {state.user.name}
             </div>
-            <button
-              onClick={lock}
-              className="text-apple-textTer hover:text-apple-textMain dark:text-white/20 dark:hover:text-white transition-colors"
-              title="锁定应用"
-            >
-              <LogOut size={16} />
-            </button>
+            <div className="text-xs text-apple-textTer dark:text-white/40 truncate">
+              {state.user.mbti} • {state.user.lifespan}岁
+            </div>
           </div>
-        </GlassCard>
+          <button
+            onClick={lock}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-apple-textSec hover:text-apple-textMain dark:text-white/40 dark:hover:text-white hover:bg-apple-bgHover dark:hover:bg-white/10 transition-all"
+            title="锁定应用"
+          >
+            <Lock size={18} />
+          </button>
+        </div>
       </div>
     </aside>
   );

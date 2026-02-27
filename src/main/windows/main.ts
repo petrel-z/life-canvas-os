@@ -1,7 +1,7 @@
 import { BrowserWindow, app } from 'electron'
 import { join } from 'node:path'
 
-import { ENVIRONMENT } from 'shared/constants'
+import { ENVIRONMENT } from '~/shared/constants'
 
 export async function MainWindow() {
   console.log('[MainWindow] Creating window...')

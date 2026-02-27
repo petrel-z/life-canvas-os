@@ -69,7 +69,14 @@ export class PythonManager {
 
     // 监听 stderr（日志输出）
     this.process.stderr?.on('data', (data) => {
-      console.error('[Python stderr]', data.toString())
+      try {
+        console.error('[Python stderr]', data.toString())
+      } catch (error) {
+        // 忽略管道错误，防止应用崩溃
+        if ((error as any)?.code !== 'EPIPE') {
+          throw error
+        }
+      }
     })
 
     // 进程退出处理
@@ -175,8 +182,9 @@ export class PythonManager {
       const jsonStr = JSON.stringify(request)
       const message = `${Buffer.byteLength(jsonStr)}\n${jsonStr}`
 
-      if (this.process?.stdin.writable) {
-        this.process.stdin.write(message)
+      const process = this.process
+      if (process?.stdin && process.stdin.writable) {
+        process.stdin.write(message)
       } else {
         clearTimeout(timer)
         this.responseCallbacks.delete(id)

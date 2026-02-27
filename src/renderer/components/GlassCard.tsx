@@ -1,5 +1,5 @@
-import React from 'react';
-import { cn } from '~/renderer/lib/utils';
+import React from "react";
+import { cn } from "~/renderer/lib/utils";
 
 export interface GlassCardProps {
   children: React.ReactNode;
@@ -8,9 +8,14 @@ export interface GlassCardProps {
   title?: string;
 }
 
-export function GlassCard({ children, className, onClick, title }: GlassCardProps) {
+export function GlassCard({
+  children,
+  className,
+  onClick,
+  title,
+}: GlassCardProps) {
   return (
-    <div 
+    <div
       onClick={onClick}
       className={cn(
         "liquid-glass rounded-2xl p-6 transition-all duration-300 hover:border-apple-accent/20 dark:hover:border-white/20 group",
@@ -23,9 +28,7 @@ export function GlassCard({ children, className, onClick, title }: GlassCardProp
           {title}
         </h3>
       )}
-      <div className="text-apple-textMain dark:text-white">
-        {children}
-      </div>
+      <div className="text-apple-textMain dark:text-white">{children}</div>
     </div>
   );
 }

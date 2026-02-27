@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   User,
   Cpu,
@@ -17,66 +17,76 @@ import {
   Moon,
   Smartphone,
   ChevronRight,
-} from 'lucide-react';
-import { useApp } from '~/renderer/contexts/AppContext';
-import { GlassCard } from '~/renderer/components/GlassCard';
-import { Input } from '~/components/ui/input';
-import { Button } from '~/components/ui/button';
-import { Switch } from '~/components/ui/switch';
-import { Slider } from '~/components/ui/slider';
-import { Badge } from '~/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
-import { Label } from '~/components/ui/label';
+  Shield,
+  KeyRound,
+  AlertTriangle,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { useApp } from "~/renderer/contexts/AppContext";
+import { GlassCard } from "~/renderer/components/GlassCard";
+import { Input } from "~/renderer/components/ui/input";
+import { Button } from "~/renderer/components/ui/button";
+import { Switch } from "~/renderer/components/ui/switch";
+import { Slider } from "~/renderer/components/ui/slider";
+import { Badge } from "~/renderer/components/ui/badge";
+import { TagInput } from "~/renderer/components/ui/tag-input";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "~/renderer/components/ui/tabs";
+import { Label } from "~/renderer/components/ui/label";
+import { calculateLifeProgress } from "~/renderer/lib/lifeUtils";
 
 export function SettingsPage() {
   const { state, updateState, setTheme } = useApp();
-  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [newValue, setNewValue] = useState('');
+  const [testStatus, setTestStatus] = useState<
+    "idle" | "testing" | "success" | "error"
+  >("idle");
+  const [pinStatus, setPinStatus] = useState<{ has_pin_set: boolean } | null>(null);
 
-  const calculateLifeProgress = () => {
-    const birthDate = new Date(state.user.birthday);
-    const today = new Date();
-    const ageInMs = today.getTime() - birthDate.getTime();
-    const expectedLifespanInMs = state.user.lifespan * 365.25 * 24 * 60 * 60 * 1000;
-    return Math.min(100, Math.max(0, (ageInMs / expectedLifespanInMs) * 100));
-  };
+  const lifeProgress = calculateLifeProgress(state.user.birthday, state.user.lifespan);
 
-  const lifeProgress = calculateLifeProgress();
+  // 检查 PIN 状态
+  useEffect(() => {
+    const checkPinStatus = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/pin/status');
+        const result = await response.json();
+        if (response.ok) {
+          setPinStatus(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to check PIN status:', error);
+      }
+    };
+    checkPinStatus();
+  }, []);
 
   const handleTestAI = () => {
-    setTestStatus('testing');
+    setTestStatus("testing");
     setTimeout(() => {
-      setTestStatus(state.aiConfig.apiKey ? 'success' : 'error');
-      setTimeout(() => setTestStatus('idle'), 3000);
+      setTestStatus(state.aiConfig.apiKey ? "success" : "error");
+      setTimeout(() => setTestStatus("idle"), 3000);
     }, 1500);
-  };
-
-  const addValue = () => {
-    if (newValue.trim() && !state.user.values.includes(newValue)) {
-      updateState({ user: { ...state.user, values: [...state.user.values, newValue.trim()] } });
-      setNewValue('');
-    }
-  };
-
-  const removeValue = (val: string) => {
-    updateState({ user: { ...state.user, values: state.user.values.filter((v) => v !== val) } });
   };
 
   const handleExport = () => {
     const dataStr = JSON.stringify(state, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const dataBlob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `life-canvas-backup-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `life-canvas-backup-${new Date().toISOString().split("T")[0]}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
 
   const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
@@ -85,9 +95,9 @@ export function SettingsPage() {
           try {
             const data = JSON.parse(event.target?.result as string);
             updateState(data);
-            alert('导入成功！');
+            alert("导入成功！");
           } catch (error) {
-            alert('导入失败，文件格式错误。');
+            alert("导入失败，文件格式错误。");
           }
         };
         reader.readAsText(file);
@@ -97,14 +107,14 @@ export function SettingsPage() {
   };
 
   const handleClearData = () => {
-    if (confirm('确定要清除所有数据吗？此操作不可恢复！')) {
-      localStorage.removeItem('life-canvas-state');
+    if (confirm("确定要清除所有数据吗？此操作不可恢复！")) {
+      localStorage.removeItem("life-canvas-state");
       window.location.reload();
     }
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+    <div className=" space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="space-y-1">
         <h1 className="text-3xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
           <Monitor className="text-apple-accent" />
@@ -124,94 +134,94 @@ export function SettingsPage() {
         </TabsList>
 
         <TabsContent value="profile" className="space-y-5">
-          <GlassCard className="space-y-6 !p-7">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label htmlFor="display-name">显示名称</Label>
+          <GlassCard className="!p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div className="space-y-3">
+                <Label
+                  htmlFor="display-name"
+                  className="text-base font-semibold"
+                >
+                  显示名称
+                </Label>
                 <Input
                   id="display-name"
                   type="text"
                   value={state.user.name}
-                  onChange={(e) => updateState({ user: { ...state.user, name: e.target.value } })}
+                  onChange={(e) =>
+                    updateState({
+                      user: { ...state.user, name: e.target.value },
+                    })
+                  }
                   placeholder="您的姓名"
+                  className="h-11"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="birthday">出生日期</Label>
+              <div className="space-y-3">
+                <Label htmlFor="birthday" className="text-base font-semibold">
+                  出生日期
+                </Label>
                 <Input
                   id="birthday"
                   type="date"
                   value={state.user.birthday}
                   onChange={(e) =>
-                    updateState({ user: { ...state.user, birthday: e.target.value } })
+                    updateState({
+                      user: { ...state.user, birthday: e.target.value },
+                    })
                   }
+                  className="h-11"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label htmlFor="mbti">MBTI 类型</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div className="space-y-3">
+                <Label htmlFor="mbti" className="text-base font-semibold">
+                  MBTI 类型
+                </Label>
                 <Input
                   id="mbti"
                   type="text"
                   value={state.user.mbti}
                   onChange={(e) =>
-                    updateState({ user: { ...state.user, mbti: e.target.value } })
+                    updateState({
+                      user: { ...state.user, mbti: e.target.value },
+                    })
                   }
                   placeholder="例如 INTJ"
+                  className="h-11"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="lifespan">预期寿命 (岁)</Label>
+              <div className="space-y-3">
+                <Label htmlFor="lifespan" className="text-base font-semibold">
+                  预期寿命 (岁)
+                </Label>
                 <Input
                   id="lifespan"
                   type="number"
                   value={state.user.lifespan}
                   onChange={(e) =>
-                    updateState({ user: { ...state.user, lifespan: parseInt(e.target.value) || 0 } })
+                    updateState({
+                      user: {
+                        ...state.user,
+                        lifespan: parseInt(e.target.value) || 0,
+                      },
+                    })
                   }
+                  className="h-11"
                 />
               </div>
             </div>
 
-            <div className="space-y-3">
-              <Label>核心价值观</Label>
-              <div className="flex flex-wrap gap-2">
-                {state.user.values.map((val) => (
-                  <Badge
-                    key={val}
-                    variant="secondary"
-                    className="px-3 py-1.5 bg-apple-accent/5 text-apple-accent border border-apple-accent/10"
-                  >
-                    {val}
-                    <button
-                      onClick={() => removeValue(val)}
-                      className="ml-2 hover:text-destructive transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </Badge>
-                ))}
-                <div className="relative flex-1 min-w-[140px]">
-                  <Input
-                    type="text"
-                    value={newValue}
-                    onChange={(e) => setNewValue(e.target.value)}
-                    placeholder="按回车添加..."
-                    onKeyDown={(e) => e.key === 'Enter' && addValue()}
-                    className="h-9 border-dashed"
-                  />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={addValue}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2"
-                  >
-                    <Plus size={16} />
-                  </Button>
-                </div>
-              </div>
+            <div className="space-y-4 mb-8">
+              <Label className="text-base font-semibold">核心价值观</Label>
+              <TagInput
+                value={state.user.values}
+                onChange={(values) =>
+                  updateState({ user: { ...state.user, values } })
+                }
+                placeholder="按回车添加..."
+              />
             </div>
 
             <div className="pt-6 border-t border-apple-border dark:border-white/5 space-y-4">
@@ -234,19 +244,25 @@ export function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="ai" className="space-y-5">
-          <GlassCard className="space-y-8 !p-7">
-            <div className="space-y-4">
-              <Label>模型供应商</Label>
-              <div className="grid grid-cols-2 gap-3">
-                {(['DeepSeek', 'Doubao'] as const).map((p) => (
+          <GlassCard className="space-y-10 !p-8">
+            <div className="space-y-5">
+              <Label className="text-base font-semibold">模型供应商</Label>
+              <div className="grid grid-cols-2 gap-4">
+                {(["DeepSeek", "Doubao"] as const).map((p) => (
                   <Button
                     key={p}
-                    variant={state.aiConfig.provider === p ? 'default' : 'outline'}
-                    onClick={() => updateState({ aiConfig: { ...state.aiConfig, provider: p } })}
+                    variant={
+                      state.aiConfig.provider === p ? "default" : "outline"
+                    }
+                    onClick={() =>
+                      updateState({
+                        aiConfig: { ...state.aiConfig, provider: p },
+                      })
+                    }
                     className={
                       state.aiConfig.provider === p
-                        ? 'bg-apple-accent hover:bg-apple-accent/90'
-                        : ''
+                        ? "bg-apple-accent hover:bg-apple-accent/90 h-12 text-base"
+                        : "h-12 text-base"
                     }
                   >
                     {p}
@@ -255,45 +271,60 @@ export function SettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-4">
-              <Label htmlFor="api-key">API 密钥 (加密存储)</Label>
-              <div className="relative flex gap-2">
+            <div className="space-y-5">
+              <Label htmlFor="api-key" className="text-base font-semibold">
+                API 密钥 (加密存储)
+              </Label>
+              <div className="relative flex gap-3">
                 <Input
                   id="api-key"
                   type="password"
                   value={state.aiConfig.apiKey}
                   placeholder="请输入您的 API Key"
                   onChange={(e) =>
-                    updateState({ aiConfig: { ...state.aiConfig, apiKey: e.target.value } })
+                    updateState({
+                      aiConfig: { ...state.aiConfig, apiKey: e.target.value },
+                    })
                   }
-                  className="flex-1"
+                  className="flex-1 h-11"
                 />
                 <Button
                   onClick={handleTestAI}
-                  disabled={testStatus === 'testing'}
+                  disabled={testStatus === "testing"}
                   variant="outline"
                   size="icon"
-                  className="shrink-0"
+                  className="shrink-0 h-11 w-11"
                 >
-                  {testStatus === 'idle' && <RefreshCw size={18} />}
-                  {testStatus === 'testing' && <RefreshCw size={18} className="animate-spin" />}
-                  {testStatus === 'success' && <CheckCircle2 size={18} className="text-green-500" />}
-                  {testStatus === 'error' && <X size={18} className="text-destructive" />}
+                  {testStatus === "idle" && <RefreshCw size={18} />}
+                  {testStatus === "testing" && (
+                    <RefreshCw size={18} className="animate-spin" />
+                  )}
+                  {testStatus === "success" && (
+                    <CheckCircle2 size={18} className="text-green-500" />
+                  )}
+                  {testStatus === "error" && (
+                    <X size={18} className="text-destructive" />
+                  )}
                 </Button>
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="flex justify-between items-center">
-                <Label>日生成上限</Label>
-                <Badge variant="secondary" className="text-apple-accent bg-apple-accent/10">
+                <Label className="text-base font-semibold">日生成上限</Label>
+                <Badge
+                  variant="secondary"
+                  className="text-apple-accent bg-apple-accent/10 text-sm px-3 py-1"
+                >
                   {state.aiConfig.frequencyLimit} 次/日
                 </Badge>
               </div>
               <Slider
                 value={[state.aiConfig.frequencyLimit]}
                 onValueChange={([value]) =>
-                  updateState({ aiConfig: { ...state.aiConfig, frequencyLimit: value } })
+                  updateState({
+                    aiConfig: { ...state.aiConfig, frequencyLimit: value },
+                  })
                 }
                 min={1}
                 max={50}
@@ -309,31 +340,33 @@ export function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="appearance" className="space-y-5">
-          <GlassCard className="space-y-6 !p-7">
-            <div className="space-y-3">
-              <Label>外观模式</Label>
-              <div className="grid grid-cols-3 gap-3">
+          <GlassCard className="space-y-10 !p-8">
+            <div className="space-y-4">
+              <Label className="text-base font-semibold">外观模式</Label>
+              <div className="grid grid-cols-3 gap-4">
                 {[
-                  { id: 'light' as const, label: '浅色', icon: Sun },
-                  { id: 'dark' as const, label: '深色', icon: Moon },
-                  { id: 'auto' as const, label: '跟随系统', icon: Smartphone },
+                  { id: "light" as const, label: "浅色", icon: Sun },
+                  { id: "dark" as const, label: "深色", icon: Moon },
+                  { id: "auto" as const, label: "跟随系统", icon: Smartphone },
                 ].map((t) => (
                   <Button
                     key={t.id}
-                    variant={state.theme === t.id ? 'default' : 'outline'}
+                    variant={state.theme === t.id ? "default" : "outline"}
                     onClick={() => setTheme(t.id)}
-                    className={`flex flex-col gap-2 h-20 ${
-                      state.theme === t.id ? 'bg-apple-accent hover:bg-apple-accent/90' : ''
+                    className={`flex flex-col gap-2 h-24 ${
+                      state.theme === t.id
+                        ? "bg-apple-accent hover:bg-apple-accent/90"
+                        : ""
                     }`}
                   >
                     <t.icon size={24} />
-                    <span className="text-xs">{t.label}</span>
+                    <span className="text-sm">{t.label}</span>
                   </Button>
                 ))}
               </div>
             </div>
 
-            <div className="space-y-4 pt-2">
+            <div className="space-y-6">
               <div className="flex items-center justify-between p-4 bg-apple-bg2 dark:bg-white/5 rounded-xl border border-apple-border dark:border-white/5">
                 <div className="space-y-0.5">
                   <div className="text-sm font-semibold text-apple-textMain dark:text-white">
@@ -347,22 +380,32 @@ export function SettingsPage() {
                   checked={state.systemConfig.notificationsEnabled}
                   onCheckedChange={(checked) =>
                     updateState({
-                      systemConfig: { ...state.systemConfig, notificationsEnabled: checked },
+                      systemConfig: {
+                        ...state.systemConfig,
+                        notificationsEnabled: checked,
+                      },
                     })
                   }
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label>自动保存间隔</Label>
-                  <Badge variant="secondary">{state.systemConfig.autoSaveInterval}s</Badge>
+                  <Label className="text-base font-semibold">
+                    自动保存间隔
+                  </Label>
+                  <Badge variant="secondary" className="text-sm px-3 py-1">
+                    {state.systemConfig.autoSaveInterval}s
+                  </Badge>
                 </div>
                 <Slider
                   value={[state.systemConfig.autoSaveInterval]}
                   onValueChange={([value]) =>
                     updateState({
-                      systemConfig: { ...state.systemConfig, autoSaveInterval: value },
+                      systemConfig: {
+                        ...state.systemConfig,
+                        autoSaveInterval: value,
+                      },
                     })
                   }
                   min={30}
@@ -376,62 +419,162 @@ export function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="security" className="space-y-5">
-          <GlassCard className="space-y-3 !p-7">
+          {/* PIN 设置提醒 */}
+          {pinStatus && !pinStatus.has_pin_set && (
+            <GlassCard className="!p-6 bg-gradient-to-r from-purple-500/5 to-indigo-500/5 border-purple-500/20">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-purple-500/10 text-purple-500 shrink-0">
+                  <Shield size={24} />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div>
+                    <div className="text-base font-semibold text-apple-textMain dark:text-white">
+                      设置 PIN 码保护私密日记
+                    </div>
+                    <div className="text-sm text-apple-textSec dark:text-white/50 mt-1">
+                      您还没有设置 PIN 码。设置后，您可以将日记标记为私密，只有通过 PIN 验证才能查看。
+                    </div>
+                  </div>
+                  <Link to="/settings/pin">
+                    <Button className="bg-purple-500 hover:bg-purple-600 text-white">
+                      立即设置 PIN 码
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </GlassCard>
+          )}
+
+          {/* PIN 管理 - 已设置时显示 */}
+          {pinStatus && pinStatus.has_pin_set && (
+            <GlassCard className="space-y-4 !p-8">
+              <div className="flex items-center gap-3 pb-4 border-b border-apple-border dark:border-white/5">
+                <div className="p-2 rounded-lg bg-purple-500/10">
+                  <Shield className="text-purple-500" size={20} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-apple-textMain dark:text-white">
+                    PIN 码管理
+                  </div>
+                  <div className="text-xs text-apple-textSec dark:text-white/40">
+                    管理您的私密日记保护设置
+                  </div>
+                </div>
+              </div>
+
+              <Link to="/settings/pin/change" className="block">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start h-auto py-4 px-5"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-purple-500/5 text-purple-500">
+                      <KeyRound size={20} />
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="text-sm font-semibold">修改 PIN 码</div>
+                      <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
+                        更改您的私密日记保护密码
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    size={16}
+                    className="ml-auto text-apple-textTer shrink-0"
+                  />
+                </Button>
+              </Link>
+
+              <Link to="/settings/pin/delete" className="block">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start h-auto py-4 px-5 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-destructive/5 text-destructive">
+                      <AlertTriangle size={20} />
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="text-sm font-semibold">删除 PIN 码</div>
+                      <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
+                        移除私密日记保护
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    size={16}
+                    className="ml-auto text-apple-textTer shrink-0"
+                  />
+                </Button>
+              </Link>
+            </GlassCard>
+          )}
+
+          <GlassCard className="space-y-4 !p-8">
             <Button
               variant="outline"
-              className="w-full justify-start h-auto py-4"
+              className="w-full justify-start h-auto py-5 px-5"
               onClick={handleExport}
             >
               <div className="flex items-center gap-4">
-                <div className="p-2.5 rounded-xl bg-apple-accent/5 text-apple-accent">
+                <div className="p-3 rounded-xl bg-apple-accent/5 text-apple-accent">
                   <Download size={20} />
                 </div>
-                <div className="text-left">
+                <div className="text-left flex-1">
                   <div className="text-sm font-semibold">导出备份 (JSON)</div>
-                  <div className="text-xs text-apple-textSec dark:text-white/30">
+                  <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
                     导出完整的生命足迹数据
                   </div>
                 </div>
               </div>
-              <ChevronRight size={16} className="ml-auto text-apple-textTer" />
+              <ChevronRight
+                size={16}
+                className="ml-auto text-apple-textTer shrink-0"
+              />
             </Button>
 
             <Button
               variant="outline"
-              className="w-full justify-start h-auto py-4"
+              className="w-full justify-start h-auto py-5 px-5"
               onClick={handleImport}
             >
               <div className="flex items-center gap-4">
-                <div className="p-2.5 rounded-xl bg-green-500/5 text-green-500">
+                <div className="p-3 rounded-xl bg-green-500/5 text-green-500">
                   <Upload size={20} />
                 </div>
-                <div className="text-left">
+                <div className="text-left flex-1">
                   <div className="text-sm font-semibold">导入历史数据</div>
-                  <div className="text-xs text-apple-textSec dark:text-white/30">
+                  <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
                     从备份文件中恢复记录
                   </div>
                 </div>
               </div>
-              <ChevronRight size={16} className="ml-auto text-apple-textTer" />
+              <ChevronRight
+                size={16}
+                className="ml-auto text-apple-textTer shrink-0"
+              />
             </Button>
 
             <Button
               variant="outline"
-              className="w-full justify-start h-auto py-4 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
+              className="w-full justify-start h-auto py-5 px-5 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
               onClick={handleClearData}
             >
               <div className="flex items-center gap-4">
-                <div className="p-2.5 rounded-xl bg-destructive/5 text-destructive">
+                <div className="p-3 rounded-xl bg-destructive/5 text-destructive">
                   <Trash2 size={20} />
                 </div>
-                <div className="text-left">
+                <div className="text-left flex-1">
                   <div className="text-sm font-semibold">清除系统数据</div>
-                  <div className="text-xs text-apple-textSec dark:text-white/30">
+                  <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
                     删除所有本地记录并重置系统
                   </div>
                 </div>
               </div>
-              <ChevronRight size={16} className="ml-auto text-apple-textTer" />
+              <ChevronRight
+                size={16}
+                className="ml-auto text-apple-textTer shrink-0"
+              />
             </Button>
           </GlassCard>
         </TabsContent>

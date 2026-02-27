@@ -3,7 +3,11 @@ import { Activity } from 'lucide-react';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { Button } from '~/renderer/components/ui/button';
 
-export function AIInsightCard() {
+export interface AIInsightCardProps {
+  className?: string;
+}
+
+export function AIInsightCard({ className }: AIInsightCardProps) {
   // TODO: 后续从 AI 洞察 API 获取数据
   const insight = {
     primaryImprovement: '身体健康',
@@ -11,7 +15,7 @@ export function AIInsightCard() {
   };
 
   return (
-    <GlassCard title="AI 智能洞察" className="flex-1">
+    <GlassCard title="AI 智能洞察" className={`flex-1 ${className || ''}`}>
       <div className="space-y-4">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-apple-accent/10 text-apple-accent">

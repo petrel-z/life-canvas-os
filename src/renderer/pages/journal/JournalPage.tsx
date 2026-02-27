@@ -1,70 +1,132 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, Search, Smile, Frown, Meh, Heart, Calendar, Plus } from 'lucide-react';
+import { Sparkles, Search, Calendar, Plus, Lock, EyeOff, LockKeyhole } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
-import { Input } from '~/components/ui/input';
-import { Button } from '~/components/ui/button';
-import { Badge } from '~/components/ui/badge';
+import { Button } from '~/renderer/components/ui/button';
+import { Badge } from '~/renderer/components/ui/badge';
+import { Switch } from '~/renderer/components/ui/switch';
+import { MoodSelector } from '~/renderer/components/ui/mood-selector';
+import { SearchInput } from '~/renderer/components/ui/search-input';
+import { MOODS, type MoodType } from '~/renderer/lib/constants';
+import { formatDateCN, formatTimeCN, formatWeekdayCN } from '~/renderer/lib/dateUtils';
+import { groupByDate } from '~/renderer/lib/arrayUtils';
+import type { DimensionType, JournalEntry } from '~/shared/types';
+import { useJournalApi } from '~/renderer/hooks/useJournalApi';
 
-type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
-
-const MOODS: { type: MoodType; icon: any; color: string; label: string }[] = [
-  { type: 'great', icon: Heart, color: 'text-pink-500', label: '很棒' },
-  { type: 'good', icon: Smile, color: 'text-green-500', label: '不错' },
-  { type: 'neutral', icon: Meh, color: 'text-yellow-500', label: '一般' },
-  { type: 'bad', icon: Frown, color: 'text-orange-500', label: '不好' },
-  { type: 'terrible', icon: Frown, color: 'text-red-500', label: '很糟' },
-];
+const PAGE_SIZE = 10;
 
 export function JournalPage() {
   const { state, updateState } = useApp();
+  const { listJournals, createJournal } = useJournalApi();
   const [content, setContent] = useState('');
   const [mood, setMood] = useState<MoodType>('good');
   const [search, setSearch] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
 
-  const addEntry = () => {
-    if (!content.trim()) return;
-    const entry = {
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: Date.now(),
-      content,
-      mood,
-      tags: [] as string[],
-      attachments: [] as string[],
-      linkedDimensions: [] as string[],
+  // 使用 ref 避免重复调用
+  const isLoadingRef = useRef(false);
+
+  // 加载日记列表（首次加载）
+  useEffect(() => {
+    const loadJournals = async () => {
+      if (isLoadingRef.current) return;
+      isLoadingRef.current = true;
+
+      try {
+        setIsLoading(true);
+        const result = await listJournals({ page: 1, page_size: PAGE_SIZE });
+        setJournals(result.items);
+        setHasNext(result.has_next);
+        setCurrentPage(1);
+      } catch (error) {
+        console.error('Failed to load journals:', error);
+      } finally {
+        setIsLoading(false);
+        isLoadingRef.current = false;
+      }
     };
-    updateState({ journals: [entry, ...state.journals] });
-    setContent('');
-    setMood('good');
+
+    loadJournals();
+  }, []); // 空依赖数组，只在组件挂载时执行一次
+
+  // 加载更多
+  const loadMore = async () => {
+    if (isLoadingMore || !hasNext) return;
+
+    try {
+      setIsLoadingMore(true);
+      const nextPage = currentPage + 1;
+      const result = await listJournals({ page: nextPage, page_size: PAGE_SIZE });
+      setJournals((prev) => [...prev, ...result.items]);
+      setHasNext(result.has_next);
+      setCurrentPage(nextPage);
+    } catch (error) {
+      console.error('Failed to load more journals:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
   };
 
-  const filteredJournals = state.journals.filter((j) =>
+  const addEntry = async () => {
+    if (!content.trim() || isSaving) return;
+
+    setIsSaving(true);
+
+    try {
+      const entry = {
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        title: '新建日记',
+        content,
+        mood,
+        tags: [] as string[],
+        attachments: [] as string[],
+        linkedDimensions: [] as DimensionType[],
+        isPrivate,
+      };
+
+      const created = await createJournal(entry);
+      setJournals((prev) => [created, ...prev]);
+      setContent('');
+      setMood('good');
+      setIsPrivate(false);
+    } catch (error) {
+      console.error('Failed to create journal:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const filteredJournals = journals.filter((j) =>
     j.content.toLowerCase().includes(search.toLowerCase()),
   );
 
   // 按日期分组
-  const groupedJournals = filteredJournals.reduce((acc, journal) => {
-    const date = new Date(journal.timestamp).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(journal);
-    return acc;
-  }, {} as Record<string, typeof filteredJournals>);
+  const groupedJournals = groupByDate(filteredJournals, formatDateCN);
 
   // 计算情绪分布
-  const moodDistribution = state.journals.reduce(
+  const moodDistribution = journals.reduce(
     (acc, j) => {
       acc[j.mood] = (acc[j.mood] || 0) + 1;
       return acc;
     },
     {} as Record<MoodType, number>,
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-apple-textSec dark:text-white/40">加载中...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -91,28 +153,9 @@ export function JournalPage() {
           <GlassCard title="快速记录">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <div className="flex gap-3">
-                  {MOODS.map((m) => (
-                    <button
-                      key={m.type}
-                      onClick={() => setMood(m.type)}
-                      className={`p-2 rounded-xl transition-all ${
-                        mood === m.type
-                          ? 'bg-apple-bg2 dark:bg-white/10 scale-110 shadow-sm'
-                          : 'opacity-40 hover:opacity-100'
-                      }`}
-                      title={m.label}
-                    >
-                      <m.icon className={m.color} size={28} />
-                    </button>
-                  ))}
-                </div>
+                <MoodSelector value={mood} onChange={setMood} variant="icon" />
                 <div className="text-xs text-apple-textTer dark:text-white/30 font-medium">
-                  {new Date().toLocaleDateString('zh-CN', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
+                  {formatWeekdayCN(Date.now())}
                 </div>
               </div>
 
@@ -123,13 +166,29 @@ export function JournalPage() {
                 className="w-full h-40 bg-black/5 dark:bg-white/5 border border-apple-border dark:border-white/10 rounded-2xl p-5 text-apple-textMain dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none text-base leading-relaxed shadow-inner"
               />
 
-              <div className="flex justify-end">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isPrivate ? (
+                    <Lock className="text-purple-500" size={16} />
+                  ) : (
+                    <EyeOff className="text-apple-textTer dark:text-white/20" size={16} />
+                  )}
+                  <span className="text-xs text-apple-textSec dark:text-white/40">
+                    私密日记
+                  </span>
+                  <Switch
+                    checked={isPrivate}
+                    onCheckedChange={setIsPrivate}
+                    className="data-[state=checked]:bg-purple-500"
+                  />
+                </div>
+
                 <Button
                   onClick={addEntry}
-                  disabled={!content.trim()}
+                  disabled={!content.trim() || isSaving}
                   className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50"
                 >
-                  保存日记
+                  {isSaving ? '保存中...' : '保存日记'}
                 </Button>
               </div>
             </div>
@@ -152,18 +211,20 @@ export function JournalPage() {
                         key={j.id}
                         className="group border-apple-border dark:border-white/5 hover:border-purple-500/20 cursor-pointer"
                       >
-                        <Link to={`/journal/${j.id}`} className="block">
+                        <Link to={`/journal/${j.id}`} state={{ isPrivate: j.isPrivate }} className="block">
                           <div className="flex gap-5">
                             <div className="flex flex-col items-center gap-2 pt-1">
                               {MoodIcon && <MoodIcon className={moodObj?.color} size={24} />}
                             </div>
                             <div className="flex-1 space-y-2">
                               <div className="flex justify-between items-start">
-                                <div className="text-xs font-bold text-apple-textTer dark:text-white/20 uppercase tracking-widest">
-                                  {new Date(j.timestamp).toLocaleTimeString('zh-CN', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
+                                <div className="flex items-center gap-2">
+                                  <div className="text-xs font-bold text-apple-textTer dark:text-white/20 uppercase tracking-widest">
+                                    {formatTimeCN(j.timestamp)}
+                                  </div>
+                                  {j.isPrivate && (
+                                    <LockKeyhole className="text-purple-500" size={14} />
+                                  )}
                                 </div>
                                 {j.tags && j.tags.length > 0 && (
                                   <div className="flex gap-1">
@@ -175,9 +236,20 @@ export function JournalPage() {
                                   </div>
                                 )}
                               </div>
-                              <p className="text-apple-textSec dark:text-white/80 leading-relaxed line-clamp-3">
-                                {j.content}
-                              </p>
+                              <div className="space-y-1">
+                                <h4 className="text-sm font-semibold text-apple-textMain dark:text-white line-clamp-1">
+                                  {j.title || '新建日记'}
+                                </h4>
+                                {j.isPrivate ? (
+                                  <p className="text-xs text-apple-textTer dark:text-white/30 italic leading-relaxed">
+                                    此日记为私密日记，需要 PIN 码才能查看
+                                  </p>
+                                ) : (
+                                  <p className="text-xs text-apple-textSec dark:text-white/60 leading-relaxed line-clamp-2">
+                                    {j.content}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </Link>
@@ -188,10 +260,23 @@ export function JournalPage() {
               </div>
             ))}
 
-            {filteredJournals.length === 0 && (
+            {filteredJournals.length === 0 && !isLoading && (
               <div className="flex flex-col items-center justify-center py-16 text-apple-textTer dark:text-white/20">
                 <Sparkles size={48} className="mb-3 opacity-50" />
                 <p className="text-lg">开始记录您的第一篇日记吧</p>
+              </div>
+            )}
+
+            {hasNext && filteredJournals.length > 0 && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={loadMore}
+                  disabled={isLoadingMore}
+                  className="min-w-[120px]"
+                >
+                  {isLoadingMore ? '加载中...' : '加载更多'}
+                </Button>
               </div>
             )}
           </div>
@@ -199,16 +284,11 @@ export function JournalPage() {
 
         <div className="space-y-6">
           <GlassCard title="搜索">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-apple-textSec dark:text-white/30" size={18} />
-              <Input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="搜索回忆..."
-                className="pl-10 bg-black/5 dark:bg-white/5 border-apple-border dark:border-white/10"
-              />
-            </div>
+            <SearchInput
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="搜索回忆..."
+            />
           </GlassCard>
 
           <GlassCard title="数据统计">
@@ -216,7 +296,7 @@ export function JournalPage() {
               <div className="flex justify-between items-center text-sm">
                 <span className="text-apple-textSec dark:text-white/40">日记总数</span>
                 <span className="text-apple-textMain dark:text-white font-bold">
-                  {state.journals.length}
+                  {journals.length}
                 </span>
               </div>
 
@@ -227,8 +307,8 @@ export function JournalPage() {
                 <div className="space-y-2">
                   {MOODS.map((m) => {
                     const count = moodDistribution[m.type] || 0;
-                    const percentage = state.journals.length
-                      ? Math.round((count / state.journals.length) * 100)
+                    const percentage = journals.length
+                      ? Math.round((count / journals.length) * 100)
                       : 0;
                     return (
                       <div key={m.type} className="flex items-center gap-2 text-xs">

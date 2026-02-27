@@ -1,56 +1,87 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, X } from 'lucide-react';
+import { ArrowLeft, Save, Lock, Eye, EyeOff } from 'lucide-react';
 import MDEditor from '@uiw/react-md-editor';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
-import { Button } from '~/components/ui/button';
-import { Input } from '~/components/ui/input';
-import { Textarea } from '~/components/ui/textarea';
-import { Badge } from '~/components/ui/badge';
-import { DIMENSIONS } from '~/renderer/lib/constants';
-
-type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
-
-const MOODS: { type: MoodType; icon: any; color: string; label: string }[] = [
-  { type: 'great', icon: () => '💖', color: 'text-pink-500', label: '很棒' },
-  { type: 'good', icon: () => '😊', color: 'text-green-500', label: '不错' },
-  { type: 'neutral', icon: () => '😐', color: 'text-yellow-500', label: '一般' },
-  { type: 'bad', icon: () => '😞', color: 'text-orange-500', label: '不好' },
-  { type: 'terrible', icon: () => '😢', color: 'text-red-500', label: '很糟' },
-];
+import { Button } from '~/renderer/components/ui/button';
+import { Input } from '~/renderer/components/ui/input';
+import { Textarea } from '~/renderer/components/ui/textarea';
+import { Badge } from '~/renderer/components/ui/badge';
+import { Switch } from '~/renderer/components/ui/switch';
+import { MoodSelector } from '~/renderer/components/ui/mood-selector';
+import { TagInput } from '~/renderer/components/ui/tag-input';
+import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
+import type { DimensionType, JournalEntry } from '~/shared/types';
+import { toast } from '~/renderer/lib/toast';
+import { pinApi } from '~/renderer/api';
+import { useJournalApi } from '~/renderer/hooks/useJournalApi';
 
 export function JournalEditorPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { state, updateState } = useApp();
+  const { createJournal, updateJournal, getJournal } = useJournalApi();
   const isEditing = Boolean(id);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
-  const existingEntry = isEditing
-    ? state.journals.find((j) => j.id === id)
-    : null;
+  const [existingEntry, setExistingEntry] = useState<JournalEntry | null>(null);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [mood, setMood] = useState<MoodType>('good');
+  const [tags, setTags] = useState<string[]>([]);
+  const [linkedDimensions, setLinkedDimensions] = useState<DimensionType[]>([]);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [pinStatus, setPinStatus] = useState<{ has_pin_set: boolean } | null>(null);
 
-  const [title, setTitle] = useState(existingEntry?.title || '');
-  const [content, setContent] = useState(existingEntry?.content || '');
-  const [mood, setMood] = useState<MoodType>(existingEntry?.mood || 'good');
-  const [tags, setTags] = useState<string[]>(existingEntry?.tags || []);
-  const [tagInput, setTagInput] = useState('');
-  const [linkedDimensions, setLinkedDimensions] = useState<string[]>(
-    existingEntry?.linkedDimensions || [],
-  );
+  // 加载日记详情（编辑模式）
+  useEffect(() => {
+    const loadJournal = async () => {
+      if (!isEditing || !id) return;
 
-  const handleAddTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput('');
-    }
-  };
+      try {
+        setIsLoadingData(true);
+        const journalData = await getJournal(id);
+        setExistingEntry(journalData);
 
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((t) => t !== tagToRemove));
-  };
+        // 回显数据
+        setTitle(journalData.title || '');
+        setContent(journalData.content);
+        setMood(journalData.mood);
+        setTags(journalData.tags || []);
+        setLinkedDimensions(journalData.linkedDimensions || []);
+        setIsPrivate(journalData.isPrivate || false);
+      } catch (error) {
+        console.error('Failed to load journal:', error);
+        toast.error('加载日记失败');
+        navigate('/journal');
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
 
-  const handleToggleDimension = (dimType: string) => {
+    loadJournal();
+  }, [isEditing, id, getJournal, navigate]);
+
+  // 检查 PIN 状态
+  useEffect(() => {
+    const checkPinStatus = async () => {
+      try {
+        const response = await pinApi.status();
+
+        if (response.ok) {
+          const result = await response.json();
+          setPinStatus(result);
+        }
+      } catch (error) {
+        console.error('Failed to check PIN status:', error);
+      }
+    };
+    checkPinStatus();
+  }, []);
+
+  const handleToggleDimension = (dimType: DimensionType) => {
     setLinkedDimensions((prev) =>
       prev.includes(dimType)
         ? prev.filter((d) => d !== dimType)
@@ -58,37 +89,83 @@ export function JournalEditorPage() {
     );
   };
 
-  const handleSave = () => {
-    if (!content.trim()) return;
-
-    const entry = {
-      id: isEditing ? id! : Math.random().toString(36).substr(2, 9),
-      timestamp: existingEntry?.timestamp || Date.now(),
-      title: title.trim(),
-      content,
-      mood,
-      tags,
-      attachments: [] as string[],
-      linkedDimensions,
-    };
-
-    if (isEditing) {
-      updateState({
-        journals: state.journals.map((j) => (j.id === id ? entry : j)),
+  const handlePrivateToggle = (checked: boolean) => {
+    if (checked && !pinStatus?.has_pin_set) {
+      // 未设置 PIN，显示提示并跳转
+      toast.error('需要设置 PIN 码', {
+        description: '私密日记功能需要先设置 PIN 码保护',
       });
-    } else {
-      updateState({ journals: [entry, ...state.journals] });
+
+      // 保存当前草稿
+      const draft = {
+        title,
+        content,
+        mood,
+        tags,
+        linkedDimensions,
+        isPrivate: false, // 暂时设为 false
+      };
+      localStorage.setItem('journal-draft', JSON.stringify(draft));
+
+      // 跳转到 PIN 设置页
+      setTimeout(() => {
+        navigate('/settings/pin', { state: { returnUrl: '/journal/new' } });
+      }, 500);
+      return;
     }
 
-    navigate('/journal');
+    setIsPrivate(checked);
+  };
+
+  const handleSave = async () => {
+    if (!content.trim()) return;
+
+    setIsLoading(true);
+
+    try {
+      const entry = {
+        id: isEditing ? id! : crypto.randomUUID(),
+        timestamp: existingEntry?.timestamp || Date.now(),
+        title: title.trim() || '新建日记',
+        content,
+        mood,
+        tags,
+        attachments: [] as string[],
+        linkedDimensions,
+        isPrivate,
+      };
+
+      if (isEditing) {
+        const updated = await updateJournal(id!, entry);
+        setExistingEntry(updated); // 更新本地数据
+      } else {
+        const created = await createJournal(entry);
+        setExistingEntry(created);
+      }
+
+      navigate('/journal');
+    } catch (error) {
+      console.error('Failed to save journal:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
     navigate('/journal');
   };
 
+  // 加载中
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-apple-textSec dark:text-white/40">加载中...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-5xl mx-auto">
+    <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-5xl mx-auto">
       <header className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={handleCancel}>
           <ArrowLeft size={20} />
@@ -102,9 +179,9 @@ export function JournalEditorPage() {
           <Button variant="outline" onClick={handleCancel}>
             取消
           </Button>
-          <Button onClick={handleSave} disabled={!content.trim()} className="bg-purple-500 hover:bg-purple-600">
+          <Button onClick={handleSave} disabled={!content.trim() || isLoading} className="bg-purple-500 hover:bg-purple-600">
             <Save size={18} className="mr-2" />
-            保存
+            {isLoading ? '保存中...' : '保存'}
           </Button>
         </div>
       </header>
@@ -124,24 +201,7 @@ export function JournalEditorPage() {
               <label className="text-sm font-medium text-apple-textSec dark:text-white/60 mb-3 block">
                 选择情绪
               </label>
-              <div className="flex gap-4">
-                {MOODS.map((m) => (
-                  <button
-                    key={m.type}
-                    onClick={() => setMood(m.type)}
-                    className={`flex-1 p-4 rounded-xl transition-all flex flex-col items-center gap-2 ${
-                      mood === m.type
-                        ? 'bg-apple-bg2 dark:bg-white/10 scale-105 shadow-md'
-                        : 'opacity-50 hover:opacity-80 hover:scale-105'
-                    }`}
-                  >
-                    <span className="text-3xl">{m.icon()}</span>
-                    <span className="text-xs font-medium text-apple-textSec dark:text-white/60">
-                      {m.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <MoodSelector value={mood} onChange={setMood} variant="emoji" />
             </div>
 
             <div>
@@ -152,7 +212,7 @@ export function JournalEditorPage() {
                   height={400}
                   preview="edit"
                   hideToolbar={false}
-                  visibleDragBar={false}
+                  visibleDragbar={false}
                 />
               </div>
             </div>
@@ -161,32 +221,7 @@ export function JournalEditorPage() {
               <label className="text-sm font-medium text-apple-textSec dark:text-white/60 mb-3 block">
                 标签
               </label>
-              <div className="flex gap-2 flex-wrap">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-sm px-3 py-1">
-                    {tag}
-                    <button
-                      onClick={() => handleRemoveTag(tag)}
-                      className="ml-2 hover:text-destructive"
-                    >
-                      <X size={14} />
-                    </button>
-                  </Badge>
-                ))}
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    placeholder="添加标签"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
-                    className="w-32 h-8 bg-black/5 dark:bg-white/5"
-                  />
-                  <Button size="sm" variant="outline" onClick={handleAddTag}>
-                    添加
-                  </Button>
-                </div>
-              </div>
+              <TagInput value={tags} onChange={setTags} placeholder="添加标签..." />
             </div>
 
             <div>
@@ -216,6 +251,36 @@ export function JournalEditorPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-apple-bg2 dark:bg-white/5 rounded-xl border border-apple-border dark:border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/10">
+                  {isPrivate ? (
+                    <Lock className="text-purple-500" size={18} />
+                  ) : (
+                    <EyeOff className="text-apple-textTer dark:text-white/30" size={18} />
+                  )}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-apple-textMain dark:text-white">
+                    私密日记
+                  </div>
+                  <div className="text-xs text-apple-textSec dark:text-white/40">
+                    {isPrivate
+                      ? '需要 PIN 码才能查看此日记'
+                      : pinStatus?.has_pin_set
+                      ? '开启后需要 PIN 码才能查看'
+                      : '需要先设置 PIN 码'}
+                  </div>
+                </div>
+              </div>
+              <Switch
+                checked={isPrivate}
+                onCheckedChange={handlePrivateToggle}
+                disabled={!pinStatus?.has_pin_set && !isPrivate}
+                className={isPrivate ? 'data-[state=checked]:bg-purple-500' : ''}
+              />
             </div>
           </div>
         </GlassCard>
