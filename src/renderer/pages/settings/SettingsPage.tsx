@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   User,
   Cpu,
@@ -38,6 +38,7 @@ import {
 } from "~/renderer/components/ui/tabs";
 import { Label } from "~/renderer/components/ui/label";
 import { calculateLifeProgress } from "~/renderer/lib/lifeUtils";
+import { pinApi } from "~/renderer/api";
 
 export function SettingsPage() {
   const { state, updateState, setTheme } = useApp();
@@ -45,20 +46,26 @@ export function SettingsPage() {
     "idle" | "testing" | "success" | "error"
   >("idle");
   const [pinStatus, setPinStatus] = useState<{ has_pin_set: boolean } | null>(null);
+  const isLoadingRef = useRef(false);
 
   const lifeProgress = calculateLifeProgress(state.user.birthday, state.user.lifespan);
 
   // 检查 PIN 状态
   useEffect(() => {
     const checkPinStatus = async () => {
+      if (isLoadingRef.current) return;
+      isLoadingRef.current = true;
+
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/pin/status');
+        const response = await pinApi.status();
         const result = await response.json();
         if (response.ok) {
           setPinStatus(result.data);
         }
       } catch (error) {
         console.error('Failed to check PIN status:', error);
+      } finally {
+        isLoadingRef.current = false;
       }
     };
     checkPinStatus();
