@@ -77,10 +77,10 @@ export function TimelinePage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
+          {/* <h1 className="text-4xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
             <History className="text-blue-500" />
             时间轴
-          </h1>
+          </h1> */}
           <p className="text-apple-textSec dark:text-white/40 mt-1 text-lg">
             跨系统的生命足迹聚合审计。
           </p>

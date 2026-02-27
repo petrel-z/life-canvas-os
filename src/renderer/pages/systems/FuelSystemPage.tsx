@@ -55,10 +55,10 @@ export function FuelSystemPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-apple-textMain dark:text-white flex items-center gap-3">
+          {/* <h1 className="text-3xl font-bold text-apple-textMain dark:text-white flex items-center gap-3">
             <Beef className="text-orange-500" />
             饮食能量系统 (Fuel)
-          </h1>
+          </h1> */}
           <p className="text-apple-textSec dark:text-white/40 mt-1">
             坚持优于完美。管理您的基准饮食并记录偏离事件。
           </p>

@@ -116,10 +116,10 @@ export function SettingsPage() {
   return (
     <div className=" space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="space-y-1">
-        <h1 className="text-3xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
+        {/* <h1 className="text-3xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
           <Monitor className="text-apple-accent" />
           系统设置
-        </h1>
+        </h1> */}
         <p className="text-apple-textSec dark:text-white/40 text-base">
           管理您的生命画布环境变量与系统偏好。
         </p>
