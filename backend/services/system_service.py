@@ -10,6 +10,7 @@ from typing import Optional, Tuple
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
+from sqlalchemy.orm.attributes import flag_modified
 
 from backend.models.dimension import System, MealDeviation, DEFAULT_SYSTEM_DETAILS
 from backend.models.user import User
@@ -112,7 +113,9 @@ class SystemService:
         if request.taste is not None:
             details["baseline_taste"] = request.taste
 
+        # 标记 JSON 字段已修改（SQLAlchemy 需要显式标记才能追踪 JSON 内部变化）
         system.details = details
+        flag_modified(system, "details")
         db.commit()
         db.refresh(system)
 
@@ -374,7 +377,9 @@ class SystemService:
         consistency_score = max(0, 100 - total_deviations_count * 2)
         details["consistency"] = consistency_score
 
+        # 标记 JSON 字段已修改
         system.details = details
+        flag_modified(system, "details")
         system.score = consistency_score
         db.commit()
 
