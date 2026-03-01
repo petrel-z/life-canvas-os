@@ -132,10 +132,10 @@ export function JournalPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-apple-textMain dark:text-white flex items-center gap-3">
+          {/* <h1 className="text-3xl font-bold text-apple-textMain dark:text-white flex items-center gap-3">
             <Sparkles className="text-purple-500" />
             生活日记
-          </h1>
+          </h1> */}
           <p className="text-apple-textSec dark:text-white/40 mt-1">
             记录您的旅程，捕捉您的情绪，在反思中不断成长。
           </p>

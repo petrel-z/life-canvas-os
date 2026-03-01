@@ -882,8 +882,6 @@
   "breakfast": [
     {
       "name": "全麦面包",
-      "amount": "2片",
-      "calories": 200
     }
   ],
   "lunch": null,

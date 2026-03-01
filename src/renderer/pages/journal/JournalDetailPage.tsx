@@ -36,6 +36,13 @@ export function JournalDetailPage() {
     getJournalRef.current = getJournal;
   }, [getJournal]);
 
+  // 当离开详情页时，清除 PIN 验证状态，确保下次查看需要重新验证
+  useEffect(() => {
+    return () => {
+      sessionStorage.removeItem('pin-verified');
+    };
+  }, []);
+
   // 检查会话中是否已验证 PIN
   useEffect(() => {
     const verified = sessionStorage.getItem('pin-verified') === 'true';

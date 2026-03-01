@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import type { AppState, DimensionType } from '~/shared/types';
 import { INITIAL_STATE } from '~/renderer/lib/constants';
+import { useUserApi } from '~/renderer/hooks/useUserApi';
 
 interface AppContextType {
   state: AppState;
@@ -18,6 +19,15 @@ interface AppProviderProps {
 }
 
 export function AppProvider({ children }: AppProviderProps) {
+  const { getUserProfile } = useUserApi();
+  const isLoadingRef = useRef(false);
+  const getUserProfileRef = useRef(getUserProfile);
+
+  // 更新 ref
+  useEffect(() => {
+    getUserProfileRef.current = getUserProfile;
+  }, [getUserProfile]);
+
   // 从 localStorage 加载初始状态
   const [state, setState] = useState<AppState>(() => {
     try {
@@ -32,15 +42,36 @@ export function AppProvider({ children }: AppProviderProps) {
     return INITIAL_STATE;
   });
 
-  // 保存状态到 localStorage
+  // 从后端加载用户信息
   useEffect(() => {
-    try {
-      localStorage.setItem('life-canvas-state', JSON.stringify(state));
-    } catch (error) {
-      // localStorage 保存失败（通常是配额超满）
-      // 生产环境可以考虑添加用户提示或错误上报
-    }
-  }, [state]);
+    const loadUserProfile = async () => {
+      if (isLoadingRef.current) return;
+      isLoadingRef.current = true;
+
+      try {
+        const profile = await getUserProfileRef.current();
+        if (profile) {
+          setState((prev) => ({
+            ...prev,
+            user: {
+              name: profile.name || '',
+              birthday: profile.birthday || '',
+              mbti: profile.mbti || '',
+              values: profile.values || [],
+              lifespan: profile.lifespan || 0,
+            },
+          }));
+        }
+      } catch (error) {
+        // 用户还未设置信息，忽略错误
+        console.log('User profile not set yet');
+      } finally {
+        isLoadingRef.current = false;
+      }
+    };
+
+    loadUserProfile();
+  }, []);
 
   // 主题切换逻辑（带动画）
   useEffect(() => {

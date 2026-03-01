@@ -68,29 +68,41 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
 
       {/* 用户信息 */}
       <div className="mt-auto pt-6 border-t border-apple-border dark:border-white/10">
-        <div className="flex items-center gap-3 px-2">
-          <Avatar className="w-11 h-11 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 border-2 border-white dark:border-white/20 shadow-lg">
-            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${state.user.name}`} />
-            <AvatarFallback className="bg-gradient-to-br from-apple-accent to-blue-600 text-white font-bold text-base">
-              {state.user.name.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold truncate text-apple-textMain dark:text-white">
-              {state.user.name}
+        {state.user.name ? (
+          <div className="flex items-center gap-3 px-2">
+            <Avatar className="w-11 h-11 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 border-2 border-white dark:border-white/20 shadow-lg">
+              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${state.user.name}`} />
+              <AvatarFallback className="bg-gradient-to-br from-apple-accent to-blue-600 text-white font-bold text-base">
+                {state.user.name.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold truncate text-apple-textMain dark:text-white">
+                {state.user.name}
+              </div>
+              <div className="text-xs text-apple-textTer dark:text-white/40 truncate">
+                {state.user.mbti} • {state.user.lifespan}岁
+              </div>
             </div>
-            <div className="text-xs text-apple-textTer dark:text-white/40 truncate">
-              {state.user.mbti} • {state.user.lifespan}岁
-            </div>
+            <button
+              onClick={lock}
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-apple-textSec hover:text-apple-textMain dark:text-white/40 dark:hover:text-white hover:bg-apple-bgHover dark:hover:bg-white/10 transition-all"
+              title="锁定应用"
+            >
+              <Lock size={18} />
+            </button>
           </div>
-          <button
-            onClick={lock}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-apple-textSec hover:text-apple-textMain dark:text-white/40 dark:hover:text-white hover:bg-apple-bgHover dark:hover:bg-white/10 transition-all"
-            title="锁定应用"
-          >
-            <Lock size={18} />
-          </button>
-        </div>
+        ) : (
+          <div className="flex justify-center">
+            <button
+              onClick={lock}
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-apple-textSec hover:text-apple-textMain dark:text-white/40 dark:hover:text-white hover:bg-apple-bgHover dark:hover:bg-white/10 transition-all"
+              title="锁定应用"
+            >
+              <Lock size={18} />
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

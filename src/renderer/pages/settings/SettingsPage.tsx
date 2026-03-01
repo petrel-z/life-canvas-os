@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   User,
   Cpu,
@@ -20,6 +20,7 @@ import {
   Shield,
   KeyRound,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useApp } from "~/renderer/contexts/AppContext";
@@ -38,27 +39,81 @@ import {
 } from "~/renderer/components/ui/tabs";
 import { Label } from "~/renderer/components/ui/label";
 import { calculateLifeProgress } from "~/renderer/lib/lifeUtils";
+import { pinApi } from "~/renderer/api";
+import { useUserApi, type UserProfile } from "~/renderer/hooks/useUserApi";
+import { toast } from "sonner";
 
 export function SettingsPage() {
   const { state, updateState, setTheme } = useApp();
+  const { getUserProfile, updateUserProfile } = useUserApi();
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "success" | "error"
   >("idle");
   const [pinStatus, setPinStatus] = useState<{ has_pin_set: boolean } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const isLoadingRef = useRef(false);
+  const isLoadingProfileRef = useRef(false);
+  const getUserProfileRef = useRef(getUserProfile);
 
-  const lifeProgress = calculateLifeProgress(state.user.birthday, state.user.lifespan);
+  // 更新 ref
+  useEffect(() => {
+    getUserProfileRef.current = getUserProfile;
+  }, [getUserProfile]);
+
+  // 表单本地状态
+  const [formData, setFormData] = useState({
+    name: '',
+    birthday: '',
+    mbti: '',
+    values: [] as string[],
+    lifespan: 0,
+  });
+
+  // 进入设置页面时加载用户信息
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (isLoadingProfileRef.current) return;
+      isLoadingProfileRef.current = true;
+
+      try {
+        const profile = await getUserProfileRef.current();
+        if (profile) {
+          setFormData({
+            name: profile.name || '',
+            birthday: profile.birthday || '',
+            mbti: profile.mbti || '',
+            values: profile.values || [],
+            lifespan: profile.lifespan || 0,
+          });
+        }
+      } catch (error) {
+        console.log('User profile not set yet');
+      } finally {
+        isLoadingProfileRef.current = false;
+      }
+    };
+
+    loadUserProfile();
+  }, []);
+
+  const lifeProgress = calculateLifeProgress(formData.birthday, formData.lifespan);
 
   // 检查 PIN 状态
   useEffect(() => {
     const checkPinStatus = async () => {
+      if (isLoadingRef.current) return;
+      isLoadingRef.current = true;
+
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/pin/status');
+        const response = await pinApi.status();
         const result = await response.json();
         if (response.ok) {
           setPinStatus(result.data);
         }
       } catch (error) {
         console.error('Failed to check PIN status:', error);
+      } finally {
+        isLoadingRef.current = false;
       }
     };
     checkPinStatus();
@@ -70,6 +125,62 @@ export function SettingsPage() {
       setTestStatus(state.aiConfig.apiKey ? "success" : "error");
       setTimeout(() => setTestStatus("idle"), 3000);
     }, 1500);
+  };
+
+  const handleSaveProfile = async () => {
+    // 表单校验
+    if (!formData.name || formData.name.trim() === '') {
+      toast.error('请输入显示名称');
+      return;
+    }
+
+    if (!formData.birthday || formData.birthday.trim() === '') {
+      toast.error('请选择出生日期');
+      return;
+    }
+
+    if (!formData.mbti || formData.mbti.trim() === '') {
+      toast.error('请输入 MBTI 类型');
+      return;
+    }
+
+    if (formData.mbti.length !== 4) {
+      toast.error('MBTI 类型必须为 4 个字母（例如：INTJ）');
+      return;
+    }
+
+    if (!formData.lifespan) {
+      toast.error('请输入预期寿命');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const profileData: UserProfile = {
+        name: formData.name,
+        birthday: formData.birthday,
+        mbti: formData.mbti,
+        values: formData.values,
+        lifespan: formData.lifespan,
+      };
+
+      const result = await updateUserProfile(profileData);
+
+      // 保存成功后，更新全局 state
+      updateState({
+        user: {
+          name: result.name || '',
+          birthday: result.birthday || '',
+          mbti: result.mbti || '',
+          values: result.values || [],
+          lifespan: result.lifespan || 0,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleExport = () => {
@@ -116,10 +227,10 @@ export function SettingsPage() {
   return (
     <div className=" space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="space-y-1">
-        <h1 className="text-3xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
+        {/* <h1 className="text-3xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
           <Monitor className="text-apple-accent" />
           系统设置
-        </h1>
+        </h1> */}
         <p className="text-apple-textSec dark:text-white/40 text-base">
           管理您的生命画布环境变量与系统偏好。
         </p>
@@ -141,16 +252,14 @@ export function SettingsPage() {
                   htmlFor="display-name"
                   className="text-base font-semibold"
                 >
-                  显示名称
+                  显示名称 <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="display-name"
                   type="text"
-                  value={state.user.name}
+                  value={formData.name}
                   onChange={(e) =>
-                    updateState({
-                      user: { ...state.user, name: e.target.value },
-                    })
+                    setFormData({ ...formData, name: e.target.value })
                   }
                   placeholder="您的姓名"
                   className="h-11"
@@ -158,16 +267,14 @@ export function SettingsPage() {
               </div>
               <div className="space-y-3">
                 <Label htmlFor="birthday" className="text-base font-semibold">
-                  出生日期
+                  出生日期 <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="birthday"
                   type="date"
-                  value={state.user.birthday}
+                  value={formData.birthday}
                   onChange={(e) =>
-                    updateState({
-                      user: { ...state.user, birthday: e.target.value },
-                    })
+                    setFormData({ ...formData, birthday: e.target.value })
                   }
                   className="h-11"
                 />
@@ -177,38 +284,44 @@ export function SettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
               <div className="space-y-3">
                 <Label htmlFor="mbti" className="text-base font-semibold">
-                  MBTI 类型
+                  MBTI 类型 <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="mbti"
                   type="text"
-                  value={state.user.mbti}
+                  value={formData.mbti}
                   onChange={(e) =>
-                    updateState({
-                      user: { ...state.user, mbti: e.target.value },
-                    })
+                    setFormData({ ...formData, mbti: e.target.value.toUpperCase() })
                   }
                   placeholder="例如 INTJ"
                   className="h-11"
+                  maxLength={4}
                 />
               </div>
               <div className="space-y-3">
                 <Label htmlFor="lifespan" className="text-base font-semibold">
-                  预期寿命 (岁)
+                  预期寿命 (岁) <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="lifespan"
                   type="number"
-                  value={state.user.lifespan}
-                  onChange={(e) =>
-                    updateState({
-                      user: {
-                        ...state.user,
-                        lifespan: parseInt(e.target.value) || 0,
-                      },
-                    })
-                  }
+                  value={formData.lifespan || ''}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    // 限制输入范围在50-120之间
+                    if (isNaN(value) || value < 50) {
+                      setFormData({ ...formData, lifespan: 50 });
+                    } else if (value > 120) {
+                      setFormData({ ...formData, lifespan: 120 });
+                    } else {
+                      setFormData({ ...formData, lifespan: value });
+                    }
+                  }}
                   className="h-11"
+                  placeholder="请输入预期寿命（50-120岁）"
+                  min={50}
+                  max={120}
+                  step={1}
                 />
               </div>
             </div>
@@ -216,9 +329,9 @@ export function SettingsPage() {
             <div className="space-y-4 mb-8">
               <Label className="text-base font-semibold">核心价值观</Label>
               <TagInput
-                value={state.user.values}
+                value={formData.values}
                 onChange={(values) =>
-                  updateState({ user: { ...state.user, values } })
+                  setFormData({ ...formData, values })
                 }
                 placeholder="按回车添加..."
               />
@@ -239,6 +352,26 @@ export function SettingsPage() {
                   style={{ width: `${lifeProgress}%` }}
                 />
               </div>
+            </div>
+
+            <div className="pt-6 flex justify-end">
+              <Button
+                onClick={handleSaveProfile}
+                disabled={isSaving}
+                className="bg-apple-accent hover:bg-apple-accent/90"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 size={18} className="mr-2 animate-spin" />
+                    保存中...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={18} className="mr-2" />
+                    保存用户信息
+                  </>
+                )}
+              </Button>
             </div>
           </GlassCard>
         </TabsContent>

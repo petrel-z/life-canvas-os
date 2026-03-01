@@ -10,6 +10,11 @@
  * @returns 生命进度百分比 (0-100)
  */
 export function calculateLifeProgress(birthday: string, lifespan: number): number {
+  // 如果没有生日或预期寿命为0，返回0
+  if (!birthday || !lifespan) {
+    return 0;
+  }
+
   const birthDate = new Date(birthday);
   const today = new Date();
   const ageInMs = today.getTime() - birthDate.getTime();
