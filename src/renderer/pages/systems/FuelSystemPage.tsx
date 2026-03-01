@@ -1,18 +1,70 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Beef, Plus, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react';
+import { Beef, Plus, AlertCircle, CheckCircle2, Trash2, Edit, Check, X } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { Button } from '~/renderer/components/ui/button';
 import { Textarea } from '~/renderer/components/ui/textarea';
 import { Label } from '~/renderer/components/ui/label';
 import { TagInput } from '~/renderer/components/ui/tag-input';
+import { Input } from '~/renderer/components/ui/input';
 import { useDietApi, BaselineData, Deviation } from '~/renderer/hooks/useDietApi';
+import { MealItem } from '~/renderer/api/diet';
 
 const PAGE_SIZE = 10; // 每页显示10条偏离记录
 
+// 食物项组件
+interface MealItemRowProps {
+  item: MealItem;
+  index: number;
+  editable: boolean;
+  onUpdate: (index: number, field: 'name' | 'amount', value: string) => void;
+  onRemove: (index: number) => void;
+}
+
+function MealItemRow({ item, index, editable, onUpdate, onRemove }: MealItemRowProps) {
+  return (
+    <div className="flex items-center gap-2 p-2 bg-black/5 dark:bg-white/5 rounded-lg border border-apple-border dark:border-white/10">
+      <div className="flex-1 flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1">
+          <span className="text-sm text-apple-textTer dark:text-white/60 whitespace-nowrap">种类:</span>
+          <Input
+            type="text"
+            value={item.name || ''}
+            onChange={(e) => onUpdate(index, 'name', e.target.value)}
+            placeholder="包子"
+            disabled={!editable}
+            className="flex-1 h-8"
+          />
+        </div>
+        <div className="flex items-center gap-2 flex-1">
+          <span className="text-sm text-apple-textTer dark:text-white/60 whitespace-nowrap">分量:</span>
+          <Input
+            type="text"
+            value={item.amount || ''}
+            onChange={(e) => onUpdate(index, 'amount', e.target.value)}
+            placeholder="两个"
+            disabled={!editable}
+            className="flex-1 h-8"
+          />
+        </div>
+      </div>
+      {editable && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onRemove(index)}
+          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
+        >
+          <X size={16} />
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function FuelSystemPage() {
   const { state, updateState } = useApp();
-  const { getBaseline, updateBaseline, createDeviation, getDeviations, deleteDeviation } = useDietApi();
+  const { getBaseline, updateBaseline, createDeviation, getDeviations, updateDeviation, deleteDeviation } = useDietApi();
 
   const [newDeviation, setNewDeviation] = useState('');
   const [isEditingBaseline, setIsEditingBaseline] = useState(false);
@@ -29,6 +81,10 @@ export function FuelSystemPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
 
+  // 编辑状态
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingDescription, setEditingDescription] = useState('');
+
   // 使用 ref 防止重复加载数据
   const isInitializedRef = useRef(false);
 
@@ -44,12 +100,16 @@ export function FuelSystemPage() {
         if (baselineData) {
           setBaselineForm(baselineData);
           // 更新全局状态（用于一致性评分计算）
+          // 将 MealItem[] 转换为字符串格式
+          const formatMealItems = (items: MealItem[]) => {
+            return items.map(item => `${item.name}(${item.amount})`).join('、');
+          };
           updateState({
             fuelSystem: {
               ...state.fuelSystem,
-              baseline: `早餐：${baselineData.breakfast.join('、')}
-午餐：${baselineData.lunch.join('、')}
-晚餐：${baselineData.dinner.join('、')}
+              baseline: `早餐：${formatMealItems(baselineData.breakfast)}
+午餐：${formatMealItems(baselineData.lunch)}
+晚餐：${formatMealItems(baselineData.dinner)}
 口味：${baselineData.taste.join('、')}`,
             },
           });
@@ -116,6 +176,46 @@ export function FuelSystemPage() {
     }
   };
 
+  // 开始编辑
+  const startEdit = (deviation: Deviation) => {
+    setEditingId(deviation.id);
+    setEditingDescription(deviation.description);
+  };
+
+  // 取消编辑
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingDescription('');
+  };
+
+  // 保存编辑
+  const saveEdit = async (id: string) => {
+    if (!editingDescription.trim()) return;
+
+    try {
+      const updated = await updateDeviation(id, editingDescription);
+
+      // 更新本地状态
+      const newDeviations = deviations.map((d) =>
+        d.id === id ? updated : d
+      );
+      setDeviations(newDeviations);
+      setDisplayedDeviations(newDeviations.slice(0, displayedDeviations.length));
+
+      // 更新全局状态
+      updateState({
+        fuelSystem: {
+          ...state.fuelSystem,
+          deviations: newDeviations,
+        },
+      });
+
+      cancelEdit();
+    } catch (error) {
+      console.log('Failed to update deviation:', error);
+    }
+  };
+
   const loadMoreDeviations = () => {
     if (isLoadingMore || !hasMore) return;
 
@@ -130,18 +230,53 @@ export function FuelSystemPage() {
     }, 300);
   };
 
+  // 添加食物项
+  const addMealItem = (mealType: 'breakfast' | 'lunch' | 'dinner') => {
+    setBaselineForm({
+      ...baselineForm,
+      [mealType]: [...baselineForm[mealType], { name: '', amount: '' }],
+    });
+  };
+
+  // 更新食物项
+  const updateMealItem = (
+    mealType: 'breakfast' | 'lunch' | 'dinner',
+    index: number,
+    field: 'name' | 'amount',
+    value: string
+  ) => {
+    const newItems = [...baselineForm[mealType]];
+    newItems[index] = { ...newItems[index], [field]: value };
+    setBaselineForm({
+      ...baselineForm,
+      [mealType]: newItems,
+    });
+  };
+
+  // 删除食物项
+  const removeMealItem = (mealType: 'breakfast' | 'lunch' | 'dinner', index: number) => {
+    setBaselineForm({
+      ...baselineForm,
+      [mealType]: baselineForm[mealType].filter((_, i) => i !== index),
+    });
+  };
+
   const saveBaseline = async () => {
     try {
       const updatedBaseline = await updateBaseline(baselineForm);
       setBaselineForm(updatedBaseline);
 
       // 更新全局状态
+      // 将 MealItem[] 转换为字符串格式
+      const formatMealItems = (items: MealItem[]) => {
+        return items.map(item => `${item.name}(${item.amount})`).join('、');
+      };
       updateState({
         fuelSystem: {
           ...state.fuelSystem,
-          baseline: `早餐：${updatedBaseline.breakfast.join('、')}
-午餐：${updatedBaseline.lunch.join('、')}
-晚餐：${updatedBaseline.dinner.join('、')}
+          baseline: `早餐：${formatMealItems(updatedBaseline.breakfast)}
+午餐：${formatMealItems(updatedBaseline.lunch)}
+晚餐：${formatMealItems(updatedBaseline.dinner)}
 口味：${updatedBaseline.taste.join('、')}`,
         },
       });
@@ -180,45 +315,97 @@ export function FuelSystemPage() {
         <GlassCard title="每日基准 (Baseline)">
           <div className="space-y-4">
             <div className="space-y-4">
+              {/* 早餐 */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-apple-textMain dark:text-white">
                   早餐：
                 </Label>
-                <div className={`transition-all ${!isEditingBaseline ? 'opacity-60 pointer-events-none' : ''}`}>
-                  <TagInput
-                    value={baselineForm.breakfast || []}
-                    onChange={(tags) => setBaselineForm({ ...baselineForm, breakfast: tags })}
-                    placeholder="例如：燕麦片、煎蛋"
-                  />
+                <div className="space-y-2">
+                  {baselineForm.breakfast.map((item, index) => (
+                    <MealItemRow
+                      key={`breakfast-${index}`}
+                      item={item}
+                      index={index}
+                      editable={isEditingBaseline}
+                      onUpdate={(index, field, value) => updateMealItem('breakfast', index, field, value)}
+                      onRemove={(index) => removeMealItem('breakfast', index)}
+                    />
+                  ))}
+                  {isEditingBaseline && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addMealItem('breakfast')}
+                      className="w-full border-dashed"
+                    >
+                      <Plus size={16} className="mr-2" />
+                      添加食物
+                    </Button>
+                  )}
                 </div>
               </div>
 
+              {/* 午餐 */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-apple-textMain dark:text-white">
                   午餐：
                 </Label>
-                <div className={`transition-all ${!isEditingBaseline ? 'opacity-60 pointer-events-none' : ''}`}>
-                  <TagInput
-                    value={baselineForm.lunch || []}
-                    onChange={(tags) => setBaselineForm({ ...baselineForm, lunch: tags })}
-                    placeholder="例如：沙拉、鸡胸肉"
-                  />
+                <div className="space-y-2">
+                  {baselineForm.lunch.map((item, index) => (
+                    <MealItemRow
+                      key={`lunch-${index}`}
+                      item={item}
+                      index={index}
+                      editable={isEditingBaseline}
+                      onUpdate={(index, field, value) => updateMealItem('lunch', index, field, value)}
+                      onRemove={(index) => removeMealItem('lunch', index)}
+                    />
+                  ))}
+                  {isEditingBaseline && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addMealItem('lunch')}
+                      className="w-full border-dashed"
+                    >
+                      <Plus size={16} className="mr-2" />
+                      添加食物
+                    </Button>
+                  )}
                 </div>
               </div>
 
+              {/* 晚餐 */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-apple-textMain dark:text-white">
                   晚餐：
                 </Label>
-                <div className={`transition-all ${!isEditingBaseline ? 'opacity-60 pointer-events-none' : ''}`}>
-                  <TagInput
-                    value={baselineForm.dinner || []}
-                    onChange={(tags) => setBaselineForm({ ...baselineForm, dinner: tags })}
-                    placeholder="例如：优质蛋白、蔬菜"
-                  />
+                <div className="space-y-2">
+                  {baselineForm.dinner.map((item, index) => (
+                    <MealItemRow
+                      key={`dinner-${index}`}
+                      item={item}
+                      index={index}
+                      editable={isEditingBaseline}
+                      onUpdate={(index, field, value) => updateMealItem('dinner', index, field, value)}
+                      onRemove={(index) => removeMealItem('dinner', index)}
+                    />
+                  ))}
+                  {isEditingBaseline && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addMealItem('dinner')}
+                      className="w-full border-dashed"
+                    >
+                      <Plus size={16} className="mr-2" />
+                      添加食物
+                    </Button>
+                  )}
                 </div>
               </div>
 
+              {/* 口味 */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-apple-textMain dark:text-white">
                   口味：
@@ -325,25 +512,81 @@ export function FuelSystemPage() {
                     key={dev.id}
                     className="flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 rounded-xl border border-apple-border dark:border-white/5 group hover:border-orange-500/20 transition-all shadow-sm"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-1">
                       <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]" />
-                      <div>
-                        <div className="text-apple-textMain dark:text-white font-medium">
-                          {dev.description}
-                        </div>
-                        <div className="text-xs text-apple-textTer dark:text-white/30">
-                          {new Date(dev.timestamp).toLocaleString('zh-CN')}
-                        </div>
+                      <div className="flex-1">
+                        {editingId === dev.id ? (
+                          <Textarea
+                            value={editingDescription}
+                            onChange={(e) => setEditingDescription(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                saveEdit(dev.id);
+                              } else if (e.key === 'Escape') {
+                                cancelEdit();
+                              }
+                            }}
+                            className="min-h-[60px] bg-black/5 dark:bg-white/5 border-apple-border dark:border-white/10 focus:ring-orange-500/50 resize-none"
+                            autoFocus
+                          />
+                        ) : (
+                          <>
+                            <div className="text-apple-textMain dark:text-white font-medium">
+                              {dev.description}
+                            </div>
+                            <div className="text-xs text-apple-textTer dark:text-white/30">
+                              {new Date(dev.timestamp).toLocaleString('zh-CN')}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeDeviation(dev.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Trash2 size={18} />
-                    </Button>
+                    <div className="flex items-center gap-1 ml-2">
+                      {editingId === dev.id ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => saveEdit(dev.id)}
+                            className="opacity-100 transition-all hover:bg-green-500/10 hover:text-green-600"
+                            title="保存"
+                          >
+                            <Check size={18} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={cancelEdit}
+                            className="opacity-100 transition-all hover:bg-destructive/10 hover:text-destructive"
+                            title="取消"
+                          >
+                            <X size={18} />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => startEdit(dev)}
+                            className="opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500/10 hover:text-blue-600"
+                            title="编辑"
+                          >
+                            <Edit size={18} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeDeviation(dev.id)}
+                            className="opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive/10 hover:text-destructive"
+                            title="删除"
+                          >
+                            <Trash2 size={18} />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

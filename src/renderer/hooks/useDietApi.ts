@@ -16,9 +16,9 @@ export interface Deviation {
 
 // 前端使用的基准数据类型
 export interface BaselineData {
-  breakfast: string[];
-  lunch: string[];
-  dinner: string[];
+  breakfast: MealItem[];
+  lunch: MealItem[];
+  dinner: MealItem[];
   taste: string[];
 }
 
@@ -44,11 +44,11 @@ export function useDietApi() {
     const result = await response.json();
     const data = result.data as FuelBaseline;
 
-    // 转换后端格式到前端格式
+    // 转换后端格式到前端格式（null 转为空数组）
     return {
-      breakfast: data.breakfast?.map(item => item.name) || [],
-      lunch: data.lunch?.map(item => item.name) || [],
-      dinner: data.dinner?.map(item => item.name) || [],
+      breakfast: data.breakfast || [],
+      lunch: data.lunch || [],
+      dinner: data.dinner || [],
       taste: data.taste || [],
     };
   }, []);
@@ -57,11 +57,24 @@ export function useDietApi() {
    * 更新饮食基准
    */
   const updateBaseline = useCallback(async (data: BaselineData): Promise<BaselineData> => {
+    // 验证：确保每个食物项都有种类和分量
+    const validateMealItems = (items: MealItem[]): boolean => {
+      return items.every(item => item.name?.trim() && item.amount?.trim());
+    };
+
+    if (!validateMealItems(data.breakfast) ||
+        !validateMealItems(data.lunch) ||
+        !validateMealItems(data.dinner)) {
+      toast.error('请填写完整的食物种类和分量');
+      throw new Error('Incomplete meal data');
+    }
+
     // 转换前端格式到后端格式
+    // 空数组需要转换为 null
     const apiData = {
-      breakfast: data.breakfast.map(name => ({ name })),
-      lunch: data.lunch.map(name => ({ name })),
-      dinner: data.dinner.map(name => ({ name })),
+      breakfast: data.breakfast.length > 0 ? data.breakfast : null,
+      lunch: data.lunch.length > 0 ? data.lunch : null,
+      dinner: data.dinner.length > 0 ? data.dinner : null,
       taste: data.taste,
     };
 
@@ -82,9 +95,9 @@ export function useDietApi() {
 
     // 转换后端响应到前端格式
     return {
-      breakfast: resultData.breakfast?.map(item => item.name) || [],
-      lunch: resultData.lunch?.map(item => item.name) || [],
-      dinner: resultData.dinner?.map(item => item.name) || [],
+      breakfast: resultData.breakfast || [],
+      lunch: resultData.lunch || [],
+      dinner: resultData.dinner || [],
       taste: resultData.taste || [],
     };
   }, []);
@@ -166,6 +179,34 @@ export function useDietApi() {
   }, []);
 
   /**
+   * 更新偏离事件
+   */
+  const updateDeviation = useCallback(async (id: string, description: string): Promise<Deviation> => {
+    const response = await dietApi.updateDeviation(parseInt(id), { description });
+
+    if (!response.ok) {
+      const error = await response.json();
+      toast.error('更新偏离事件失败', {
+        description: error.detail?.message || '请稍后重试',
+      });
+      throw error;
+    }
+
+    const result = await response.json();
+    const data = result.data as MealDeviation;
+
+    toast.success('更新成功');
+
+    // 转换后端响应到前端格式
+    return {
+      id: data.id.toString(),
+      timestamp: data.occurred_at_ts,
+      description: data.description,
+      type: 'other',
+    };
+  }, []);
+
+  /**
    * 删除偏离事件
    */
   const deleteDeviation = useCallback(async (id: string): Promise<void> => {
@@ -179,7 +220,7 @@ export function useDietApi() {
       throw error;
     }
 
-    toast.success('偏离事件已删除');
+    toast.success('删除成功');
   }, []);
 
   return {
@@ -187,6 +228,7 @@ export function useDietApi() {
     updateBaseline,
     createDeviation,
     getDeviations,
+    updateDeviation,
     deleteDeviation,
   };
 }

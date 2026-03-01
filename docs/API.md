@@ -882,6 +882,11 @@
   "breakfast": [
     {
       "name": "全麦面包",
+      "amount": "2片",
+    },
+    {
+      "name": "全麦面包",
+      "amount": "2片",
     }
   ],
   "lunch": null,
@@ -1570,9 +1575,9 @@
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| type | String | 否 | all | 事件类型过滤：all（全部）、diary（日记）、diet（饮食偏离） |
-| page | Integer | 否 | 1 | 页码，从 1 开始 |
-| page_size | Integer | 否 | 30 | 每页数量，最大 100 |
+| type | String | 是 | all | 事件类型过滤：all（全部）、diary（日记）、diet（饮食偏离） |
+| page | Integer | 是 | 1 | 页码，从 1 开始 |
+| page_size | Integer | 是 | 30 | 每页数量，最大 100 |
 
 **成功响应（200）**：
 ```json

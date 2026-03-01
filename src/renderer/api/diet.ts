@@ -11,9 +11,9 @@ export interface MealItem {
 }
 
 export interface FuelBaseline {
-  breakfast: MealItem[];
-  lunch: MealItem[];
-  dinner: MealItem[];
+  breakfast: MealItem[] | null;
+  lunch: MealItem[] | null;
+  dinner: MealItem[] | null;
   taste: string[];
 }
 
@@ -55,10 +55,10 @@ export const dietApi = {
    * 更新饮食基准
    */
   updateBaseline(data: {
-    breakfast?: MealItem[];
-    lunch?: MealItem[];
-    dinner?: MealItem[];
-    taste?: string[];
+    breakfast: MealItem[] | null;
+    lunch: MealItem[] | null;
+    dinner: MealItem[] | null;
+    taste: string[];
   }): Promise<Response> {
     return fetch(`${API_BASE_URL}/api/diet/baseline`, {
       method: 'PUT',
@@ -90,6 +90,17 @@ export const dietApi = {
 
     const url = `${API_BASE_URL}/api/diet/deviations?${queryParams}`;
     return fetch(url);
+  },
+
+  /**
+   * 更新偏离事件
+   */
+  updateDeviation(deviationId: number, data: MealDeviationUpdate): Promise<Response> {
+    return fetch(`${API_BASE_URL}/api/diet/deviations/${deviationId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
   },
 
   /**
