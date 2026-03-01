@@ -162,6 +162,7 @@ export const INITIAL_STATE: AppState = {
   aiConfig: {
     provider: "DeepSeek",
     apiKey: "",
+    modelName: "deepseek-chat",
     frequencyLimit: 10,
   },
   systemConfig: {

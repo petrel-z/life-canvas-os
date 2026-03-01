@@ -70,6 +70,7 @@ export interface AppState {
   aiConfig: {
     provider: 'DeepSeek' | 'Doubao';
     apiKey: string;
+    modelName: string;
     frequencyLimit: number;
   };
   systemConfig: {

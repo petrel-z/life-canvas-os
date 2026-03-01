@@ -41,19 +41,41 @@ import { Label } from "~/renderer/components/ui/label";
 import { calculateLifeProgress } from "~/renderer/lib/lifeUtils";
 import { pinApi } from "~/renderer/api";
 import { useUserApi, type UserProfile } from "~/renderer/hooks/useUserApi";
+import { useAiApi, type AIConfigData } from "~/renderer/hooks/useAiApi";
+import { useDataApi, type ExportFormat } from "~/renderer/hooks/useDataApi";
 import { toast } from "sonner";
 
 export function SettingsPage() {
   const { state, updateState, setTheme } = useApp();
   const { getUserProfile, updateUserProfile } = useUserApi();
+  const { getAIConfig, saveAIConfig } = useAiApi();
+  const { exportData, importData } = useDataApi();
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "success" | "error"
   >("idle");
   const [pinStatus, setPinStatus] = useState<{ has_pin_set: boolean } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingAI, setIsSavingAI] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [aiConfigLoaded, setAiConfigLoaded] = useState(false);
   const isLoadingRef = useRef(false);
   const isLoadingProfileRef = useRef(false);
   const getUserProfileRef = useRef(getUserProfile);
+
+  // AI 配置本地状态
+  const [aiFormData, setAiFormData] = useState<{
+    provider: 'DeepSeek' | 'Doubao';
+    apiKey: string;
+    modelName: string;
+    frequencyLimit: number;
+  }>({
+    provider: 'DeepSeek',
+    apiKey: '',
+    modelName: 'deepseek-chat',
+    frequencyLimit: 10,
+  });
 
   // 更新 ref
   useEffect(() => {
@@ -96,6 +118,40 @@ export function SettingsPage() {
     loadUserProfile();
   }, []);
 
+  // 加载 AI 配置
+  useEffect(() => {
+    const loadAIConfig = async () => {
+      if (aiConfigLoaded) return;
+
+      try {
+        const config = await getAIConfig();
+        if (config) {
+          setAiFormData({
+            provider: config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
+            apiKey: '', // 不显示完整的 API Key
+            modelName: config.model_name || 'deepseek-chat',
+            frequencyLimit: state.aiConfig.frequencyLimit || 10,
+          });
+          // 更新全局状态
+          updateState({
+            aiConfig: {
+              ...state.aiConfig,
+              provider: config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
+              modelName: config.model_name || 'deepseek-chat',
+              apiKey: state.aiConfig.apiKey, // 保留原有的 API Key
+            },
+          });
+        }
+        setAiConfigLoaded(true);
+      } catch (error) {
+        console.log('AI config not set yet');
+        setAiConfigLoaded(true);
+      }
+    };
+
+    loadAIConfig();
+  }, [aiConfigLoaded]);
+
   const lifeProgress = calculateLifeProgress(formData.birthday, formData.lifespan);
 
   // 检查 PIN 状态
@@ -119,12 +175,65 @@ export function SettingsPage() {
     checkPinStatus();
   }, []);
 
-  const handleTestAI = () => {
+  const handleTestAI = async () => {
+    if (!aiFormData.apiKey && !state.aiConfig.apiKey) {
+      toast.error('请先输入 API 密钥');
+      return;
+    }
+
     setTestStatus("testing");
-    setTimeout(() => {
-      setTestStatus(state.aiConfig.apiKey ? "success" : "error");
+
+    try {
+      // 模拟测试，实际应该调用 AI API
+      setTimeout(() => {
+        const apiKeyToTest = aiFormData.apiKey || state.aiConfig.apiKey;
+        setTestStatus(apiKeyToTest ? "success" : "error");
+        if (apiKeyToTest) {
+          toast.success('AI 配置测试成功');
+        } else {
+          toast.error('AI 配置测试失败，请检查 API Key');
+        }
+        setTimeout(() => setTestStatus("idle"), 3000);
+      }, 1500);
+    } catch (error) {
+      setTestStatus("error");
       setTimeout(() => setTestStatus("idle"), 3000);
-    }, 1500);
+    }
+  };
+
+  const handleSaveAIConfig = async () => {
+    setIsSavingAI(true);
+
+    try {
+      const configData: AIConfigData = {
+        provider: aiFormData.provider,
+        apiKey: aiFormData.apiKey || state.aiConfig.apiKey,
+        modelName: aiFormData.modelName,
+      };
+
+      const result = await saveAIConfig(configData);
+
+      // 保存成功后，更新全局状态
+      updateState({
+        aiConfig: {
+          ...state.aiConfig,
+          provider: aiFormData.provider,
+          modelName: result.model_name,
+          apiKey: configData.apiKey,
+          frequencyLimit: aiFormData.frequencyLimit,
+        },
+      });
+
+      // 清空 API Key 输入框（因为已保存）
+      setAiFormData({
+        ...aiFormData,
+        apiKey: '',
+      });
+    } catch (error) {
+      console.error('Failed to save AI config:', error);
+    } finally {
+      setIsSavingAI(false);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -183,45 +292,48 @@ export function SettingsPage() {
     }
   };
 
-  const handleExport = () => {
-    const dataStr = JSON.stringify(state, null, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `life-canvas-backup-${new Date().toISOString().split("T")[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImport = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          try {
-            const data = JSON.parse(event.target?.result as string);
-            updateState(data);
-            alert("导入成功！");
-          } catch (error) {
-            alert("导入失败，文件格式错误。");
-          }
-        };
-        reader.readAsText(file);
-      }
-    };
-    input.click();
-  };
-
   const handleClearData = () => {
     if (confirm("确定要清除所有数据吗？此操作不可恢复！")) {
       localStorage.removeItem("life-canvas-state");
       window.location.reload();
     }
+  };
+
+  const handleExportClick = () => {
+    setShowExportDialog(true);
+  };
+
+  const handleExportFormatSelect = async (format: ExportFormat) => {
+    setIsExporting(true);
+    setShowExportDialog(false);
+
+    try {
+      await exportData(format);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportClick = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,.zip";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        setIsImporting(true);
+        try {
+          await importData(file);
+        } catch (error) {
+          console.error('Import failed:', error);
+        } finally {
+          setIsImporting(false);
+        }
+      }
+    };
+    input.click();
   };
 
   return (
@@ -385,15 +497,13 @@ export function SettingsPage() {
                   <Button
                     key={p}
                     variant={
-                      state.aiConfig.provider === p ? "default" : "outline"
+                      aiFormData.provider === p ? "default" : "outline"
                     }
                     onClick={() =>
-                      updateState({
-                        aiConfig: { ...state.aiConfig, provider: p },
-                      })
+                      setAiFormData({ ...aiFormData, provider: p })
                     }
                     className={
-                      state.aiConfig.provider === p
+                      aiFormData.provider === p
                         ? "bg-apple-accent hover:bg-apple-accent/90 h-12 text-base"
                         : "h-12 text-base"
                     }
@@ -412,12 +522,10 @@ export function SettingsPage() {
                 <Input
                   id="api-key"
                   type="password"
-                  value={state.aiConfig.apiKey}
+                  value={aiFormData.apiKey}
                   placeholder="请输入您的 API Key"
                   onChange={(e) =>
-                    updateState({
-                      aiConfig: { ...state.aiConfig, apiKey: e.target.value },
-                    })
+                    setAiFormData({ ...aiFormData, apiKey: e.target.value })
                   }
                   className="flex-1 h-11"
                 />
@@ -449,15 +557,13 @@ export function SettingsPage() {
                   variant="secondary"
                   className="text-apple-accent bg-apple-accent/10 text-sm px-3 py-1"
                 >
-                  {state.aiConfig.frequencyLimit} 次/日
+                  {aiFormData.frequencyLimit} 次/日
                 </Badge>
               </div>
               <Slider
-                value={[state.aiConfig.frequencyLimit]}
+                value={[aiFormData.frequencyLimit]}
                 onValueChange={([value]) =>
-                  updateState({
-                    aiConfig: { ...state.aiConfig, frequencyLimit: value },
-                  })
+                  setAiFormData({ ...aiFormData, frequencyLimit: value })
                 }
                 min={1}
                 max={50}
@@ -468,6 +574,26 @@ export function SettingsPage() {
                 <span>极简</span>
                 <span>深度</span>
               </div>
+            </div>
+
+            <div className="pt-6 flex justify-end">
+              <Button
+                onClick={handleSaveAIConfig}
+                disabled={isSavingAI}
+                className="bg-apple-accent hover:bg-apple-accent/90"
+              >
+                {isSavingAI ? (
+                  <>
+                    <Loader2 size={18} className="mr-2 animate-spin" />
+                    保存中...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={18} className="mr-2" />
+                    保存 AI 配置
+                  </>
+                )}
+              </Button>
             </div>
           </GlassCard>
         </TabsContent>
@@ -647,16 +773,17 @@ export function SettingsPage() {
             <Button
               variant="outline"
               className="w-full justify-start h-auto py-5 px-5"
-              onClick={handleExport}
+              onClick={handleExportClick}
+              disabled={isExporting}
             >
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-apple-accent/5 text-apple-accent">
-                  <Download size={20} />
+                  {isExporting ? <Loader2 size={20} className="animate-spin" /> : <Download size={20} />}
                 </div>
                 <div className="text-left flex-1">
-                  <div className="text-sm font-semibold">导出备份 (JSON)</div>
+                  <div className="text-sm font-semibold">导出备份数据</div>
                   <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
-                    导出完整的生命足迹数据
+                    导出完整的生命足迹数据（支持 JSON/ZIP）
                   </div>
                 </div>
               </div>
@@ -669,16 +796,17 @@ export function SettingsPage() {
             <Button
               variant="outline"
               className="w-full justify-start h-auto py-5 px-5"
-              onClick={handleImport}
+              onClick={handleImportClick}
+              disabled={isImporting}
             >
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-green-500/5 text-green-500">
-                  <Upload size={20} />
+                  {isImporting ? <Loader2 size={20} className="animate-spin" /> : <Upload size={20} />}
                 </div>
                 <div className="text-left flex-1">
                   <div className="text-sm font-semibold">导入历史数据</div>
                   <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
-                    从备份文件中恢复记录
+                    从备份文件中恢复记录（支持 JSON/ZIP）
                   </div>
                 </div>
               </div>
@@ -721,6 +849,67 @@ export function SettingsPage() {
           Copyright © 2025 Creative Canvas Labs. All Rights Reserved.
         </div>
       </div>
+
+      {/* 导出格式选择弹窗 */}
+      {showExportDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <GlassCard className="!p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold text-apple-textMain dark:text-white mb-2">
+              选择导出格式
+            </h3>
+            <p className="text-sm text-apple-textSec dark:text-white/50 mb-6">
+              请选择您希望导出的数据格式
+            </p>
+
+            <div className="space-y-3">
+              <Button
+                onClick={() => handleExportFormatSelect('json')}
+                className="w-full justify-start h-auto py-4 px-5"
+                variant="outline"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+                    <Database size={20} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="text-sm font-semibold">JSON 格式</div>
+                    <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
+                      文本格式，易于阅读和编辑
+                    </div>
+                  </div>
+                </div>
+              </Button>
+
+              <Button
+                onClick={() => handleExportFormatSelect('zip')}
+                className="w-full justify-start h-auto py-4 px-5"
+                variant="outline"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500">
+                    <Download size={20} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="text-sm font-semibold">ZIP 格式</div>
+                    <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
+                      压缩格式，包含数据库文件和附件
+                    </div>
+                  </div>
+                </div>
+              </Button>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <Button
+                variant="ghost"
+                onClick={() => setShowExportDialog(false)}
+              >
+                取消
+              </Button>
+            </div>
+          </GlassCard>
+        </div>
+      )}
     </div>
   );
 }

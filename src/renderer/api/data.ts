@@ -1,0 +1,55 @@
+/**
+ * 数据导入导出 API
+ */
+
+import { API_BASE_URL } from './config';
+
+export type ExportFormat = 'json' | 'zip';
+
+export const dataApi = {
+  /**
+   * 导出数据
+   */
+  exportData(format: ExportFormat = 'json'): Promise<Response> {
+    return fetch(`${API_BASE_URL}/api/data/export?format=${format}`, {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * 导入数据（通过文件上传）
+   */
+  importData(file: File, verify: boolean = true): Promise<Response> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('verify', verify.toString());
+
+    return fetch(`${API_BASE_URL}/api/data/import`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  /**
+   * 获取备份列表
+   */
+  getBackups(): Promise<Response> {
+    return fetch(`${API_BASE_URL}/api/data/backups`);
+  },
+
+  /**
+   * 创建备份
+   */
+  createBackup(): Promise<Response> {
+    return fetch(`${API_BASE_URL}/api/data/backup/create`, {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * 健康检查
+   */
+  healthCheck(): Promise<Response> {
+    return fetch(`${API_BASE_URL}/api/data/health`);
+  },
+};
