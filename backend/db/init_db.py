@@ -21,38 +21,44 @@ from backend.models.record import DailyRecord
 
 def ensure_database_initialized(db: Session) -> bool:
     """
-    确保数据库已初始化（如果未初始化则自动初始化）
+    确保数据库已初始化（自动创建新表并初始化默认数据）
 
     Returns:
         是否进行了初始化操作
     """
-    # 检查表是否存在
     inspector = inspect(engine)
     existing_tables = inspector.get_table_names()
 
-    # 如果没有任何表，需要初始化
+    # 始终尝试创建所有表（SQLAlchemy 会跳过已存在的表）
     if len(existing_tables) == 0:
         print("[INFO] No database tables found. Initializing database...")
-        init_db(db)
-        return True
+    else:
+        print(f"[INFO] Found {len(existing_tables)} existing tables. Checking for new tables...")
 
-    # 检查关键表是否存在
-    required_tables = ['users', 'systems']
-    missing_tables = [t for t in required_tables if t not in existing_tables]
+    # 1. 创建所有表（包括新增的模型）
+    Base.metadata.create_all(bind=engine)
 
-    if missing_tables:
-        print(f"[INFO] Missing tables: {missing_tables}. Re-initializing...")
-        init_db(db)
-        return True
+    # 检查是否有新表被创建
+    new_tables = [t for t in inspector.get_table_names() if t not in existing_tables]
+    if new_tables:
+        print(f"[OK] Created new tables: {new_tables}")
 
-    # 检查是否有默认用户
+    # 2. 检查并创建默认用户
     user = db.query(User).first()
     if not user:
         print("[INFO] No default user found. Creating...")
         _create_default_user(db)
+        _create_default_settings(db)
+        _create_default_systems(db)
         return True
 
-    return False
+    # 3. 确保用户设置存在
+    _create_default_settings(db)
+
+    # 4. 确保8个系统存在
+    _create_default_systems(db)
+
+    return len(new_tables) > 0
 
 
 def init_db(db: Session) -> None:
