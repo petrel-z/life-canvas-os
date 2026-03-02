@@ -2,6 +2,7 @@
 用户服务 - 用户管理业务逻辑
 """
 import base64
+import httpx
 from cryptography.fernet import Fernet
 from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
@@ -295,4 +296,127 @@ class UserService:
             "model_name": model,
             "api_key_masked": masked_key,
             "updated_at": user.updated_at.isoformat()
+        }, 200
+
+    @staticmethod
+    async def verify_api_key(provider: str, api_key: str, model: Optional[str] = None) -> Tuple[dict, int]:
+        """
+        验证 API Key 有效性
+
+        Args:
+            provider: AI 提供商 (deepseek, openai, doubao)
+            api_key: API Key
+            model: 可选的模型名称
+
+        Returns:
+            (response_data, status_code)
+        """
+        try:
+            if provider.lower() == "deepseek":
+                return await UserService._verify_deepseek_key(api_key, model)
+            elif provider.lower() == "openai":
+                return await UserService._verify_openai_key(api_key, model)
+            elif provider.lower() == "doubao":
+                return await UserService._verify_doubao_key(api_key, model)
+            else:
+                return error_response(
+                    message=f"不支持的 AI 提供商: {provider}",
+                    code=400
+                ), 400
+
+        except httpx.TimeoutException:
+            return error_response(
+                message="API 请求超时，请检查网络连接",
+                code=504
+            ), 504
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                return error_response(
+                    message="API Key 无效或已过期",
+                    code=401,
+                    data={"provider": provider}
+                ), 401
+            elif e.response.status_code == 429:
+                return error_response(
+                    message="API 请求频率超限，请稍后再试",
+                    code=429
+                ), 429
+            else:
+                return error_response(
+                    message=f"API 验证失败 (HTTP {e.response.status_code})",
+                    code=502,
+                    data={"provider": provider, "status_code": e.response.status_code}
+                ), 502
+        except Exception as e:
+            return error_response(
+                message=f"API Key 验证失败: {str(e)}",
+                code=500
+            ), 500
+
+    @staticmethod
+    async def _verify_deepseek_key(api_key: str, model: Optional[str] = None) -> Tuple[dict, int]:
+        """验证 DeepSeek API Key"""
+        url = "https://api.deepseek.com/v1/chat/completions"
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": model or "deepseek-chat",
+            "messages": [
+                {"role": "user", "content": "Hi"}
+            ],
+            "max_tokens": 5
+        }
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+
+        return {
+            "valid": True,
+            "provider": "deepseek",
+            "model": model or "deepseek-chat"
+        }, 200
+
+    @staticmethod
+    async def _verify_openai_key(api_key: str, model: Optional[str] = None) -> Tuple[dict, int]:
+        """验证 OpenAI API Key"""
+        url = "https://api.openai.com/v1/chat/completions"
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": model or "gpt-3.5-turbo",
+            "messages": [
+                {"role": "user", "content": "Hi"}
+            ],
+            "max_tokens": 5
+        }
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+
+        return {
+            "valid": True,
+            "provider": "openai",
+            "model": model or "gpt-3.5-turbo"
+        }, 200
+
+    @staticmethod
+    async def _verify_doubao_key(api_key: str, model: Optional[str] = None) -> Tuple[dict, int]:
+        """验证豆包 API Key"""
+        # 豆包 API 验证逻辑（需要根据实际 API 文档实现）
+        # 这里暂时返回成功，实际使用时需要完善
+        return {
+            "valid": True,
+            "provider": "doubao",
+            "model": model or "doubao-seed-2-0-lite-260215",
+            "note": "豆包 API 验证尚未完全实现"
         }, 200

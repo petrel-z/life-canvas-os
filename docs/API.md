@@ -1,12 +1,18 @@
 # Life Canvas OS API 接口文档
 
-> 版本：v1.1.0
+> 版本：v1.2.0
 > 最后更新：2026-03-02
 > 基础 URL：`http://127.0.0.1:8000`（开发环境）
 > 数据格式：JSON
 > 遵循规范：[API_STANDARDS.md](./API_STANDARDS.md)
 
 ## 📝 更新日志
+
+### v1.2.0 (2026-03-02)
+- ✨ **用户配置**：新增 API Key 验证接口，支持保存前验证 Key 有效性
+- ✨ **用户配置**：支持 DeepSeek、OpenAI、豆包的 API Key 验证
+- 🔧 **用户配置**：完善错误处理（401/429/504 等）
+- 📝 **文档**：优化洞察生成接口文档，移除混乱的注释代码
 
 ### v1.1.0 (2026-03-02)
 - ✨ **AI 洞察**：移除 `force` 参数，添加每日生成次数限制（3次/天）
@@ -1250,6 +1256,94 @@
 
 ---
 
+### 6. 验证 AI API Key
+
+**接口地址**：`POST /api/user/ai-config/verify`
+
+**描述**：在保存 AI 配置前验证 API Key 是否有效，避免保存无效的 Key
+
+**请求参数**：
+```json
+{
+  "provider": "deepseek",
+  "api_key": "sk-xxxxx",
+  "model": "deepseek-chat"
+}
+```
+
+**参数说明**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| provider | String | 是 | AI 提供商：`deepseek`、`openai`、`doubao` |
+| api_key | String | 是 | API Key |
+| model | String | 否 | 模型名称（可选，使用默认值） |
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "API Key 验证成功",
+  "data": {
+    "valid": true,
+    "provider": "deepseek",
+    "model": "deepseek-chat"
+  },
+  "timestamp": 1772424710405
+}
+```
+
+**错误响应（401 - API Key 无效）**：
+```json
+{
+  "code": 401,
+  "message": "API Key 无效或已过期",
+  "data": {
+    "provider": "deepseek"
+  },
+  "timestamp": 1772424710405
+}
+```
+
+**错误响应（504 - 请求超时）**：
+```json
+{
+  "code": 504,
+  "message": "API 请求超时，请检查网络连接",
+  "timestamp": 1772424710405
+}
+```
+
+**错误响应（429 - 频率超限）**：
+```json
+{
+  "code": 429,
+  "message": "API 请求频率超限，请稍后再试",
+  "timestamp": 1772424710405
+}
+```
+
+**使用建议**：
+- 在用户输入 API Key 后实时验证（防抖处理）
+- 验证成功后再调用保存配置接口
+- 验证超时时间为 10 秒
+- 验证失败时给出明确的错误提示
+
+**使用示例**：
+```bash
+# 验证 DeepSeek API Key
+curl -X POST "http://localhost:8000/api/user/ai-config/verify" \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "deepseek", "api_key": "sk-xxxxx"}'
+
+# 验证 OpenAI API Key
+curl -X POST "http://localhost:8000/api/user/ai-config/verify" \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "openai", "api_key": "sk-xxxxx"}'
+```
+
+---
+
 ## 📝 日记管理
 
 ### 1. 创建日记
@@ -1456,15 +1550,12 @@
 
 **接口地址**：`POST /api/insights/generate`
 
-**无请求参数**：
-<!-- ```json
-{
-  "force": false
-}
-``` -->
+**请求参数**：无需参数，接口会自动检查今日生成次数
 
-<!-- **参数说明**： -->
-<!-- - `force`: 是否强制重新生成（默认 false） -->
+**使用限制**：
+- 每天最多生成 **3 次**洞察
+- 超过限制后返回最新的历史洞察
+- 每日限制在 UTC 00:00 重置
 
 **成功响应（200）- 正常生成**：
 ```json

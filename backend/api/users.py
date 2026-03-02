@@ -1,7 +1,8 @@
 """用户配置 API 接口"""
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Body
 from sqlalchemy.orm import Session
 from typing import Optional
+from pydantic import BaseModel, Field
 
 from backend.db.session import get_db
 from backend.services.user_service import UserService
@@ -17,6 +18,15 @@ from backend.schemas.common import success_response, error_response
 
 
 router = APIRouter(prefix="/api/user", tags=["user"])
+
+
+# ============ API Key 验证 Schema ============
+
+class APIKeyVerifyRequest(BaseModel):
+    """API Key 验证请求"""
+    provider: str = Field(..., description="AI 提供商 (deepseek, openai, doubao)")
+    api_key: str = Field(..., description="API Key")
+    model: Optional[str] = Field(None, description="可选的模型名称")
 
 
 # ============ 用户信息 ============
@@ -158,4 +168,33 @@ async def get_ai_config(db: Session = Depends(get_db)):
     return success_response(
         data=data,
         message="获取 AI 配置成功"
+    )
+
+
+@router.post("/ai-config/verify")
+async def verify_api_key(
+    request: APIKeyVerifyRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    验证 API Key 有效性
+
+    在保存前验证 API Key 是否有效，避免保存无效的 Key。
+    支持 DeepSeek、OpenAI、豆包等提供商。
+    """
+    data, status_code = await UserService.verify_api_key(
+        provider=request.provider,
+        api_key=request.api_key,
+        model=request.model
+    )
+
+    if status_code >= 400:
+        raise HTTPException(
+            status_code=status_code,
+            detail=data
+        )
+
+    return success_response(
+        data=data,
+        message="API Key 验证成功"
     )
