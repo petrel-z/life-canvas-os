@@ -1,12 +1,19 @@
 # Life Canvas OS API 接口文档
 
-> 版本：v1.2.0
+> 版本：v1.3.0
 > 最后更新：2026-03-02
 > 基础 URL：`http://127.0.0.1:8000`（开发环境）
 > 数据格式：JSON
 > 遵循规范：[API_STANDARDS.md](./API_STANDARDS.md)
 
 ## 📝 更新日志
+
+### v1.3.0 (2026-03-02)
+- ✨ **用户配置**：保存 AI 配置接口自动验证 API Key 有效性
+- ✨ **用户配置**：验证失败时不保存配置，直接返回错误
+- 🔧 **用户配置**：添加 `verified: true` 标识到成功响应
+- 📝 **文档**：完善保存 AI 配置接口文档，添加自动验证说明
+- 📝 **文档**：删除重复的饮食系统接口说明
 
 ### v1.2.0 (2026-03-02)
 - ✨ **用户配置**：新增 API Key 验证接口，支持保存前验证 Key 有效性
@@ -832,244 +839,6 @@
 
 ## 👤 用户配置
 
-**接口地址**：`DELETE /api/systems/{system_type}/actions/{id}`
-
-**路径参数**：
-- `system_type`: 系统类型
-- `id`: 行动项 ID
-
-**成功响应（200）**：
-```json
-{
-  "code": 200,
-  "message": "删除成功",
-  "data": {
-    "deleted_id": 456
-  },
-  "timestamp": 1707219200000
-}
-```
-
----
-
-### 9. 获取饮食基准
-
-**接口地址**：`GET /api/diet/baseline`
-
-**成功响应（200）**：
-```json
-{
-  "code": 200,
-  "message": "获取饮食基准成功",
-  "data": {
-    "breakfast": [
-      {
-        "name": "燕麦粥",
-        "amount": "1碗",
-        "calories": 300
-      }
-    ],
-    "lunch": [
-      {
-        "name": "鸡胸肉沙拉",
-        "amount": "200g",
-        "calories": 250
-      }
-    ],
-    "dinner": [
-      {
-        "name": "蒸鱼",
-        "amount": "200g",
-        "calories": 200
-      }
-    ],
-    "taste": ["清淡", "微辣"]
-  },
-  "timestamp": 1707219200000
-}
-```
-
----
-
-### 10. 更新饮食基准
-
-**接口地址**：`PUT /api/diet/baseline`
-
-**请求参数**：
-```json
-{
-  "breakfast": [
-    {
-      "name": "全麦面包",
-      "amount": "2片",
-    },
-    {
-      "name": "全麦面包",
-      "amount": "2片",
-    }
-  ],
-  "lunch": null,
-  "dinner": null,
-  "taste": ["清淡"]
-}
-```
-
-**参数说明**：只传需要修改的字段，null 表示不修改
-
-**成功响应（200）**：返回更新后的基准配置（格式同上）
-
----
-
-### 11. 创建饮食偏离事件
-
-**接口地址**：`POST /api/diet/deviations`
-
-**请求参数**：
-```json
-{
-  "description": "加班太累，点了一份麻辣烫宵夜",
-  "occurred_at": "2026-02-26T22:30:00"
-}
-```
-
-**参数说明**：
-- `description`: 必填，偏离描述
-- `occurred_at`: 可选，发生时间（ISO 格式），默认当前时间
-
-**成功响应（201）**：
-```json
-{
-  "code": 201,
-  "message": "创建成功",
-  "data": {
-    "id": 10,
-    "system_id": 1,
-    "description": "加班太累，点了一份麻辣烫宵夜",
-    "occurred_at": "2026-02-26T22:30:00Z",
-    "occurred_at_ts": 1772173800000,
-    "created_at": "2026-02-26T22:30:00Z",
-    "created_at_ts": 1772173800000
-  },
-  "timestamp": 1707219200000
-}
-```
-
----
-
-### 12. 获取饮食偏离事件列表
-
-**接口地址**：`GET /api/diet/deviations`
-
-**查询参数**：
-```typescript
-?start_date=2026-02-01&end_date=2026-02-28&page=1&page_size=20
-```
-
-**参数说明**：
-
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| start_date | String | 开始日期（YYYY-MM-DD） |
-| end_date | String | 结束日期（YYYY-MM-DD） |
-| page | Integer | 页码 |
-| page_size | Integer | 每页数量 |
-
-**成功响应（200）**：
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "items": [
-      {
-        "id": 10,
-        "system_id": 1,
-        "description": "加班太累，点了一份麻辣烫宵夜",
-        "occurred_at": "2026-02-26T22:30:00Z",
-        "occurred_at_ts": 1772173800000,
-        "created_at": "2026-02-26T22:30:00Z",
-        "created_at_ts": 1772173800000
-      }
-    ],
-    "total": 15,
-    "page": 1,
-    "page_size": 20,
-    "total_pages": 1,
-    "has_next": false,
-    "has_prev": false
-  },
-  "timestamp": 1707219200000
-}
-```
-
----
-
-### 13. 获取饮食偏离事件详情
-
-**接口地址**：`GET /api/diet/deviations/{deviation_id}`
-
-**路径参数**：
-- `deviation_id`: 偏离事件 ID
-
-**成功响应（200）**：返回偏离事件详情（格式同上）
-
----
-
-### 14. 更新饮食偏离事件
-
-**接口地址**：`PATCH /api/diet/deviations/{deviation_id}`
-
-**请求参数**：
-```json
-{
-  "description": "更新后的描述内容"
-}
-```
-
-**成功响应（200）**：返回更新后的偏离事件
-
----
-
-### 15. 删除饮食偏离事件
-
-**接口地址**：`DELETE /api/diet/deviations/{deviation_id}`
-
-**成功响应（200）**：
-```json
-{
-  "code": 200,
-  "message": "删除成功",
-  "data": {
-    "deleted_id": 10
-  },
-  "timestamp": 1707219200000
-}
-```
-
----
-
-### 16. 获取饮食统计信息
-
-**接口地址**：`GET /api/diet/statistics`
-
-**成功响应（200）**：
-```json
-{
-  "code": 200,
-  "message": "获取饮食统计成功",
-  "data": {
-    "total_deviations": 25,
-    "monthly_deviations": 5,
-    "latest_deviation": "2026-02-26T22:30:00Z"
-  },
-  "timestamp": 1707219200000
-}
-```
-
----
-
-## 👤 用户配置
-
 ### 1. 获取用户信息
 
 **接口地址**：`GET /api/user/profile`
@@ -1222,9 +991,18 @@
 
 ---
 
-### 5. 保存 AI 配置
+### 5. 保存 AI 配置（自动验证）
 
 **接口地址**：`POST /api/user/ai-config`
+
+**描述**：保存 AI 配置时会自动验证 API Key 有效性，只有验证通过后才会保存配置
+
+**工作流程**：
+```
+用户提交配置 → 验证 API Key → 验证失败？ → 返回错误，不保存配置
+                              ↓ 验证成功
+                           保存配置到数据库
+```
 
 **请求参数**：
 ```json
@@ -1244,15 +1022,61 @@
 ```json
 {
   "code": 200,
-  "message": "success",
+  "message": "AI 配置保存成功",
   "data": {
     "provider": "deepseek",
     "model_name": "deepseek-chat",
-    "updated_at": "2026-02-06T10:05:00Z"
+    "updated_at": "2026-03-02T14:30:00.000000",
+    "verified": true
   },
-  "timestamp": 1707219200000
+  "timestamp": 1772424710405
 }
 ```
+
+**错误响应（401 - API Key 无效）**：
+```json
+{
+  "code": 401,
+  "message": "API Key 无效或已过期",
+  "data": {
+    "provider": "deepseek"
+  },
+  "timestamp": 1772424710405
+}
+```
+
+**错误响应（504 - 验证超时）**：
+```json
+{
+  "code": 504,
+  "message": "API 请求超时，请检查网络连接",
+  "timestamp": 1772424710405
+}
+```
+
+**错误响应（429 - 频率超限）**：
+```json
+{
+  "code": 429,
+  "message": "API 请求频率超限，请稍后再试",
+  "timestamp": 1772424710405
+}
+```
+
+**错误响应（400 - 不支持的提供商）**：
+```json
+{
+  "code": 400,
+  "message": "不支持的 AI 提供商",
+  "timestamp": 1772424710405
+}
+```
+
+**注意事项**：
+- 验证过程通常需要 1-10 秒，请耐心等待
+- 验证接口需要访问 AI 服务商的 API
+- 验证失败时配置不会被保存
+- 验证超时时间为 10 秒
 
 ---
 
