@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { Button } from '~/renderer/components/ui/button';
@@ -8,6 +9,8 @@ export interface AIInsightCardProps {
 }
 
 export function AIInsightCard({ className }: AIInsightCardProps) {
+  const navigate = useNavigate();
+
   // TODO: 后续从 AI 洞察 API 获取数据
   const insight = {
     primaryImprovement: '身体健康',
@@ -33,7 +36,11 @@ export function AIInsightCard({ className }: AIInsightCardProps) {
         <p className="text-sm text-apple-textSec dark:text-white/60 leading-relaxed">
           {insight.description}
         </p>
-        <Button className="w-full" size="default">
+        <Button
+          className="w-full"
+          size="default"
+          onClick={() => navigate('/insights/detail')}
+        >
           查看详细报告
         </Button>
       </div>
