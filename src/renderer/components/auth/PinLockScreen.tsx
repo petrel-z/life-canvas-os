@@ -31,9 +31,9 @@ export function PinLockScreen({
   const [isUnlocking, setIsUnlocking] = useState(false);
 
   // 当 initialPin 变化时更新输入框的值
-  // useEffect(() => {
-  //   setPinInput(initialPin || '');
-  // }, [initialPin]);
+  useEffect(() => {
+    setPinInput(initialPin || '');
+  }, [initialPin]);
 
   const handleUnlock = async () => {
     if (pinInput.length === 6 && !isUnlocking) {

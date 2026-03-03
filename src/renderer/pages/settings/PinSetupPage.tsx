@@ -91,6 +91,7 @@ export function PinSetupPage() {
   if (currentStep === 'enter-pin') {
     return (
       <PinLockScreen
+        key="enter-pin"
         title="设置 PIN 码"
         description="请输入 6 位数字 PIN 码以保护您的私密日记"
         unlockButtonText="下一步"
@@ -102,6 +103,7 @@ export function PinSetupPage() {
           setUnlockError(undefined);
         }}
         error={unlockError}
+        initialPin=""
         onUnlock={handleEnterPin}
       />
     );
@@ -110,6 +112,7 @@ export function PinSetupPage() {
   // 第二步：确认PIN码
   return (
     <PinLockScreen
+      key="confirm-pin"
       title="确认 PIN 码"
       description="请再次输入 PIN 码以确认"
       unlockButtonText="确认设置"
@@ -121,6 +124,7 @@ export function PinSetupPage() {
         setUnlockError(undefined);
       }}
       error={unlockError}
+      initialPin={firstPin}
       onUnlock={handleConfirmPin}
     />
   );

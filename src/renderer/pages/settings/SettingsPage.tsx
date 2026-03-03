@@ -71,6 +71,7 @@ export function SettingsPage() {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false);
+  const [pinVerifyAction, setPinVerifyAction] = useState<'export' | 'reset' | null>(null);
   const [unlockError, setUnlockError] = useState<string | undefined>(undefined);
   const [aiConfigLoaded, setAiConfigLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
@@ -324,14 +325,34 @@ export function SettingsPage() {
     }
   };
 
-  const handleClearData = () => {
-    // 显示 PIN 验证界面
-    setShowPinDialog(true);
+  const handleClearData = async () => {
+    // 检查 PIN 是否已设置
+    try {
+      const status = await fetchPinStatus();
+      if (status?.has_pin_set) {
+        // 有 PIN，显示 PIN 验证界面
+        setPinVerifyAction('reset');
+        setShowPinDialog(true);
+      } else {
+        // 无 PIN，直接显示确认对话框
+        setShowResetConfirmDialog(true);
+      }
+    } catch (error) {
+      console.error('Failed to check PIN status:', error);
+      // 如果检查失败，直接显示确认对话框
+      setShowResetConfirmDialog(true);
+    }
   };
 
   const handlePinVerifySuccess = async () => {
     setShowPinDialog(false);
-    setShowResetConfirmDialog(true);
+    // 根据验证后的操作执行不同的逻辑
+    if (pinVerifyAction === 'reset') {
+      setShowResetConfirmDialog(true);
+    } else if (pinVerifyAction === 'export') {
+      setShowExportDialog(true);
+    }
+    setPinVerifyAction(null);
   };
 
   const handleConfirmReset = async () => {
@@ -340,6 +361,14 @@ export function SettingsPage() {
 
     try {
       await resetData();
+
+      // 清空本地所有数据
+      localStorage.removeItem('life-canvas-state');
+      localStorage.removeItem('pin-setup-status');
+      localStorage.removeItem('journal-draft');
+      localStorage.removeItem('app_cache_pin_status');
+      sessionStorage.removeItem('pin-verified');
+
       // 重置成功后刷新页面
       setTimeout(() => {
         window.location.reload();
@@ -351,8 +380,23 @@ export function SettingsPage() {
     }
   };
 
-  const handleExportClick = () => {
-    setShowExportDialog(true);
+  const handleExportClick = async () => {
+    // 检查 PIN 是否已设置
+    try {
+      const status = await fetchPinStatus();
+      if (status?.has_pin_set) {
+        // 有 PIN，先验证 PIN
+        setPinVerifyAction('export');
+        setShowPinDialog(true);
+      } else {
+        // 无 PIN，直接显示导出对话框
+        setShowExportDialog(true);
+      }
+    } catch (error) {
+      console.error('Failed to check PIN status:', error);
+      // 如果检查失败，直接显示导出对话框
+      setShowExportDialog(true);
+    }
   };
 
   const handleExportFormatSelect = async (format: ExportFormat) => {
@@ -1032,14 +1076,15 @@ export function SettingsPage() {
       {/* PIN 验证 */}
       {showPinDialog && (
         <PinLockScreen
-          title="删除数据验证"
-          description="请输入 PIN 码以确认删除数据操作"
+          title={pinVerifyAction === 'export' ? '导出数据验证' : '删除数据验证'}
+          description={pinVerifyAction === 'export' ? '请输入 PIN 码以确认导出数据操作' : '请输入 PIN 码以确认删除数据操作'}
           unlockButtonText="验证并继续"
           unlockingText="验证中..."
           showCancelButton={true}
           cancelButtonText="取消"
           onCancel={() => {
             setShowPinDialog(false);
+            setPinVerifyAction(null);
             setUnlockError(undefined);
           }}
           error={unlockError}

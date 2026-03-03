@@ -27,39 +27,39 @@ export function PinWelcomePage({ onSetupNow, onSetupLater }: PinWelcomePageProps
               欢迎使用 Life Canvas OS
             </h2>
             <p className="text-apple-textSec dark:text-white/40 text-sm mt-1">
-              设置 PIN 码，保护您的私密日记
+              设置密码，保护您的系统
             </p>
           </div>
         </div>
 
         {/* 功能介绍 */}
-        <div className="flex items-start gap-4 p-4 bg-black/5 dark:bg-white/5 rounded-2xl border border-apple-border dark:border-white/10">
+        <div className="flex items-start my-4 gap-4 p-4 bg-black/5 dark:bg-white/5 rounded-2xl border border-apple-border dark:border-white/10">
           <div className="p-2 rounded-lg bg-purple-500/10 shrink-0">
             <Shield className="text-purple-500" size={20} />
           </div>
           <div className="text-left">
             <div className="text-sm font-semibold text-apple-textMain dark:text-white mb-1">
-              PIN 码保护
+              密码保护
             </div>
             <div className="text-xs text-apple-textSec dark:text-white/40 leading-relaxed">
-              您的私密日记需要 6 位 PIN 码才能查看。设置后，每次启动应用时都需要验证 PIN 码。
+              您的系统需要密码才能访问。设置后，每次启动应用时都需要验证密码。
             </div>
           </div>
         </div>
 
         {/* 提示信息 */}
-        <div className="text-left space-y-2 px-2">
+        <div className="text-left space-y-2 px-2 mb-4">
           <div className="text-xs text-apple-textTer dark:text-white/30 font-semibold uppercase tracking-wider">
             设置须知
           </div>
           <div className="text-xs text-apple-textSec dark:text-white/50 space-y-1">
             <div className="flex items-start gap-2">
               <div className="w-1 h-1 rounded-full bg-apple-textTer dark:bg-white/30 mt-1.5 shrink-0" />
-              <span>PIN 码必须是 6 位数字</span>
+              <span>密码必须是 6 位数字</span>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-1 h-1 rounded-full bg-apple-textTer dark:bg-white/30 mt-1.5 shrink-0" />
-              <span>请妥善保管 PIN 码，丢失后无法找回</span>
+              <span>请妥善保管密码，丢失后无法找回</span>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-1 h-1 rounded-full bg-apple-textTer dark:bg-white/30 mt-1.5 shrink-0" />
@@ -74,7 +74,7 @@ export function PinWelcomePage({ onSetupNow, onSetupLater }: PinWelcomePageProps
             onClick={onSetupNow}
             className="w-full h-14 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold flex items-center justify-center gap-2 shadow-lg"
           >
-            立即设置 PIN 码
+            立即设置密码
             <ArrowRight size={18} />
           </Button>
           <Button

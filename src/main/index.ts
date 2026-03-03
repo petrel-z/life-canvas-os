@@ -1,7 +1,6 @@
 import { app, ipcMain, dialog } from 'electron'
-import { copyFile, mkdir } from 'node:fs'
+import { mkdirSync, existsSync, copyFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { existsSync } from 'node:fs'
 
 import { makeAppWithSingleInstanceLock } from '~/lib/electron-app/factories/app/instance'
 import { makeAppSetup } from '~/lib/electron-app/factories/app/setup'
@@ -53,7 +52,7 @@ makeAppWithSingleInstanceLock(async () => {
     // 创建临时导入目录
     const tempImportDir = join(app.getPath('temp'), 'life-canvas-import')
     if (!existsSync(tempImportDir)) {
-      await mkdir(tempImportDir, { recursive: true })
+      mkdirSync(tempImportDir, { recursive: true })
     }
 
     // 复制文件到临时目录
@@ -61,7 +60,7 @@ makeAppWithSingleInstanceLock(async () => {
     const targetPath = join(tempImportDir, fileName)
 
     try {
-      await copyFile(sourcePath, targetPath)
+      copyFileSync(sourcePath, targetPath)
       console.log(`[IPC] File copied from ${sourcePath} to ${targetPath}`)
       return { canceled: false, filePath: targetPath }
     } catch (error) {

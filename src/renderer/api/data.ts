@@ -26,13 +26,13 @@ export const dataApi = {
    * 使用 Electron IPC 选择文件并获取路径
    */
   importData(backupPath: string, verify: boolean = true): Promise<Response> {
-    const params = new URLSearchParams();
-    params.append('backup_path', backupPath);
-    params.append('verify', verify.toString());
-
-    return fetch(`${API_BASE_URL}/api/data/import?${params.toString()}`, {
+    return fetch(`${API_BASE_URL}/api/data/import`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        backup_path: backupPath,
+        verify: verify,
+      }),
     });
   },
 
