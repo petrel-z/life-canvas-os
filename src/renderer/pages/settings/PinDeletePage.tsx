@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Shield, Trash2, AlertTriangle } from 'lucide-react';
-import { GlassCard } from '~/renderer/components/GlassCard';
-import { Button } from '~/renderer/components/ui/button';
-import { toast } from '~/renderer/lib/toast';
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Shield, Trash2, AlertTriangle } from 'lucide-react'
+import { GlassCard } from '~/renderer/components/GlassCard'
+import { Button } from '~/renderer/components/ui/button'
+import { toast } from '~/renderer/lib/toast'
+import { PIN_CONFIG, PIN_MESSAGES, type PinApiError } from '~/renderer/lib/pin'
+import { usePinApi, handlePinApiError } from '~/renderer/hooks'
+import { usePinStatus } from '~/renderer/hooks/usePinStatus'
 import {
   PIN_CONFIG,
   PIN_MESSAGES,
@@ -15,9 +18,9 @@ import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen';
 import { LoadingSpinner } from '~/renderer/components/pin';
 
 export function PinDeletePage() {
-  const navigate = useNavigate();
-  const { verifyWithErrorHandling, deleteWithErrorHandling } = usePinApi();
-  const { updatePinStatusAfterOperation } = usePinStatus();
+  const navigate = useNavigate()
+  const { verifyWithErrorHandling, deleteWithErrorHandling } = usePinApi()
+  const { updatePinStatusAfterOperation } = usePinStatus()
 
   const [verifiedPin, setVerifiedPin] = useState('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -30,26 +33,29 @@ export function PinDeletePage() {
   };
 
   const handleDelete = async () => {
-    setIsDeleting(true);
+    setIsDeleting(true)
 
     try {
       await deleteWithErrorHandling(verifiedPin, toast);
 
       // 更新 PIN 状态缓存
-      await updatePinStatusAfterOperation();
+      await updatePinStatusAfterOperation()
 
       toast.success(PIN_MESSAGES.DELETE_SUCCESS, {
         description: PIN_MESSAGES.DELETE_SUCCESS_DESC,
-      });
+      })
 
-      setTimeout(() => navigate('/settings', { replace: true }), PIN_CONFIG.NAVIGATION_DELAY);
-    } catch (error: unknown) {
+      setTimeout(
+        () => navigate('/settings', { replace: true }),
+        PIN_CONFIG.NAVIGATION_DELAY
+      )
+    } catch (_error: unknown) {
       // 错误已在 hook 中处理
     } finally {
-      setIsDeleting(false);
-      setShowConfirmDialog(false);
+      setIsDeleting(false)
+      setShowConfirmDialog(false)
     }
-  };
+  }
 
   return (
     <>
@@ -89,9 +95,14 @@ export function PinDeletePage() {
 
               {/* 最终警告 */}
               <div className="flex items-start gap-3 p-4 bg-red-500/5 dark:bg-red-500/5 rounded-xl border border-red-500/20 dark:border-red-500/10">
-                <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={16} />
+                <AlertTriangle
+                  className="text-red-500 shrink-0 mt-0.5"
+                  size={16}
+                />
                 <div className="text-xs text-apple-textSec dark:text-white/60 space-y-1">
-                  <p className="font-semibold text-red-500 dark:text-red-400">最后提醒</p>
+                  <p className="font-semibold text-red-500 dark:text-red-400">
+                    最后提醒
+                  </p>
                   <p>• 删除后所有私密日记将变为公开可见</p>
                   <p>• 任何人都将能够查看您的私密内容</p>
                   <p>• 此操作无法撤销，请谨慎操作</p>
@@ -100,17 +111,17 @@ export function PinDeletePage() {
 
               <div className="flex gap-3">
                 <Button
-                  variant="outline"
-                  onClick={() => setShowConfirmDialog(false)}
                   className="flex-1"
                   disabled={isDeleting}
+                  onClick={() => setShowConfirmDialog(false)}
+                  variant="outline"
                 >
                   取消
                 </Button>
                 <Button
-                  onClick={handleDelete}
                   className="flex-1 bg-red-500 hover:bg-red-600"
                   disabled={isDeleting}
+                  onClick={handleDelete}
                 >
                   {isDeleting ? (
                     <LoadingSpinner text="删除中..." />

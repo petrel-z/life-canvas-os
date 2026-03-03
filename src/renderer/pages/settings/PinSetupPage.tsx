@@ -23,7 +23,7 @@ export function PinSetupPage() {
   const [unlockError, setUnlockError] = useState<string | undefined>(undefined);
 
   // 获取返回 URL
-  const returnUrl = (location.state as any)?.returnUrl || '/journal';
+  const returnUrl = (location.state as any)?.returnUrl || '/journal'
 
   // 第一步：输入PIN码
   const handleEnterPin = async (pin: string) => {
@@ -45,13 +45,13 @@ export function PinSetupPage() {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
 
     try {
       const response = await pinApi.setup(confirmPin);
 
       if (!response.ok) {
-        const error = (await response.json()) as PinApiError;
+        const error = (await response.json()) as PinApiError
 
         if (error.code === 409) {
           setUnlockError('您已经设置过 PIN 码了');
@@ -67,11 +67,11 @@ export function PinSetupPage() {
       localStorage.setItem('life-canvas-first-launch', 'false');
 
       // 更新 PIN 状态缓存
-      await updatePinStatusAfterOperation();
+      await updatePinStatusAfterOperation()
 
       toast.success('PIN 设置成功', {
         description: '您现在可以使用私密日记功能了',
-      });
+      })
       // 返回原页面
       setTimeout(() => navigate(returnUrl, { replace: true }), PIN_CONFIG.NAVIGATION_DELAY);
     } catch (error) {
@@ -79,9 +79,9 @@ export function PinSetupPage() {
       setFirstPin('');
       setCurrentStep('enter-pin');
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleCancel = () => {
     navigate(returnUrl);

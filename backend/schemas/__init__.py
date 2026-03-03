@@ -27,7 +27,6 @@ from .user import (
     PinChangeRequest,
     PinVerifyResponse,
     PinSetupResponse,
-    AuthStatusResponse,
     LockResponse,
 )
 
@@ -110,7 +109,6 @@ __all__ = [
     "PinChangeRequest",
     "PinVerifyResponse",
     "PinSetupResponse",
-    "AuthStatusResponse",
     "LockResponse",
     # System
     "SystemType",

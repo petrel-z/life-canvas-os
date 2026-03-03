@@ -85,8 +85,14 @@ class ErrorResponse(BaseModel):
 
 
 class DataImportRequest(BaseModel):
-    """数据导入请求"""
-    backup_path: str = Field(description="备份文件路径")
+    """数据导入请求
+
+    支持两种导入方式：
+    1. ZIP 备份文件：通过 backup_path 指定文件路径
+    2. JSON 数据：通过 data 字段直接传入 JSON 数据
+    """
+    backup_path: Optional[str] = Field(default=None, description="备份文件路径 (ZIP 格式)")
+    data: Optional[dict] = Field(default=None, description="JSON 格式的导入数据")
     verify: bool = Field(default=True, description="是否验证备份文件")
 
     class Config:

@@ -70,6 +70,11 @@ class UserSettingsBase(BaseModel):
     notification_time: str = Field(default="09:00", pattern=r"^\d{2}:\d{2}$", description="通知时间 HH:mm")
     show_year_progress: bool = True
     show_weekday: bool = True
+    # PIN验证开关
+    pin_verify_on_startup: bool = True
+    pin_verify_for_private_journal: bool = True
+    pin_verify_for_data_export: bool = True
+    pin_verify_for_settings_change: bool = True
 
 
 class UserSettingsUpdate(BaseModel):
@@ -82,6 +87,11 @@ class UserSettingsUpdate(BaseModel):
     notification_time: Optional[str] = Field(None, pattern=r"^\d{2}:\d{2}$")
     show_year_progress: Optional[bool] = None
     show_weekday: Optional[bool] = None
+    # PIN验证开关（可选）
+    pin_verify_on_startup: Optional[bool] = None
+    pin_verify_for_private_journal: Optional[bool] = None
+    pin_verify_for_data_export: Optional[bool] = None
+    pin_verify_for_settings_change: Optional[bool] = None
 
 
 class UserSettingsResponse(UserSettingsBase):
@@ -175,11 +185,6 @@ class PinVerifyResponse(BaseModel):
 class PinSetupResponse(BaseModel):
     """PIN 码设置响应"""
     redirect_to: str = "/canvas"
-
-
-class AuthStatusResponse(BaseModel):
-    """认证状态响应"""
-    has_pin_set: bool
 
 
 class LockResponse(BaseModel):

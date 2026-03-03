@@ -1,12 +1,22 @@
 # Life Canvas OS API 接口文档
 
-> 版本：v1.3.0
-> 最后更新：2026-03-02
+> 版本：v1.5.0
+> 最后更新：2026-03-03
 > 基础 URL：`http://127.0.0.1:8000`（开发环境）
 > 数据格式：JSON
 > 遵循规范：[API_STANDARDS.md](./API_STANDARDS.md)
 
 ## 📝 更新日志
+
+### v1.5.0 (2026-03-03)
+- ✨ **数据导入**：新增 JSON 数据直接导入功能，无需 ZIP 文件
+- ✨ **数据导入**：支持 `data` 字段传入 JSON 格式数据
+- 📝 **文档**：更新导入数据接口文档，添加 JSON 导入示例
+- ✨ **PIN验证**：新增独立的PIN验证开关功能，支持按功能模块分别控制PIN验证
+- ✨ **PIN验证**：新增 `GET /api/pin/verify-requirements` 接口，获取PIN验证要求配置
+- 🔧 **用户设置**：用户设置新增4个PIN验证开关字段
+- 🔪 **API清理**：移除 `GET /api/pin/status` 接口，统一使用 `/verify-requirements`
+- 📝 **文档**：更新用户设置接口文档，添加PIN验证开关字段说明
 
 ### v1.3.0 (2026-03-02)
 - ✨ **用户配置**：保存 AI 配置接口自动验证 API Key 有效性
@@ -287,6 +297,57 @@
   "timestamp": 1707219200000
 }
 ```
+
+---
+
+### 5. 获取 PIN 验证要求
+
+**接口地址**：`GET /api/pin/verify-requirements`
+
+**描述**：获取各个功能模块的PIN验证要求配置和PIN设置状态。前端可在应用启动时调用此接口，根据返回的开关状态决定是否显示PIN验证界面。
+
+**请求参数**：无
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "获取PIN验证要求成功",
+  "data": {
+    "has_pin": true,
+    "requirements": {
+      "startup": true,
+      "private_journal": true,
+      "data_export": true,
+      "settings_change": true
+    }
+  },
+  "timestamp": 1772510957075
+}
+```
+
+**字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| has_pin | Boolean | 是否已设置PIN码 |
+| requirements | Object | PIN验证要求配置对象 |
+| requirements.startup | Boolean | 启动时是否需要验证PIN |
+| requirements.private_journal | Boolean | 查看私密日记时是否需要验证PIN |
+| requirements.data_export | Boolean | 导出数据时是否需要验证PIN |
+| requirements.settings_change | Boolean | 修改设置时是否需要验证PIN |
+
+**使用场景**：
+
+1. **应用启动时**：检查 `requirements.startup`，如果为 `true` 则显示PIN验证界面
+2. **查看私密日记**：检查 `requirements.private_journal`，如果为 `true` 则要求验证PIN
+3. **导出数据**：检查 `requirements.data_export`，如果为 `true` 则要求验证PIN
+4. **修改设置**：检查 `requirements.settings_change`，如果为 `true` 则要求验证PIN
+
+**注意**：
+- 如果 `has_pin` 为 `false`，表示用户未设置PIN码，所有验证要求将不生效
+- 所有开关的默认值为 `true`（启用），用户可在设置中单独控制
+- 通过 `PATCH /api/user/settings` 接口可以修改这些开关配置
 
 ---
 
@@ -937,6 +998,7 @@
   "code": 200,
   "message": "success",
   "data": {
+    "id": 1,
     "user_id": 1,
     "theme": "dark",
     "language": "zh-CN",
@@ -946,8 +1008,14 @@
     "notification_time": "09:00",
     "show_year_progress": true,
     "show_weekday": true,
+    "pin_verify_on_startup": true,
+    "pin_verify_for_private_journal": true,
+    "pin_verify_for_data_export": true,
+    "pin_verify_for_settings_change": true,
     "created_at": "2026-02-06T10:00:00Z",
-    "updated_at": "2026-02-06T10:00:00Z"
+    "updated_at": "2026-02-06T10:00:00Z",
+    "created_at_ts": 1770576595000,
+    "updated_at_ts": 1772510962745
   },
   "timestamp": 1707219200000
 }
@@ -965,7 +1033,8 @@
   "theme": "light",
   "language": "en-US",
   "auto_save_enabled": false,
-  "notification_time": "08:00"
+  "notification_time": "08:00",
+  "pin_verify_on_startup": false
 }
 ```
 
@@ -973,11 +1042,21 @@
 - `theme`: 可选，枚举值（light, dark, auto）
 - `language`: 可选，语言代码
 - `auto_save_enabled`: 可选，布尔值
-- `auto_save_interval`: 可选，整数（秒）
+- `auto_save_interval`: 可选，整数（10-600秒）
 - `notification_enabled`: 可选，布尔值
 - `notification_time`: 可选，HH:mm 格式
 - `show_year_progress`: 可选，布尔值
 - `show_weekday`: 可选，布尔值
+- `pin_verify_on_startup`: 可选，布尔值，启动时是否验证PIN
+- `pin_verify_for_private_journal`: 可选，布尔值，查看私密日记时是否验证PIN
+- `pin_verify_for_data_export`: 可选，布尔值，导出数据时是否验证PIN
+- `pin_verify_for_settings_change`: 可选，布尔值，修改设置时是否验证PIN
+
+**注意**：
+- 所有字段都是可选的，只更新提供的字段
+- PIN验证开关字段默认值为 `true`（启用）
+- 修改PIN验证开关不需要预先验证PIN码
+- 建议在设置页面提供这些开关的UI控件
 
 **成功响应（200）**：
 ```json
@@ -1742,6 +1821,10 @@ GET /api/timeline?page=2&page_size=10
 
 **接口地址**：`POST /api/data/import`
 
+**描述**：支持两种导入方式：ZIP 备份文件导入和 JSON 数据直接导入
+
+**方式一：ZIP 备份文件导入**
+
 **请求参数**：
 ```json
 {
@@ -1751,8 +1834,8 @@ GET /api/timeline?page=2&page_size=10
 ```
 
 **参数说明**：
-- `backup_path`: 必填，备份文件的完整路径
-- `verify`: 可选，是否验证备份文件完整性，默认为 `true`
+- `backup_path`: ZIP 备份文件的完整路径
+- `verify`: 是否验证备份文件完整性，默认为 `true`
 
 **成功响应（200）**：
 ```json
@@ -1760,6 +1843,7 @@ GET /api/timeline?page=2&page_size=10
   "code": 200,
   "message": "数据导入成功",
   "data": {
+    "import_type": "zip",
     "backup_path": "D:\\pythonCode\\life-canvas-os\\backups\\backup_20260302_104334.zip",
     "imported_at": "2026-03-02T10:47:45.698477"
   },
@@ -1767,10 +1851,92 @@ GET /api/timeline?page=2&page_size=10
 }
 ```
 
+**方式二：JSON 数据直接导入**
+
+**请求参数**：
+```json
+{
+  "data": {
+    "version": "1.0.0",
+    "users": [
+      {
+        "id": 1,
+        "username": "user",
+        "display_name": "User",
+        "birthday": "1990-01-01",
+        "mbti": "INTJ",
+        "values": "[\"成长\",\"自由\"]",
+        "life_expectancy": 85
+      }
+    ],
+    "systems": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "type": "FUEL",
+        "score": 75,
+        "details": {}
+      }
+    ],
+    "diaries": [],
+    "insights": []
+  }
+}
+```
+
+**JSON 数据格式说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| version | String | 数据版本，当前为 "1.0.0" |
+| users | Array | 用户数据数组 |
+| systems | Array | 八维系统数据数组 |
+| diaries | Array | 日记数据数组（可选） |
+| insights | Array | 洞察数据数组（可选） |
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "数据导入成功",
+  "data": {
+    "import_type": "json",
+    "stats": {
+      "users": 1,
+      "user_settings": 0,
+      "systems": 8,
+      "diaries": 0,
+      "insights": 0
+    },
+    "imported_at": "2026-03-03T17:12:26.614026"
+  },
+  "timestamp": 1772529146615
+}
+```
+
+**错误响应（400 - 参数缺失）**：
+```json
+{
+  "code": 400,
+  "message": "必须提供 backup_path 或 data 参数",
+  "timestamp": 1772529146615
+}
+```
+
+**错误响应（400 - 数据格式错误）**：
+```json
+{
+  "code": 400,
+  "message": "数据格式错误：缺少 version 字段",
+  "timestamp": 1772529146615
+}
+```
+
 **注意事项**：
-- 导入操作会覆盖当前数据库所有数据
-- 导入前会自动关闭所有数据库连接
-- 导入过程中后端服务会暂时停止响应其他请求
+- `backup_path` 和 `data` 参数二选一，不能同时提供
+- ZIP 导入会完全覆盖当前数据库
+- JSON 导入采用 upsert 策略：存在相同 ID 则更新，否则创建
+- JSON 导入不会删除现有数据，只会更新或新增
 - 建议在导入前先创建当前数据的备份
 
 ---

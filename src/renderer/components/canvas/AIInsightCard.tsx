@@ -1,24 +1,24 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Activity } from 'lucide-react';
-import { GlassCard } from '~/renderer/components/GlassCard';
-import { Button } from '~/renderer/components/ui/button';
+import { useNavigate } from 'react-router-dom'
+import { Activity } from 'lucide-react'
+import { GlassCard } from '~/renderer/components/GlassCard'
+import { Button } from '~/renderer/components/ui/button'
 
 export interface AIInsightCardProps {
-  className?: string;
+  className?: string
 }
 
 export function AIInsightCard({ className }: AIInsightCardProps) {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   // TODO: 后续从 AI 洞察 API 获取数据
   const insight = {
     primaryImprovement: '身体健康',
-    description: '您的产出评分很高，但恢复系统严重滞后。建议在晚上 9 点到 11 点之间安排"无电子设备"时间。',
-  };
+    description:
+      '您的产出评分很高，但恢复系统严重滞后。建议在晚上 9 点到 11 点之间安排"无电子设备"时间。',
+  }
 
   return (
-    <GlassCard title="AI 智能洞察" className={`flex-1 ${className || ''}`}>
+    <GlassCard className={`flex-1 ${className || ''}`} title="AI 智能洞察">
       <div className="space-y-4">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-apple-accent/10 text-apple-accent">
@@ -38,12 +38,12 @@ export function AIInsightCard({ className }: AIInsightCardProps) {
         </p>
         <Button
           className="w-full"
-          size="default"
           onClick={() => navigate('/insights/detail')}
+          size="default"
         >
           查看详细报告
         </Button>
       </div>
     </GlassCard>
-  );
+  )
 }

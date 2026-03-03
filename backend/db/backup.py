@@ -329,6 +329,141 @@ def export_to_json(db_path: str, output_dir: str) -> str:
         db.close()
 
 
+def import_from_json(db_path: str, data: dict) -> dict:
+    """
+    从 JSON 数据导入到数据库
+
+    Args:
+        db_path: 数据库路径
+        data: JSON 格式的导入数据
+
+    Returns:
+        导入结果统计
+    """
+    from backend.db.session import SessionLocal
+    from backend.models import User, UserSettings, System, Diary, Insight
+    from datetime import datetime as dt
+
+    # 验证数据格式
+    if not isinstance(data, dict):
+        raise ValueError("数据格式错误：必须是 JSON 对象")
+
+    if "version" not in data:
+        raise ValueError("数据格式错误：缺少 version 字段")
+
+    db = SessionLocal()
+    stats = {
+        "users": 0,
+        "user_settings": 0,
+        "systems": 0,
+        "diaries": 0,
+        "insights": 0
+    }
+
+    try:
+        # 导入用户
+        if "users" in data:
+            for user_data in data["users"]:
+                existing = db.query(User).filter(User.id == user_data["id"]).first()
+                if existing:
+                    # 更新现有用户
+                    existing.username = user_data.get("username")
+                    existing.display_name = user_data.get("display_name")
+                    if user_data.get("birthday"):
+                        existing.birthday = dt.fromisoformat(user_data["birthday"])
+                    existing.mbti = user_data.get("mbti")
+                    existing.values = user_data.get("values")
+                    existing.life_expectancy = user_data.get("life_expectancy")
+                    existing.preferences = user_data.get("preferences")
+                else:
+                    # 创建新用户
+                    user = User(
+                        id=user_data["id"],
+                        username=user_data.get("username"),
+                        display_name=user_data.get("display_name"),
+                        birthday=dt.fromisoformat(user_data["birthday"]) if user_data.get("birthday") else None,
+                        mbti=user_data.get("mbti"),
+                        values=user_data.get("values"),
+                        life_expectancy=user_data.get("life_expectancy"),
+                        preferences=user_data.get("preferences")
+                    )
+                    db.add(user)
+                stats["users"] += 1
+
+        # 导入系统
+        if "systems" in data:
+            for system_data in data["systems"]:
+                existing = db.query(System).filter(System.id == system_data["id"]).first()
+                if existing:
+                    existing.user_id = system_data.get("user_id")
+                    existing.type = system_data.get("type")
+                    existing.score = system_data.get("score")
+                    existing.details = system_data.get("details")
+                else:
+                    system = System(
+                        id=system_data["id"],
+                        user_id=system_data.get("user_id"),
+                        type=system_data.get("type"),
+                        score=system_data.get("score"),
+                        details=system_data.get("details")
+                    )
+                    db.add(system)
+                stats["systems"] += 1
+
+        # 导入日记
+        if "diaries" in data:
+            for diary_data in data["diaries"]:
+                existing = db.query(Diary).filter(Diary.id == diary_data["id"]).first()
+                if existing:
+                    existing.user_id = diary_data.get("user_id")
+                    existing.content = diary_data.get("content")
+                    existing.date = dt.fromisoformat(diary_data["date"]) if diary_data.get("date") else None
+                    existing.mood = diary_data.get("mood")
+                    existing.tags = diary_data.get("tags")
+                else:
+                    diary = Diary(
+                        id=diary_data["id"],
+                        user_id=diary_data.get("user_id"),
+                        content=diary_data.get("content"),
+                        date=dt.fromisoformat(diary_data["date"]) if diary_data.get("date") else None,
+                        mood=diary_data.get("mood"),
+                        tags=diary_data.get("tags")
+                    )
+                    db.add(diary)
+                stats["diaries"] += 1
+
+        # 导入洞察
+        if "insights" in data:
+            for insight_data in data["insights"]:
+                existing = db.query(Insight).filter(Insight.id == insight_data["id"]).first()
+                if existing:
+                    existing.user_id = insight_data.get("user_id")
+                    existing.content = insight_data.get("content")
+                    existing.insight_type = insight_data.get("insight_type")
+                    existing.related_system = insight_data.get("related_system")
+                else:
+                    insight = Insight(
+                        id=insight_data["id"],
+                        user_id=insight_data.get("user_id"),
+                        content=insight_data.get("content"),
+                        insight_type=insight_data.get("insight_type"),
+                        related_system=insight_data.get("related_system")
+                    )
+                    db.add(insight)
+                stats["insights"] += 1
+
+        db.commit()
+        print(f"[OK] Data imported from JSON: {stats}")
+        return stats
+
+    except Exception as e:
+        db.rollback()
+        raise e
+
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
     # 测试备份功能
     db_path = "d:/pythonCode/life-canvas-os/life_canvas.db"

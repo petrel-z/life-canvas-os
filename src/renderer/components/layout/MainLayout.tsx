@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { PinLockScreen } from '../auth/PinLockScreen';
 import { PinWelcomePage } from '../auth/PinWelcomePage';
 import { useApp } from '~/renderer/contexts/AppContext';
+import { request } from '~/renderer/api/config'
 import { usePinApi } from '~/renderer/hooks';
 import { usePinStatus } from '~/renderer/hooks/usePinStatus';
 
@@ -30,16 +31,16 @@ export function MainLayout() {
 
   // 根据当前路径确定 activeTab
   const getActiveTab = () => {
-    const path = location.pathname;
-    if (path === '/dashboard') return 'dashboard';
-    if (path === '/system/fuel') return 'fuel';
-    if (path.startsWith('/journal')) return 'journal';
-    if (path === '/timeline') return 'timeline';
-    if (path.startsWith('/settings')) return 'settings';
-    return 'dashboard';
-  };
+    const path = location.pathname
+    if (path === '/dashboard') return 'dashboard'
+    if (path === '/system/fuel') return 'fuel'
+    if (path.startsWith('/journal')) return 'journal'
+    if (path === '/timeline') return 'timeline'
+    if (path.startsWith('/settings')) return 'settings'
+    return 'dashboard'
+  }
 
-  const [activeTab, setActiveTab] = useState(getActiveTab());
+  const [activeTab, setActiveTab] = useState(getActiveTab())
 
   // 更新 activeTab 当路由变化时
   React.useEffect(() => {
@@ -57,12 +58,12 @@ export function MainLayout() {
   const handleUnlock = async (pin: string) => {
     // 验证格式
     if (pin.length !== 6) {
-      setUnlockError('PIN 码必须是 6 位数字');
-      return;
+      setUnlockError('PIN 码必须是 6 位数字')
+      return
     }
 
-    setIsVerifying(true);
-    setUnlockError(undefined);
+    setIsVerifying(true)
+    setUnlockError(undefined)
 
     const result = await verifyPin(pin);
 
@@ -83,8 +84,8 @@ export function MainLayout() {
     localStorage.setItem(FIRST_LAUNCH_KEY, 'false');
     setIsFirstLaunch(false);
     // 导航到 PIN 设置页面
-    navigate('/settings/pin');
-  };
+    navigate('/settings/pin')
+  }
 
   const handleSetupLater = () => {
     // 标记为非首次启动
@@ -145,5 +146,5 @@ export function MainLayout() {
         </div>
       </main>
     </div>
-  );
+  )
 }

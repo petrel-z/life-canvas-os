@@ -18,63 +18,63 @@ export enum DimensionType {
   RECOVERY = 'RECOVERY',
   ASSET = 'ASSET',
   CONNECTION = 'CONNECTION',
-  ENVIRONMENT = 'ENVIRONMENT'
+  ENVIRONMENT = 'ENVIRONMENT',
 }
 
 export interface DimensionInfo {
-  type: DimensionType;
-  label: string;
-  icon: string;
-  color: string;
+  type: DimensionType
+  label: string
+  icon: string
+  color: string
 }
 
 export interface Deviation {
-  id: string;
-  timestamp: number;
-  description: string;
-  calories?: number;
-  type: 'excess' | 'deficit' | 'other';
+  id: string
+  timestamp: number
+  description: string
+  calories?: number
+  type: 'excess' | 'deficit' | 'other'
 }
 
 export interface FuelSystemData {
-  baseline: string;
-  deviations: Deviation[];
+  baseline: string
+  deviations: Deviation[]
 }
 
 export interface JournalEntry {
-  id: string;
-  timestamp: number;
-  title?: string;
-  content: string;
-  mood: 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
-  tags: string[];
-  attachments: string[];
-  linkedDimensions?: DimensionType[];
-  isPrivate?: boolean;
+  id: string
+  timestamp: number
+  title?: string
+  content: string
+  mood: 'great' | 'good' | 'neutral' | 'bad' | 'terrible'
+  tags: string[]
+  attachments: string[]
+  linkedDimensions?: DimensionType[]
+  isPrivate?: boolean
 }
 
 export interface AppState {
   user: {
-    name: string;
-    birthday: string;
-    mbti: string;
-    values: string[];
-    lifespan: number;
-  };
-  dimensions: Record<DimensionType, number>;
-  fuelSystem: FuelSystemData;
-  journals: JournalEntry[];
-  isLocked: boolean;
-  theme: 'light' | 'dark' | 'auto';
-  language: 'zh' | 'en';
+    name: string
+    birthday: string
+    mbti: string
+    values: string[]
+    lifespan: number
+  }
+  dimensions: Record<DimensionType, number>
+  fuelSystem: FuelSystemData
+  journals: JournalEntry[]
+  isLocked: boolean
+  theme: 'light' | 'dark' | 'auto'
+  language: 'zh' | 'en'
   aiConfig: {
-    provider: 'DeepSeek' | 'Doubao';
-    apiKey: string;
-    modelName: string;
-    frequencyLimit: number;
-  };
+    provider: 'DeepSeek' | 'Doubao'
+    apiKey: string
+    modelName: string
+    frequencyLimit: number
+  }
   systemConfig: {
-    autoSaveInterval: number; // 秒
-    notificationsEnabled: boolean;
-  };
+    autoSaveInterval: number // 秒
+    notificationsEnabled: boolean
+  }
 }

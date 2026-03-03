@@ -1,14 +1,16 @@
-import React from 'react';
-import { Sparkles, Shield, ArrowRight } from 'lucide-react';
-import { GlassCard } from '~/renderer/components/GlassCard';
-import { Button } from '~/renderer/components/ui/button';
+import { Sparkles, Shield, ArrowRight } from 'lucide-react'
+import { GlassCard } from '~/renderer/components/GlassCard'
+import { Button } from '~/renderer/components/ui/button'
 
 interface PinWelcomePageProps {
-  onSetupNow: () => void;
-  onSetupLater: () => void;
+  onSetupNow: () => void
+  onSetupLater: () => void
 }
 
-export function PinWelcomePage({ onSetupNow, onSetupLater }: PinWelcomePageProps) {
+export function PinWelcomePage({
+  onSetupNow,
+  onSetupLater,
+}: PinWelcomePageProps) {
   return (
     <div className="fixed inset-0 bg-apple-bgMain dark:bg-black flex items-center justify-center p-6">
       {/* 背景装饰 */}
@@ -71,21 +73,21 @@ export function PinWelcomePage({ onSetupNow, onSetupLater }: PinWelcomePageProps
         {/* 按钮组 */}
         <div className="space-y-3">
           <Button
-            onClick={onSetupNow}
             className="w-full h-14 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold flex items-center justify-center gap-2 shadow-lg"
+            onClick={onSetupNow}
           >
             立即设置密码
             <ArrowRight size={18} />
           </Button>
           <Button
+            className="w-full h-12 text-apple-textSec dark:text-white/60 hover:text-apple-textMain dark:hover:text-white"
             onClick={onSetupLater}
             variant="outline"
-            className="w-full h-12 text-apple-textSec dark:text-white/60 hover:text-apple-textMain dark:hover:text-white"
           >
             稍后再设置
           </Button>
         </div>
       </GlassCard>
     </div>
-  );
+  )
 }

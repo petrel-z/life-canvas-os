@@ -1,57 +1,64 @@
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import type { AppState, DimensionType } from '~/shared/types';
-import { INITIAL_STATE } from '~/renderer/lib/constants';
-import { useUserApi } from '~/renderer/hooks/useUserApi';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from 'react'
+import type { AppState, DimensionType } from '~/shared/types'
+import { INITIAL_STATE } from '~/renderer/lib/constants'
+import { useUserApi } from '~/renderer/hooks/useUserApi'
 
 interface AppContextType {
-  state: AppState;
-  updateState: (updates: Partial<AppState>) => void;
-  updateDimension: (type: DimensionType, score: number) => void;
-  setTheme: (theme: 'light' | 'dark' | 'auto') => void;
-  lock: () => void;
-  unlock: () => void;
+  state: AppState
+  updateState: (updates: Partial<AppState>) => void
+  updateDimension: (type: DimensionType, score: number) => void
+  setTheme: (theme: 'light' | 'dark' | 'auto') => void
+  lock: () => void
+  unlock: () => void
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
+const AppContext = createContext<AppContextType | undefined>(undefined)
 
 interface AppProviderProps {
-  children: ReactNode;
+  children: ReactNode
 }
 
 export function AppProvider({ children }: AppProviderProps) {
-  const { getUserProfile } = useUserApi();
-  const isLoadingRef = useRef(false);
-  const getUserProfileRef = useRef(getUserProfile);
+  const { getUserProfile } = useUserApi()
+  const isLoadingRef = useRef(false)
+  const getUserProfileRef = useRef(getUserProfile)
 
   // 更新 ref
   useEffect(() => {
-    getUserProfileRef.current = getUserProfile;
-  }, [getUserProfile]);
+    getUserProfileRef.current = getUserProfile
+  }, [getUserProfile])
 
   // 从 localStorage 加载初始状态
   const [state, setState] = useState<AppState>(() => {
     try {
-      const saved = localStorage.getItem('life-canvas-state');
+      const saved = localStorage.getItem('life-canvas-state')
       if (saved) {
-        return { ...INITIAL_STATE, ...JSON.parse(saved) };
+        return { ...INITIAL_STATE, ...JSON.parse(saved) }
       }
-    } catch (error) {
+    } catch (_error) {
       // localStorage 访问失败（隐私模式或配额超满），使用初始状态
       // 生产环境可以考虑添加错误上报
     }
-    return INITIAL_STATE;
-  });
+    return INITIAL_STATE
+  })
 
   // 从后端加载用户信息
   useEffect(() => {
     const loadUserProfile = async () => {
-      if (isLoadingRef.current) return;
-      isLoadingRef.current = true;
+      if (isLoadingRef.current) return
+      isLoadingRef.current = true
 
       try {
-        const profile = await getUserProfileRef.current();
+        const profile = await getUserProfileRef.current()
         if (profile) {
-          setState((prev) => ({
+          setState(prev => ({
             ...prev,
             user: {
               name: profile.name || '',
@@ -60,77 +67,78 @@ export function AppProvider({ children }: AppProviderProps) {
               values: profile.values || [],
               lifespan: profile.lifespan || 0,
             },
-          }));
+          }))
         }
-      } catch (error) {
+      } catch (_error) {
         // 用户还未设置信息，忽略错误
-        console.log('User profile not set yet');
+        console.log('User profile not set yet')
       } finally {
-        isLoadingRef.current = false;
+        isLoadingRef.current = false
       }
-    };
+    }
 
-    loadUserProfile();
-  }, []);
+    loadUserProfile()
+  }, [])
 
   // 主题切换逻辑（带动画）
   useEffect(() => {
-    const root = window.document.documentElement;
+    const root = window.document.documentElement
 
     // 添加主题切换动画类
-    root.classList.add('theme-transitioning');
+    root.classList.add('theme-transitioning')
 
     const isDark =
       state.theme === 'dark' ||
-      (state.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      (state.theme === 'auto' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches)
 
     if (isDark) {
-      root.classList.add('dark');
-      root.classList.remove('light');
+      root.classList.add('dark')
+      root.classList.remove('light')
     } else {
-      root.classList.add('light');
-      root.classList.remove('dark');
+      root.classList.add('light')
+      root.classList.remove('dark')
     }
 
     // 动画完成后移除过渡类
     const timeout = setTimeout(() => {
-      root.classList.remove('theme-transitioning');
-    }, 300); // 与 CSS 过渡时间匹配
+      root.classList.remove('theme-transitioning')
+    }, 300) // 与 CSS 过渡时间匹配
 
-    return () => clearTimeout(timeout);
-  }, [state.theme]);
+    return () => clearTimeout(timeout)
+  }, [state.theme])
 
   // 更新状态
   const updateState = (updates: Partial<AppState>) => {
-    setState((prev) => ({ ...prev, ...updates }));
-  };
+    setState(prev => ({ ...prev, ...updates }))
+  }
 
   // 更新单个维度评分
   const updateDimension = (type: DimensionType, score: number) => {
-    const clampedScore = Math.max(0, Math.min(100, score));
-    setState((prev) => ({
+    const clampedScore = Math.max(0, Math.min(100, score))
+    setState(prev => ({
       ...prev,
       dimensions: {
         ...prev.dimensions,
         [type]: clampedScore,
       },
-    }));
-  };
+    }))
+  }
 
   // 设置主题
   const setTheme = (theme: 'light' | 'dark' | 'auto') => {
-    updateState({ theme });
-  };
+    updateState({ theme })
+  }
 
   // 锁定应用
   const lock = () => {
-    updateState({ isLocked: true });
-  };
+    updateState({ isLocked: true })
+  }
 
   // 解锁应用
   const unlock = () => {
-    updateState({ isLocked: false });
-  };
+    updateState({ isLocked: false })
+  }
 
   const value: AppContextType = {
     state,
@@ -139,16 +147,16 @@ export function AppProvider({ children }: AppProviderProps) {
     setTheme,
     lock,
     unlock,
-  };
+  }
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
 
 // Hook 用于使用 AppContext
 export function useApp() {
-  const context = useContext(AppContext);
+  const context = useContext(AppContext)
   if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
+    throw new Error('useApp must be used within an AppProvider')
   }
-  return context;
+  return context
 }

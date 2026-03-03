@@ -90,11 +90,21 @@ async def import_data(
     """
     导入数据
 
+    支持两种导入方式：
+    1. ZIP 备份文件：通过 backup_path 指定文件路径
+    2. JSON 数据：通过 data 字段直接传入 JSON 数据
+
     请求体:
-        backup_path: 备份文件路径
+        backup_path: 备份文件路径 (可选)
+        data: JSON 格式的导入数据 (可选)
         verify: 是否验证备份文件 (默认 True)
     """
-    data, status_code = DataService.import_data(db, request.backup_path, request.verify)
+    data, status_code = DataService.import_data(
+        db,
+        backup_path=request.backup_path,
+        data=request.data,
+        verify=request.verify
+    )
 
     if status_code >= 400:
         raise HTTPException(

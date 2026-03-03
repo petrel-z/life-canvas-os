@@ -10,12 +10,12 @@ import { usePinApi } from "~/renderer/hooks";
 import { usePinStatus } from "~/renderer/hooks/usePinStatus";
 import { PinLockScreen } from "~/renderer/components/auth/PinLockScreen";
 
-type Step = "verify-old" | "enter-new" | "confirm-new";
+type Step = 'verify-old' | 'enter-new' | 'confirm-new'
 
 export function PinChangePage() {
-  const navigate = useNavigate();
-  const { verifyWithErrorHandling, changeWithErrorHandling } = usePinApi();
-  const { updatePinStatusAfterOperation } = usePinStatus();
+  const navigate = useNavigate()
+  const { verifyWithErrorHandling, changeWithErrorHandling } = usePinApi()
+  const { updatePinStatusAfterOperation } = usePinStatus()
 
   const [currentStep, setCurrentStep] = useState<Step>("verify-old");
   const [verifiedOldPin, setVerifiedOldPin] = useState("");
@@ -36,9 +36,9 @@ export function PinChangePage() {
       const err = error as PinApiError;
       setUnlockError('密码验证失败');
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   // 步骤2：输入新PIN
   const handleEnterNewPin = async (pin: string) => {
@@ -62,20 +62,23 @@ export function PinChangePage() {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
 
     try {
       await changeWithErrorHandling(verifiedOldPin, confirmPin, toast);
 
       // 更新 PIN 状态缓存
-      await updatePinStatusAfterOperation();
+      await updatePinStatusAfterOperation()
 
       toast.success(PIN_MESSAGES.CHANGE_SUCCESS, {
         description: PIN_MESSAGES.CHANGE_SUCCESS_DESC,
-      });
-      setTimeout(() => navigate("/settings", { replace: true }), PIN_CONFIG.NAVIGATION_DELAY);
+      })
+      setTimeout(
+        () => navigate('/settings', { replace: true }),
+        PIN_CONFIG.NAVIGATION_DELAY
+      )
     } catch (error: unknown) {
-      const err = error as PinApiError;
+      const err = error as PinApiError
       if (err.code === 401) {
         setUnlockError("密码验证失败，请重新输入");
         setCurrentStep("verify-old");
@@ -85,9 +88,9 @@ export function PinChangePage() {
         setUnlockError('密码修改失败');
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   // 步骤1：验证旧PIN
   if (currentStep === "verify-old") {

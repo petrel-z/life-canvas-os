@@ -37,20 +37,20 @@ export function PinLockScreen({
 
   const handleUnlock = async () => {
     if (pinInput.length === 6 && !isUnlocking) {
-      setIsUnlocking(true);
+      setIsUnlocking(true)
       try {
-        await onUnlock(pinInput);
+        await onUnlock(pinInput)
       } finally {
-        setIsUnlocking(false);
+        setIsUnlocking(false)
       }
     }
-  };
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && pinInput.length === 6 && !isUnlocking) {
-      handleUnlock();
+      handleUnlock()
     }
-  };
+  }
 
   return (
     <div className="fixed inset-0 bg-apple-bgMain dark:bg-black flex items-center justify-center p-6 z-[9999]">
@@ -75,17 +75,17 @@ export function PinLockScreen({
 
         <div className="space-y-4">
           <input
-            type="password"
-            placeholder="••••••"
-            value={pinInput}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-              setPinInput(value);
-            }}
-            onKeyDown={handleKeyDown}
+            autoFocus
             className="w-full text-center bg-black/5 dark:bg-white/5 border border-apple-border dark:border-white/10 rounded-2xl py-4 text-3xl tracking-[1em] text-apple-textMain dark:text-white focus:outline-none focus:ring-2 focus:ring-apple-accent/30 placeholder:text-apple-textTer/30 dark:placeholder:text-white/20"
             maxLength={6}
-            autoFocus
+            onChange={e => {
+              const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+              setPinInput(value)
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="••••••"
+            type="password"
+            value={pinInput}
           />
 
           {error && (
@@ -123,5 +123,5 @@ export function PinLockScreen({
         </div>
       </GlassCard>
     </div>
-  );
+  )
 }

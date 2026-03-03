@@ -9,7 +9,7 @@ from typing import Tuple, Optional
 from sqlalchemy.orm import Session
 
 from backend.models.user import User
-from backend.db.backup import DatabaseBackup, export_to_json
+from backend.db.backup import DatabaseBackup, export_to_json, import_from_json
 from backend.db.session import DatabaseManager
 from backend.schemas.common import error_response
 
@@ -66,9 +66,13 @@ class DataService:
         return backup_path, filename, "application/zip"
 
     @staticmethod
-    def import_data(db: Session, backup_path: str, verify: bool = True) -> Tuple[dict, int]:
+    def import_data(db: Session, backup_path: str = None, data: dict = None, verify: bool = True) -> Tuple[dict, int]:
         """
         导入数据
+
+        支持两种导入方式：
+        1. ZIP 备份文件：通过 backup_path 指定
+        2. JSON 数据：通过 data 字段直接传入
 
         Returns:
             (response_data, status_code)
@@ -77,10 +81,23 @@ class DataService:
         if not user:
             return error_response(message="用户不存在", code=404), 404
 
+        # 检查参数：必须提供 backup_path 或 data 其中之一
+        if not backup_path and not data:
+            return error_response(message="必须提供 backup_path 或 data 参数", code=400), 400
+
         try:
             db_path = db.bind.url.database
 
-            # 在恢复前关闭当前会话和所有数据库连接
+            # JSON 数据导入
+            if data:
+                stats = import_from_json(db_path, data)
+                return {
+                    "import_type": "json",
+                    "stats": stats,
+                    "imported_at": datetime.now().isoformat()
+                }, 200
+
+            # ZIP 备份文件导入
             db.close()
             db.expunge_all()
 
@@ -96,6 +113,7 @@ class DataService:
 
             if success:
                 return {
+                    "import_type": "zip",
                     "backup_path": backup_path,
                     "imported_at": datetime.now().isoformat()
                 }, 200
