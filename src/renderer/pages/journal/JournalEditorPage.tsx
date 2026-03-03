@@ -87,28 +87,39 @@ export function JournalEditorPage() {
   };
 
   const handlePrivateToggle = (checked: boolean) => {
-    if (checked && !pinStatus?.has_pin_set) {
-      // 未设置 PIN，显示提示并跳转
-      toast.error('需要设置 PIN 码', {
-        description: '私密日记功能需要先设置 PIN 码保护',
-      });
+    // 如果要开启私密功能
+    if (checked) {
+      // 等待 PIN 状态加载完成
+      if (pinStatus === null) {
+        toast.error('正在检查 PIN 状态...', {
+          description: '请稍候',
+        });
+        return;
+      }
 
-      // 保存当前草稿
-      const draft = {
-        title,
-        content,
-        mood,
-        tags,
-        linkedDimensions,
-        isPrivate: false, // 暂时设为 false
-      };
-      localStorage.setItem('journal-draft', JSON.stringify(draft));
+      // 如果没有设置 PIN
+      if (!pinStatus.has_pin_set) {
+        toast.error('需要设置 PIN 码', {
+          description: '私密日记功能需要先设置 PIN 码保护',
+        });
 
-      // 跳转到 PIN 设置页
-      setTimeout(() => {
-        navigate('/settings/pin', { state: { returnUrl: '/journal/new' } });
-      }, 500);
-      return;
+        // 保存当前草稿
+        const draft = {
+          title,
+          content,
+          mood,
+          tags,
+          linkedDimensions,
+          isPrivate: false, // 暂时设为 false
+        };
+        localStorage.setItem('journal-draft', JSON.stringify(draft));
+
+        // 跳转到 PIN 设置页
+        setTimeout(() => {
+          navigate('/settings/pin', { state: { returnUrl: '/journal/new' } });
+        }, 500);
+        return;
+      }
     }
 
     setIsPrivate(checked);
@@ -116,6 +127,14 @@ export function JournalEditorPage() {
 
   const handleSave = async () => {
     if (!content.trim()) return;
+
+    // 安全检查：如果要保存为私密日记，必须有 PIN
+    if (isPrivate && !pinStatus?.has_pin_set) {
+      toast.error('无法保存私密日记', {
+        description: '私密日记功能需要先设置 PIN 码保护',
+      });
+      return;
+    }
 
     setIsLoading(true);
 
@@ -264,7 +283,9 @@ export function JournalEditorPage() {
                     私密日记
                   </div>
                   <div className="text-xs text-apple-textSec dark:text-white/40">
-                    {isPrivate
+                    {pinStatus === null
+                      ? '正在检查 PIN 状态...'
+                      : isPrivate
                       ? '需要 PIN 码才能查看此日记'
                       : pinStatus?.has_pin_set
                       ? '开启后需要 PIN 码才能查看'
@@ -275,7 +296,7 @@ export function JournalEditorPage() {
               <Switch
                 checked={isPrivate}
                 onCheckedChange={handlePrivateToggle}
-                disabled={!pinStatus?.has_pin_set && !isPrivate}
+                disabled={pinStatus === null || (!pinStatus?.has_pin_set && !isPrivate)}
                 className={isPrivate ? 'data-[state=checked]:bg-purple-500' : ''}
               />
             </div>

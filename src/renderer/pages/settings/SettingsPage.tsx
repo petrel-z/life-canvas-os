@@ -39,13 +39,13 @@ import {
   TabsTrigger,
 } from "~/renderer/components/ui/tabs";
 import { Label } from "~/renderer/components/ui/label";
-import { PinVerifyDialog } from "~/renderer/components/auth/PinVerifyDialog";
+import { PinLockScreen } from "~/renderer/components/auth/PinLockScreen";
 import { calculateLifeProgress } from "~/renderer/lib/lifeUtils";
-import { pinApi } from "~/renderer/api";
 import { useUserApi, type UserProfile } from "~/renderer/hooks/useUserApi";
 import { useAiApi, type AIConfigData } from "~/renderer/hooks/useAiApi";
 import { useDataApi, type ExportFormat } from "~/renderer/hooks/useDataApi";
 import { usePinStatus } from "~/renderer/hooks/usePinStatus";
+import { usePinApi } from "~/renderer/hooks";
 import { toast } from "sonner";
 
 export function SettingsPage() {
@@ -59,6 +59,7 @@ export function SettingsPage() {
     fetchPinStatus,
     updatePinStatusAfterOperation,
   } = usePinStatus();
+  const { verifyPin } = usePinApi();
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "success" | "error"
   >("idle");
@@ -70,6 +71,7 @@ export function SettingsPage() {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | undefined>(undefined);
   const [aiConfigLoaded, setAiConfigLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditingAI, setIsEditingAI] = useState(false); // 是否处于编辑模式
@@ -323,10 +325,11 @@ export function SettingsPage() {
   };
 
   const handleClearData = () => {
+    // 显示 PIN 验证界面
     setShowPinDialog(true);
   };
 
-  const handlePinVerifySuccess = () => {
+  const handlePinVerifySuccess = async () => {
     setShowPinDialog(false);
     setShowResetConfirmDialog(true);
   };
@@ -1026,23 +1029,34 @@ export function SettingsPage() {
         </div>
       )}
 
-      {/* PIN 验证对话框 */}
-      <PinVerifyDialog
-        isOpen={showPinDialog}
-        onClose={() => setShowPinDialog(false)}
-        onVerify={async (pin) => {
-          try {
-            const response = await pinApi.verify(pin);
-            if (response.ok) {
-              handlePinVerifySuccess();
-              return true;
+      {/* PIN 验证 */}
+      {showPinDialog && (
+        <PinLockScreen
+          title="删除数据验证"
+          description="请输入 PIN 码以确认删除数据操作"
+          unlockButtonText="验证并继续"
+          unlockingText="验证中..."
+          showCancelButton={true}
+          cancelButtonText="取消"
+          onCancel={() => {
+            setShowPinDialog(false);
+            setUnlockError(undefined);
+          }}
+          error={unlockError}
+          onUnlock={async (pin) => {
+            setUnlockError(undefined);
+
+            const result = await verifyPin(pin);
+
+            if (!result.success) {
+              setUnlockError(result.error || 'PIN验证失败');
+              return;
             }
-            return false;
-          } catch {
-            return false;
-          }
-        }}
-      />
+
+            handlePinVerifySuccess();
+          }}
+        />
+      )}
 
       {/* 确认重置对话框 */}
       {showResetConfirmDialog && (

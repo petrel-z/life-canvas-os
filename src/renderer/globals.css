@@ -265,23 +265,44 @@
 }
 
 [data-sonner-toast][data-type="success"] {
-  border-color: rgba(48, 209, 88, 0.3) !important;
+  border-color: rgba(48, 209, 88, 0.5) !important;
+  color: rgb(21, 128, 61) !important;
 }
 
 [data-sonner-toast][data-type="error"] {
-  border-color: rgba(245, 64, 54, 0.3) !important;
+  border-color: rgba(245, 64, 54, 0.5) !important;
+  color: rgb(185, 28, 28) !important;
+}
+
+[data-sonner-toast][data-type="warning"] {
+  border-color: rgba(255, 159, 10, 0.5) !important;
+  color: rgb(245, 158, 11) !important;
 }
 
 /* Toast 浅色模式关闭按钮 */
 [data-sonner-toast] [data-close-button] {
   color: #9e9c9c !important;
   background: #FFFFFF !important;
-  border-color: #9e9c9c !important;
+  border: 1px solid #e5e5e5 !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-close-button] {
+  color: rgb(34, 197, 94) !important;
+  border-color: rgb(34, 197, 94) !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-close-button] {
+  color: rgb(239, 68, 68) !important;
+  border-color: rgb(239, 68, 68) !important;
+}
+
+[data-sonner-toast][data-type="warning"] [data-close-button] {
+  color: rgb(249, 115, 22) !important;
+  border-color: rgb(249, 115, 22) !important;
 }
 
 [data-sonner-toast] [data-close-button]:hover {
-  color: #1D1D1F !important;
-  border-color: #1D1D1F !important;
+  opacity: 0.8 !important;
 }
 
 /* Toast 深色模式样式 */
@@ -294,20 +315,42 @@
 /* Toast 深色模式关闭按钮 */
 .dark [data-sonner-toast] [data-close-button] {
   color: rgba(255, 255, 255, 0.6) !important;
-  background: #1D1D1F !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark [data-sonner-toast][data-type="success"] [data-close-button] {
+  color: rgb(74, 222, 128) !important;
+  border-color: rgb(74, 222, 128) !important;
+}
+
+.dark [data-sonner-toast][data-type="error"] [data-close-button] {
+  color: rgb(248, 113, 113) !important;
+  border-color: rgb(248, 113, 113) !important;
+}
+
+.dark [data-sonner-toast][data-type="warning"] [data-close-button] {
+  color: rgb(251, 146, 60) !important;
+  border-color: rgb(251, 146, 60) !important;
 }
 
 .dark [data-sonner-toast] [data-close-button]:hover {
-  color: #FFFFFF !important;
-  border-color: #FFFFFF !important;
+  opacity: 0.8 !important;
 }
 
 .dark [data-sonner-toast][data-type="success"] {
-  border-color: rgba(48, 209, 88, 0.3) !important;
+  border-color: rgba(48, 209, 88, 0.5) !important;
+  color: rgb(74, 222, 128) !important;
 }
 
 .dark [data-sonner-toast][data-type="error"] {
-  border-color: rgba(255, 69, 58, 0.3) !important;
+  border-color: rgba(255, 69, 58, 0.5) !important;
+  color: rgb(248, 113, 113) !important;
+}
+
+.dark [data-sonner-toast][data-type="warning"] {
+  border-color: rgba(255, 159, 10, 0.5) !important;
+  color: rgb(251, 146, 60) !important;
 }
 
 /* 额外的动画 */

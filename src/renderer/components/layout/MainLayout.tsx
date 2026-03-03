@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { PinLockScreen } from '../auth/PinLockScreen';
 import { PinWelcomePage } from '../auth/PinWelcomePage';
 import { useApp } from '~/renderer/contexts/AppContext';
+import { usePinApi } from '~/renderer/hooks';
 
 type PinSetupStatus = 'completed' | 'skipped' | null;
 
@@ -11,6 +12,7 @@ export function MainLayout() {
   const { state, unlock } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
+  const { verifyPin } = usePinApi();
   const [unlockError, setUnlockError] = useState<string>();
   const [isVerifying, setIsVerifying] = useState(false);
   const [pinSetupStatus, setPinSetupStatus] = useState<PinSetupStatus>(() => {
@@ -49,40 +51,18 @@ export function MainLayout() {
     setIsVerifying(true);
     setUnlockError(undefined);
 
-    try {
-      const response = await fetch('http://127.0.0.1:8000/api/pin/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
-      });
+    const result = await verifyPin(pin);
 
-      const result = await response.json();
-
-      if (response.ok) {
-        // 验证成功
-        setUnlockError(undefined);
-        unlock();
-      } else {
-        // 验证失败
-        if (result.code === 401) {
-          const attempts = result.data?.attempts_remaining || 0;
-          setUnlockError(`密码错误，剩余尝试次数：${attempts}`);
-        } else if (result.code === 429) {
-          const seconds = result.data?.remaining_seconds || '30';
-          setUnlockError(`您的操作过于频繁，请 ${seconds} 秒后重试`);
-        } else if (result.code === 424) {
-          // PIN 未设置，直接解锁
-          setUnlockError(undefined);
-          unlock();
-        } else {
-          setUnlockError(result.message || '验证失败');
-        }
-      }
-    } catch (err) {
-      setUnlockError('网络错误，请检查后端服务');
-    } finally {
-      setIsVerifying(false);
+    if (result.success) {
+      // 验证成功
+      setUnlockError(undefined);
+      unlock();
+    } else {
+      // 验证失败
+      setUnlockError(result.error || '验证失败');
     }
+
+    setIsVerifying(false);
   };
 
   const handleSetupNow = () => {

@@ -80,9 +80,15 @@ export function InsightDetailPage() {
 
       if (!response.ok) {
         const error = await response.json();
+
+        // 如果是 AI 服务未配置的特殊错误，显示提示信息
+        const description = error.code === 424
+          ? error.data?.hint || error.message
+          : error.message || '请稍后重试';
+
         toast.error('生成洞察失败', {
           id: 'generate-insight',
-          description: error.detail?.message || '请稍后重试',
+          description,
         });
         return;
       }

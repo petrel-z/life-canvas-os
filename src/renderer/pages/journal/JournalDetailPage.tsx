@@ -5,13 +5,13 @@ import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { Button } from '~/renderer/components/ui/button';
 import { Badge } from '~/renderer/components/ui/badge';
-import { PinVerifyDialog } from '~/renderer/components/auth/PinVerifyDialog';
+import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen';
 import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
 import { formatDateTimeCN } from '~/renderer/lib/dateUtils';
 import MDEditor from '@uiw/react-md-editor';
-import { pinApi } from '~/renderer/api';
 import { useJournalApi } from '~/renderer/hooks/useJournalApi';
 import { usePinStatus } from '~/renderer/hooks/usePinStatus';
+import { usePinApi } from '~/renderer/hooks';
 import type { JournalEntry } from '~/shared/types';
 
 export function JournalDetailPage() {
@@ -20,12 +20,14 @@ export function JournalDetailPage() {
   const location = useLocation();
   const { getJournal, deleteJournal } = useJournalApi();
   const { fetchPinStatus, pinStatus } = usePinStatus();
+  const { verifyPin } = usePinApi();
   const [isPinVerified, setIsPinVerified] = useState(false);
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingPin, setIsCheckingPin] = useState(false);
   const [entry, setEntry] = useState<JournalEntry | null>(null);
+  const [unlockError, setUnlockError] = useState<string | undefined>(undefined);
 
   // 从路由状态获取是否私密（如果有的话）
   const isPrivateFromList = location.state?.isPrivate || false;
@@ -117,43 +119,32 @@ export function JournalDetailPage() {
       return null; // 等待 PIN 状态加载
     }
 
-    // 自动显示 PIN 验证弹窗
-    if (!showPinDialog) {
-      setTimeout(() => setShowPinDialog(true), 100);
-    }
-
-    const handleClose = () => {
-      setShowPinDialog(false);
-      navigate('/journal');
-    };
-
-    const handleVerify = async (pin: string) => {
-      try {
-        const response = await pinApi.verify(pin);
-
-        if (!response.ok) {
-          return false;
-        }
-
-        sessionStorage.setItem('pin-verified', 'true');
-        setIsPinVerified(true);
-        setShowPinDialog(false);
-        // PIN 验证成功后，加载日记详情
-        await loadJournal();
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
     return (
-      <div className="flex flex-col items-center justify-center h-96 text-apple-textSec dark:text-white/40">
-        <PinVerifyDialog
-          isOpen={showPinDialog}
-          onClose={handleClose}
-          onVerify={handleVerify}
-        />
-      </div>
+      <PinLockScreen
+        title="查看私密日记"
+        description="请输入 PIN 码以查看此私密日记"
+        unlockButtonText="验证并查看"
+        unlockingText="验证中..."
+        showCancelButton={true}
+        cancelButtonText="返回列表"
+        onCancel={() => navigate('/journal')}
+        error={unlockError}
+        onUnlock={async (pin) => {
+          setUnlockError(undefined);
+
+          const result = await verifyPin(pin);
+
+          if (!result.success) {
+            setUnlockError(result.error || 'PIN验证失败');
+            return;
+          }
+
+          sessionStorage.setItem('pin-verified', 'true');
+          setIsPinVerified(true);
+          // PIN 验证成功后，加载日记详情
+          await loadJournal();
+        }}
+      />
     );
   }
 
