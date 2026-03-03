@@ -61,6 +61,12 @@ class UserSettings(Base):
     show_year_progress = Column(Integer, default=1)  # 0 或 1
     show_weekday = Column(Integer, default=1)  # 0 或 1
 
+    # PIN验证开关（0=禁用，1=启用）
+    pin_verify_on_startup = Column(Integer, default=1)  # 启动时验证PIN
+    pin_verify_for_private_journal = Column(Integer, default=1)  # 查看私密日记时验证
+    pin_verify_for_data_export = Column(Integer, default=1)  # 导出数据时验证
+    pin_verify_for_settings_change = Column(Integer, default=1)  # 修改设置时验证
+
     created_at = Column(DateTime, server_default=localnow_func())
     updated_at = Column(DateTime, server_default=localnow_func(), onupdate=localnow_func())
 

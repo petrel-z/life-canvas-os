@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 from sqlalchemy.orm import Session
 
 from backend.models.user import User
-from backend.schemas.user import PinSetupResponse, PinVerifyResponse, AuthStatusResponse
+from backend.schemas.user import PinSetupResponse, PinVerifyResponse
 from backend.schemas.common import error_response
 
 
@@ -183,19 +183,6 @@ class AuthService:
         return None, 200
 
     @staticmethod
-    def get_pin_status(db: Session) -> dict:
-        """
-        获取 PIN 状态
-
-        Returns:
-            AuthStatusResponse data
-        """
-        user = AuthService.get_user(db)
-        has_pin = user is not None and user.pin_hash is not None
-
-        return AuthStatusResponse(has_pin_set=has_pin).model_dump()
-
-    @staticmethod
     def is_pin_locked(db: Session) -> bool:
         """检查 PIN 是否被锁定"""
         user = AuthService.get_user(db)
@@ -203,3 +190,76 @@ class AuthService:
             return False
         locked_until = _parse_datetime(user.pin_locked_until)
         return locked_until and locked_until > datetime.now()
+
+    @staticmethod
+    def get_pin_verify_requirements(db: Session) -> dict:
+        """
+        获取PIN验证要求
+
+        Returns:
+            包含各个功能PIN验证要求的字典
+        """
+        from backend.services.user_service import UserService
+
+        user = AuthService.get_user(db)
+        if not user:
+            return {
+                "has_pin": False,
+                "requirements": {}
+            }
+
+        settings = UserService.get_or_create_settings(db, user.id)
+
+        return {
+            "has_pin": bool(user.pin_hash),
+            "requirements": {
+                "startup": bool(settings.pin_verify_on_startup),
+                "private_journal": bool(settings.pin_verify_for_private_journal),
+                "data_export": bool(settings.pin_verify_for_data_export),
+                "settings_change": bool(settings.pin_verify_for_settings_change),
+            }
+        }
+
+    @staticmethod
+    def should_verify_on_startup(db: Session) -> bool:
+        """检查启动时是否需要验证PIN"""
+        user = AuthService.get_user(db)
+        if not user or not user.pin_hash:
+            return False
+
+        from backend.services.user_service import UserService
+        settings = UserService.get_or_create_settings(db, user.id)
+        return bool(settings.pin_verify_on_startup)
+
+    @staticmethod
+    def should_verify_for_private_journal(db: Session) -> bool:
+        """检查查看私密日记时是否需要验证PIN"""
+        user = AuthService.get_user(db)
+        if not user or not user.pin_hash:
+            return False
+
+        from backend.services.user_service import UserService
+        settings = UserService.get_or_create_settings(db, user.id)
+        return bool(settings.pin_verify_for_private_journal)
+
+    @staticmethod
+    def should_verify_for_data_export(db: Session) -> bool:
+        """检查导出数据时是否需要验证PIN"""
+        user = AuthService.get_user(db)
+        if not user or not user.pin_hash:
+            return False
+
+        from backend.services.user_service import UserService
+        settings = UserService.get_or_create_settings(db, user.id)
+        return bool(settings.pin_verify_for_data_export)
+
+    @staticmethod
+    def should_verify_for_settings_change(db: Session) -> bool:
+        """检查修改设置时是否需要验证PIN"""
+        user = AuthService.get_user(db)
+        if not user or not user.pin_hash:
+            return False
+
+        from backend.services.user_service import UserService
+        settings = UserService.get_or_create_settings(db, user.id)
+        return bool(settings.pin_verify_for_settings_change)

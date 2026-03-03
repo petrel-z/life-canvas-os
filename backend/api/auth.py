@@ -14,7 +14,6 @@ from backend.schemas.user import (
     PinChangeRequest,
     PinSetupResponse,
     PinVerifyResponse,
-    AuthStatusResponse,
     LockResponse,
 )
 from backend.schemas.common import success_response
@@ -107,16 +106,18 @@ async def lock_app(db: Session = Depends(get_db)):
     )
 
 
-@router.get("/status")
-async def get_pin_status(db: Session = Depends(get_db)):
+@router.get("/verify-requirements")
+async def get_pin_verify_requirements(db: Session = Depends(get_db)):
     """
-    获取 PIN 状态
+    获取PIN验证要求
+
+    返回各个功能是否需要PIN验证
     """
-    data = AuthService.get_pin_status(db)
+    data = AuthService.get_pin_verify_requirements(db)
 
     return success_response(
         data=data,
-        message="状态获取成功"
+        message="获取PIN验证要求成功"
     )
 
 
@@ -179,21 +180,6 @@ def handle_auth_action(action: str, params: dict) -> dict:
             except HTTPException as e:
                 return {
                     'action': 'set_pin',
-                    'status': 'error',
-                    'error': e.detail
-                }
-
-        elif action == 'get_auth_status':
-            try:
-                result = _run_async(get_pin_status(db))
-                return {
-                    'action': 'get_auth_status',
-                    'status': 'ok',
-                    'data': result['data']
-                }
-            except HTTPException as e:
-                return {
-                    'action': 'get_auth_status',
                     'status': 'error',
                     'error': e.detail
                 }
