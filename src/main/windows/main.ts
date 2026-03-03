@@ -1,4 +1,4 @@
-import { BrowserWindow, app } from 'electron'
+import { BrowserWindow } from 'electron'
 import { join } from 'node:path'
 
 import { ENVIRONMENT } from '~/shared/constants'
@@ -34,8 +34,8 @@ export async function MainWindow() {
     window.show()
   })
 
-  if (ENVIRONMENT.IS_DEV && process.env['ELECTRON_RENDERER_URL']) {
-    await window.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (ENVIRONMENT.IS_DEV && process.env.ELECTRON_RENDERER_URL) {
+    await window.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
     await window.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -57,9 +57,12 @@ export async function MainWindow() {
     console.log('[MainWindow] Window shown')
   })
 
-  window.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('[MainWindow] Failed to load:', errorCode, errorDescription)
-  })
+  window.webContents.on(
+    'did-fail-load',
+    (_event, errorCode, errorDescription) => {
+      console.error('[MainWindow] Failed to load:', errorCode, errorDescription)
+    }
+  )
 
   // 移除 close 事件监听器，避免意外关闭
   // window.on('close', () => {

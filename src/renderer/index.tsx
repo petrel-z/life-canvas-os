@@ -11,7 +11,7 @@ ReactDom.createRoot(document.querySelector('app') as HTMLElement).render(
   <React.StrictMode>
     <AppProvider>
       <AppRoutes />
-      <Toaster position="top-right" richColors closeButton />
+      <Toaster closeButton position="top-right" richColors />
     </AppProvider>
   </React.StrictMode>
 )

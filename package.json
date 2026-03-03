@@ -6,8 +6,7 @@
   "main": "./node_modules/.dev/main/index.mjs",
   "resources": "src/resources",
   "author": {
-    "name": "Dalton Menezes",
-    "email": "daltonmenezes@outlook.com"
+    "name": "Life Canvas Team"
   },
   "license": "MIT",
   "packageManager": "pnpm@10.0.0",
@@ -30,7 +29,7 @@
     "lint": "biome check --no-errors-on-unmatched",
     "lint:fix": "biome check --write --no-errors-on-unmatched --assist-enabled=true",
     "typecheck": "tsc --noEmit",
-    "build:python": "cd backend && ../venv/bin/python3 -m PyInstaller backend.spec --clean",
+    "build:python": "cd backend && python3 -m PyInstaller backend.spec --clean",
     "build:all": "pnpm build:python && pnpm build"
   },
   "dependencies": {

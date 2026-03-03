@@ -1,8 +1,11 @@
-import { author as _author, name } from '../../package.json'
+import packageJson from '../../package.json'
 
-const author = _author.name ?? _author
+const author =
+  typeof packageJson.author === 'string'
+    ? packageJson.author
+    : (packageJson.author?.name ?? 'unknown')
 const authorInKebabCase = author.replace(/\s+/g, '-')
-const appId = `com.${authorInKebabCase}.${name}`.toLowerCase()
+const appId = `com.${authorInKebabCase}.${packageJson.name}`.toLowerCase()
 
 /**
  * @param {string} id

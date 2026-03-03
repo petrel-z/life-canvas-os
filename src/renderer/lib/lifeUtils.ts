@@ -9,15 +9,18 @@
  * @param lifespan - 预期寿命（年）
  * @returns 生命进度百分比 (0-100)
  */
-export function calculateLifeProgress(birthday: string, lifespan: number): number {
+export function calculateLifeProgress(
+  birthday: string,
+  lifespan: number
+): number {
   // 如果没有生日或预期寿命为0，返回0
   if (!birthday || !lifespan) {
-    return 0;
+    return 0
   }
 
-  const birthDate = new Date(birthday);
-  const today = new Date();
-  const ageInMs = today.getTime() - birthDate.getTime();
-  const expectedLifespanInMs = lifespan * 365.25 * 24 * 60 * 60 * 1000;
-  return Math.min(100, Math.max(0, (ageInMs / expectedLifespanInMs) * 100));
+  const birthDate = new Date(birthday)
+  const today = new Date()
+  const ageInMs = today.getTime() - birthDate.getTime()
+  const expectedLifespanInMs = lifespan * 365.25 * 24 * 60 * 60 * 1000
+  return Math.min(100, Math.max(0, (ageInMs / expectedLifespanInMs) * 100))
 }

@@ -1,12 +1,12 @@
-import React from 'react';
-import { cn } from '~/renderer/lib/utils';
+import type React from 'react'
+import { cn } from '~/renderer/lib/utils'
 
 export interface EmptyStateProps {
-  icon?: React.ReactNode;
-  title: string;
-  description?: string;
-  action?: React.ReactNode;
-  className?: string;
+  icon?: React.ReactNode
+  title: string
+  description?: string
+  action?: React.ReactNode
+  className?: string
 }
 
 export function EmptyState({
@@ -29,5 +29,5 @@ export function EmptyState({
       {description && <p className="text-sm mt-1">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
-  );
+  )
 }

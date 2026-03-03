@@ -1,0 +1,63 @@
+name: 构建测试
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 启用 Corepack
+        run: npm i -g --force corepack && corepack enable
+
+      - name: 安装 Node.js 和 PNPM
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Linux 系统依赖
+        if: startsWith(matrix.os, 'ubuntu-latest')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools rpm
+
+      - name: 安装 Python 依赖
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: 构建 Python 后端
+        run: |
+          cd backend
+          python -m PyInstaller backend.spec --clean
+
+      - name: 安装前端依赖
+        run: pnpm install
+
+      - name: 代码检查
+        run: pnpm lint
+
+      - name: 类型检查
+        run: pnpm typecheck
+
+      - name: 构建应用
+        run: pnpm compile:app

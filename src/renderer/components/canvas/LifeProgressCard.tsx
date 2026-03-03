@@ -1,22 +1,22 @@
-import React, { useMemo } from 'react';
-import { GlassCard } from '~/renderer/components/GlassCard';
-import { useApp } from '~/renderer/contexts/AppContext';
-import { calculateLifeProgress } from '~/renderer/lib/lifeUtils';
+import { useMemo } from 'react'
+import { GlassCard } from '~/renderer/components/GlassCard'
+import { useApp } from '~/renderer/contexts/AppContext'
+import { calculateLifeProgress } from '~/renderer/lib/lifeUtils'
 
 export interface LifeProgressCardProps {
-  className?: string;
+  className?: string
 }
 
 export function LifeProgressCard({ className }: LifeProgressCardProps) {
-  const { state } = useApp();
+  const { state } = useApp()
 
   // 计算生命进度
   const lifeProgress = useMemo(() => {
-    return calculateLifeProgress(state.user.birthday, state.user.lifespan);
-  }, [state.user.birthday, state.user.lifespan]);
+    return calculateLifeProgress(state.user.birthday, state.user.lifespan)
+  }, [state.user.birthday, state.user.lifespan])
 
   return (
-    <GlassCard title="生命进度" className={`flex-1 ${className || ''}`}>
+    <GlassCard className={`flex-1 ${className || ''}`} title="生命进度">
       <div className="space-y-4">
         <div className="flex justify-between items-end">
           <span className="text-sm text-apple-textSec dark:text-white/60 font-medium">
@@ -37,5 +37,5 @@ export function LifeProgressCard({ className }: LifeProgressCardProps) {
         </p>
       </div>
     </GlassCard>
-  );
+  )
 }

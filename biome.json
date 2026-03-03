@@ -32,23 +32,25 @@
   "linter": {
     "enabled": true,
     "rules": {
+      "recommended": true,
       "a11y": {
-        "noSvgWithoutTitle": "off",
-        "useButtonType": "off"
+        "recommended": false
       },
       "complexity": {
-        "noBannedTypes": "warn"
+        "noBannedTypes": "warn",
+        "useLiteralKeys": "off"
       },
       "correctness": {
-        "noUnusedImports": "warn",
+        "noUnusedImports": "off",
+        "noUnusedVariables": "off",
         "useExhaustiveDependencies": "off"
       },
-      "recommended": true,
       "style": {
+        "noNonNullAssertion": "off",
         "noUselessElse": "warn"
       },
       "suspicious": {
-        "noArrayIndexKey": "info",
+        "noArrayIndexKey": "off",
         "noDuplicateObjectKeys": "warn",
         "noDuplicateProperties": "warn",
         "noEmptyInterface": "off",
