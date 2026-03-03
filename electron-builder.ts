@@ -53,11 +53,13 @@ export default {
     gatekeeperAssess: false,
   },
 
+  // Linux 构建配置
   linux: {
     artifactName,
     category: 'Utility',
     synopsis: description,
-    target: ['AppImage', 'deb', 'rpm'],
+    // ✅ 只构建 x64 架构，避免 app-builder 架构问题
+    target: ['AppImage', 'deb'],
     icon: `${resources}/build/icons`,
   },
 
