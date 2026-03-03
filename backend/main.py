@@ -225,10 +225,13 @@ else:
         """内部调用 API"""
         app = get_app_instance()
 
+        # 使用 httpx 的 ASGITransport 来直接调用 FastAPI 应用
+        from httpx import ASGITransport
+
         # 构建请求
         request_kwargs = {
             'method': method,
-            'url': path,
+            'url': f'http://test{path}',
         }
 
         if params:
@@ -236,7 +239,8 @@ else:
         if body and method in ['POST', 'PUT', 'PATCH']:
             request_kwargs['json'] = body
 
-        async with AsyncClient(app=app, base_url="http://test") as ac:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
             response = await ac.request(**request_kwargs)
             return response.json()
 
