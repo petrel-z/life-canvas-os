@@ -29,7 +29,7 @@
     "lint": "biome check --no-errors-on-unmatched",
     "lint:fix": "biome check --write --no-errors-on-unmatched --assist-enabled=true",
     "typecheck": "tsc --noEmit",
-    "build:python": "cd backend && ../venv/bin/python3 -m PyInstaller backend.spec --clean",
+    "build:python": "python3 -m PyInstaller backend/backend.spec --clean",
     "build:all": "pnpm build:python && pnpm build"
   },
   "dependencies": {

@@ -13,11 +13,18 @@ from pathlib import Path
 # 获取项目根目录
 current_file = Path(__file__).resolve()
 backend_dir = current_file.parent
-project_root = backend_dir.parent
 
-# 将项目根目录添加到 Python 路径
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+# PyInstaller 打包后的路径处理
+if hasattr(sys, '_MEIPASS'):
+    # 打包后的环境：添加 _MEIPASS 到路径
+    sys.path.insert(0, sys._MEIPASS)
+else:
+    # 开发环境：使用项目根目录
+    project_root = backend_dir.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    if str(backend_dir) not in sys.path:
+        sys.path.insert(0, str(backend_dir))
 
 # 判断运行模式
 IS_DEV = '--dev' in sys.argv

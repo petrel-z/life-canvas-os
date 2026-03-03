@@ -1,17 +1,12 @@
 /** biome-ignore-all lint/suspicious/noTemplateCurlyInString: <> */
-import {
-  main,
-  name,
-  version,
-  resources,
-  description,
-  displayName,
-  author as _author,
-} from './package.json'
+import packageJson from './package.json'
 
 import { getDevFolder } from './src/lib/electron-app/release/utils/path'
 
-const author = _author?.name ?? _author
+const { main, name, version, resources, description, displayName } = packageJson
+const author = typeof packageJson.author === 'string' 
+  ? packageJson.author 
+  : packageJson.author?.name ?? 'unknown'
 const currentYear = new Date().getFullYear()
 const authorInKebabCase = author.replace(/\s+/g, '-')
 const appId = `com.${authorInKebabCase}.${name}`.toLowerCase()

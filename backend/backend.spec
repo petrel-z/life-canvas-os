@@ -5,15 +5,15 @@ PyInstaller 配置文件
 import sys
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
-# 收集数据文件
+# 收集数据文件 - 使用 backend 目录作为根目录
 datas = [
-    ('api', 'api'),
-    ('core', 'core'),
-    ('models', 'models'),
-    ('schemas', 'schemas'),
-    ('services', 'services'),
-    ('db', 'db'),
-    ('utils', 'utils'),
+    ('backend/api', 'backend/api'),
+    ('backend/core', 'backend/core'),
+    ('backend/models', 'backend/models'),
+    ('backend/schemas', 'backend/schemas'),
+    ('backend/services', 'backend/services'),
+    ('backend/db', 'backend/db'),
+    ('backend/utils', 'backend/utils'),
 ]
 
 # 隐藏导入
@@ -51,13 +51,41 @@ hiddenimports = [
     'email.mime.audio',
     'email.mime.video',
     'pkg_resources.py2_warn',
+    # 收集 backend 子模块
+    'backend',
+    'backend.api',
+    'backend.api.auth',
+    'backend.api.users',
+    'backend.api.journals',
+    'backend.api.insights',
+    'backend.api.systems',
+    'backend.api.data',
+    'backend.core',
+    'backend.core.config',
+    'backend.core.exceptions',
+    'backend.core.logging',
+    'backend.db',
+    'backend.db.base',
+    'backend.db.session',
+    'backend.db.init_db',
+    'backend.models',
+    'backend.models.user',
+    'backend.models.dimension',
+    'backend.models.diary',
+    'backend.models.insight',
+    'backend.services',
+    'backend.services.auth_service',
+    'backend.services.user_service',
+    'backend.services.journal_service',
+    'backend.services.insight_service',
+    'backend.services.system_service',
 ]
 
 block_cipher = None
 
 a = Analysis(
     ['main.py'],
-    pathex=[],
+    pathex=['.'],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,

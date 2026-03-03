@@ -47,8 +47,7 @@ jobs:
 
       - name: 构建 Python 后端
         run: |
-          cd backend
-          python -m PyInstaller backend.spec --clean
+          python -m PyInstaller backend/backend.spec --clean
 
       - name: 安装前端依赖
         run: pnpm install
