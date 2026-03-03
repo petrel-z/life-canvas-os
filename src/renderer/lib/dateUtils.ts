@@ -13,7 +13,7 @@ export function formatDateCN(timestamp: number): string {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  });
+  })
 }
 
 /**
@@ -25,7 +25,7 @@ export function formatTimeCN(timestamp: number): string {
   return new Date(timestamp).toLocaleTimeString('zh-CN', {
     hour: '2-digit',
     minute: '2-digit',
-  });
+  })
 }
 
 /**
@@ -40,7 +40,7 @@ export function formatDateTimeCN(timestamp: number): string {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  });
+  })
 }
 
 /**
@@ -51,7 +51,7 @@ export function formatDateTimeCN(timestamp: number): string {
 export function formatWeekdayCN(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString('zh-CN', {
     weekday: 'long',
-  });
+  })
 }
 
 /**
@@ -65,5 +65,5 @@ export function formatDateWithWeekdayCN(timestamp: number): string {
     month: 'long',
     day: 'numeric',
     weekday: 'long',
-  });
+  })
 }

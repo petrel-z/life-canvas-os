@@ -32,9 +32,9 @@
   "linter": {
     "enabled": true,
     "rules": {
+      "recommended": true,
       "a11y": {
-        "noSvgWithoutTitle": "off",
-        "useButtonType": "off"
+        "recommended": false
       },
       "complexity": {
         "noBannedTypes": "warn"
@@ -43,7 +43,6 @@
         "noUnusedImports": "warn",
         "useExhaustiveDependencies": "off"
       },
-      "recommended": true,
       "style": {
         "noUselessElse": "warn"
       },

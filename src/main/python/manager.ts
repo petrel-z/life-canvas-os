@@ -2,9 +2,8 @@
  * Python 进程管理器
  * 负责启动、停止和监控 Python 后端进程
  */
-import { spawn, ChildProcess } from 'child_process'
-import path from 'path'
-import { app } from 'electron'
+import { spawn, type ChildProcess } from 'node:child_process'
+import path from 'node:path'
 
 export class PythonManager {
   private process: ChildProcess | null = null
@@ -54,7 +53,11 @@ export class PythonManager {
       args = ['--dev']
     }
 
-    console.log('[Python Manager] Starting Python:', { pythonPath, args, isDev })
+    console.log('[Python Manager] Starting Python:', {
+      pythonPath,
+      args,
+      isDev,
+    })
 
     this.process = spawn(pythonPath, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -62,13 +65,13 @@ export class PythonManager {
     })
 
     // 监听 stdout（使用长度前缀协议）
-    this.process.stdout?.on('data', (data) => {
+    this.process.stdout?.on('data', data => {
       this.stdoutBuffer += data.toString()
       this.processBuffer()
     })
 
     // 监听 stderr（日志输出）
-    this.process.stderr?.on('data', (data) => {
+    this.process.stderr?.on('data', data => {
       try {
         console.error('[Python stderr]', data.toString())
       } catch (error) {
@@ -80,7 +83,7 @@ export class PythonManager {
     })
 
     // 进程退出处理
-    this.process.on('exit', (code) => {
+    this.process.on('exit', code => {
       console.error(`[Python Manager] Process exited with code ${code}`)
       this.isReady = false
 
@@ -92,7 +95,7 @@ export class PythonManager {
     })
 
     // 进程错误处理
-    this.process.on('error', (error) => {
+    this.process.on('error', error => {
       console.error('[Python Manager] Process error:', error)
     })
   }
@@ -106,9 +109,9 @@ export class PythonManager {
       if (newlineIndex === -1) break
 
       const lengthStr = this.stdoutBuffer.slice(0, newlineIndex)
-      const length = parseInt(lengthStr)
+      const length = parseInt(lengthStr, 10)
 
-      if (isNaN(length)) {
+      if (Number.isNaN(length)) {
         // 不是长度前缀格式，可能是日志，跳过
         this.stdoutBuffer = this.stdoutBuffer.slice(newlineIndex + 1)
         continue
@@ -169,7 +172,7 @@ export class PythonManager {
       }, timeout)
 
       // 注册回调
-      this.responseCallbacks.set(id, (response) => {
+      this.responseCallbacks.set(id, response => {
         clearTimeout(timer)
         if (response.success) {
           resolve(response.data)
@@ -183,11 +186,13 @@ export class PythonManager {
       const message = `${Buffer.byteLength(jsonStr)}\n${jsonStr}`
 
       const process = this.process
-      if (process?.stdin && process.stdin.writable) {
-        process.stdin.write(message, (err) => {
+      if (process?.stdin?.writable) {
+        process.stdin.write(message, err => {
           // 处理 EPIPE 错误（管道已关闭）
           if (err && (err as any).code === 'EPIPE') {
-            console.warn('[Python Manager] EPIPE: Python process may have exited')
+            console.warn(
+              '[Python Manager] EPIPE: Python process may have exited'
+            )
             clearTimeout(timer)
             this.responseCallbacks.delete(id)
             reject(new Error('Python process is not running'))
@@ -227,7 +232,7 @@ export class PythonManager {
     try {
       await this.sendRequest('ping', {}, 5000)
       return true
-    } catch (e) {
+    } catch (_e) {
       return false
     }
   }

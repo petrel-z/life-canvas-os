@@ -12,21 +12,21 @@ export const CACHE_KEYS = {
   DIMENSION_SCORES: 'dimension_scores',
   FUEL_BASELINE: 'fuel_baseline',
   AI_INSIGHTS: 'ai_insights',
-} as const;
+} as const
 
 /**
  * 缓存项接口
  */
 interface CacheItem<T> {
-  data: T;
-  timestamp: number;
-  expiresAt: number;
+  data: T
+  timestamp: number
+  expiresAt: number
 }
 
 /**
  * 默认缓存过期时间（分钟）
  */
-const DEFAULT_CACHE_EXPIRY_MINUTES = 5;
+const DEFAULT_CACHE_EXPIRY_MINUTES = 5
 
 /**
  * 设置缓存
@@ -34,16 +34,20 @@ const DEFAULT_CACHE_EXPIRY_MINUTES = 5;
  * @param data - 缓存数据
  * @param expiryMinutes - 过期时间（分钟），默认 5 分钟
  */
-export function setCache<T>(key: string, data: T, expiryMinutes: number = DEFAULT_CACHE_EXPIRY_MINUTES): void {
+export function setCache<T>(
+  key: string,
+  data: T,
+  expiryMinutes: number = DEFAULT_CACHE_EXPIRY_MINUTES
+): void {
   try {
     const item: CacheItem<T> = {
       data,
       timestamp: Date.now(),
       expiresAt: Date.now() + expiryMinutes * 60 * 1000,
-    };
-    localStorage.setItem(key, JSON.stringify(item));
+    }
+    localStorage.setItem(key, JSON.stringify(item))
   } catch (error) {
-    console.error(`Failed to set cache for key: ${key}`, error);
+    console.error(`Failed to set cache for key: ${key}`, error)
   }
 }
 
@@ -54,23 +58,23 @@ export function setCache<T>(key: string, data: T, expiryMinutes: number = DEFAUL
  */
 export function getCache<T>(key: string): T | null {
   try {
-    const itemStr = localStorage.getItem(key);
+    const itemStr = localStorage.getItem(key)
     if (!itemStr) {
-      return null;
+      return null
     }
 
-    const item: CacheItem<T> = JSON.parse(itemStr);
+    const item: CacheItem<T> = JSON.parse(itemStr)
 
     // 检查是否过期
     if (Date.now() > item.expiresAt) {
-      localStorage.removeItem(key);
-      return null;
+      localStorage.removeItem(key)
+      return null
     }
 
-    return item.data;
+    return item.data
   } catch (error) {
-    console.error(`Failed to get cache for key: ${key}`, error);
-    return null;
+    console.error(`Failed to get cache for key: ${key}`, error)
+    return null
   }
 }
 
@@ -80,9 +84,9 @@ export function getCache<T>(key: string): T | null {
  */
 export function removeCache(key: string): void {
   try {
-    localStorage.removeItem(key);
+    localStorage.removeItem(key)
   } catch (error) {
-    console.error(`Failed to remove cache for key: ${key}`, error);
+    console.error(`Failed to remove cache for key: ${key}`, error)
   }
 }
 
@@ -91,9 +95,9 @@ export function removeCache(key: string): void {
  */
 export function clearAllCache(): void {
   try {
-    localStorage.clear();
+    localStorage.clear()
   } catch (error) {
-    console.error('Failed to clear all cache', error);
+    console.error('Failed to clear all cache', error)
   }
 }
 
@@ -104,22 +108,22 @@ export function clearAllCache(): void {
  */
 export function hasCache(key: string): boolean {
   try {
-    const itemStr = localStorage.getItem(key);
+    const itemStr = localStorage.getItem(key)
     if (!itemStr) {
-      return false;
+      return false
     }
 
-    const item: CacheItem<any> = JSON.parse(itemStr);
+    const item: CacheItem<any> = JSON.parse(itemStr)
 
     // 检查是否过期
     if (Date.now() > item.expiresAt) {
-      localStorage.removeItem(key);
-      return false;
+      localStorage.removeItem(key)
+      return false
     }
 
-    return true;
+    return true
   } catch (error) {
-    console.error(`Failed to check cache for key: ${key}`, error);
-    return false;
+    console.error(`Failed to check cache for key: ${key}`, error)
+    return false
   }
 }

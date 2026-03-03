@@ -1,20 +1,20 @@
-import React, { useMemo } from 'react';
-import { Heart } from 'lucide-react';
-import { useApp } from '~/renderer/contexts/AppContext';
-import { DIMENSIONS } from '~/renderer/lib/constants';
-import { RadarChartCard } from '~/renderer/components/canvas/RadarChartCard';
-import { AIInsightCard } from '~/renderer/components/canvas/AIInsightCard';
-import { LifeProgressCard } from '~/renderer/components/canvas/LifeProgressCard';
-import { GlassCard } from '~/renderer/components/GlassCard';
+import { useMemo } from 'react'
+import { Heart } from 'lucide-react'
+import { useApp } from '~/renderer/contexts/AppContext'
+import { DIMENSIONS } from '~/renderer/lib/constants'
+import { RadarChartCard } from '~/renderer/components/canvas/RadarChartCard'
+import { AIInsightCard } from '~/renderer/components/canvas/AIInsightCard'
+import { LifeProgressCard } from '~/renderer/components/canvas/LifeProgressCard'
+import { GlassCard } from '~/renderer/components/GlassCard'
 
 export function DashboardPage() {
-  const { state } = useApp();
+  const { state } = useApp()
 
   // 计算平衡总分
   const overallBalance = useMemo(() => {
-    const values = Object.values(state.dimensions);
-    return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
-  }, [state.dimensions]);
+    const values = Object.values(state.dimensions)
+    return Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+  }, [state.dimensions])
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -22,7 +22,8 @@ export function DashboardPage() {
       <header className="flex justify-between items-end">
         <div>
           <h1 className="text-4xl font-black text-apple-textMain dark:text-white tracking-tight">
-            欢迎回来，<span className="text-apple-accent">{state.user.name}</span>
+            欢迎回来，
+            <span className="text-apple-accent">{state.user.name}</span>
           </h1>
           <p className="text-apple-textSec dark:text-white/40 mt-1 text-lg">
             这是您当前的生命画布状态
@@ -52,10 +53,10 @@ export function DashboardPage() {
 
       {/* 八维小卡片网格 */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 pt-4">
-        {DIMENSIONS.map((d) => (
+        {DIMENSIONS.map(d => (
           <GlassCard
-            key={d.type}
             className="!p-4 flex flex-col items-center text-center gap-2 hover:-translate-y-1 shadow-apple-soft transition-all cursor-pointer"
+            key={d.type}
           >
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center mb-1 shadow-sm"
@@ -73,5 +74,5 @@ export function DashboardPage() {
         ))}
       </div>
     </div>
-  );
+  )
 }

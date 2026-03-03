@@ -12,7 +12,7 @@ export const PIN_CONFIG = {
   DEFAULT_LOCK_SECONDS: 30,
   /** 导航延迟（毫秒） */
   NAVIGATION_DELAY: 1500,
-} as const;
+} as const
 
 /**
  * PIN 消息常量
@@ -36,20 +36,32 @@ export const PIN_MESSAGES = {
   DELETE_SUCCESS: 'PIN 已删除',
   /** 删除成功描述 */
   DELETE_SUCCESS_DESC: '您已关闭 PIN 验证功能',
-} as const;
+  /** 删除警告 */
+  DELETE_WARNING: '删除 PIN 后将无法保护私密日记',
+} as const
 
 /**
  * PIN API 错误类型
  */
 export interface PinApiError {
-  code: number;
-  message: string;
+  code: number
+  message: string
   data?: {
-    attempts_remaining?: number;
-    remaining_seconds?: number;
-    conflict?: string;
-    hint?: string;
-    [key: string]: any;
-  };
-  timestamp?: number;
+    attempts_remaining?: number
+    remaining_seconds?: number
+    conflict?: string
+    hint?: string
+    [key: string]: any
+  }
+  timestamp?: number
+}
+
+/**
+ * PIN API 响应类型
+ */
+export interface PinApiResponse {
+  code: number
+  message: string
+  data?: any
+  timestamp: number
 }

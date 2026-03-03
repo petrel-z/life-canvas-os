@@ -1,21 +1,24 @@
-import React from 'react';
-import { cn } from '~/renderer/lib/utils';
-import { Loader2 } from 'lucide-react';
+import type React from 'react'
+import { cn } from '~/renderer/lib/utils'
+import { Loader2 } from 'lucide-react'
 
 export interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
+  size?: 'sm' | 'md' | 'lg'
+  className?: string
 }
 
 /**
  * 加载中 Spinner 组件
  */
-export function LoadingSpinner({ size = 'md', className }: LoadingSpinnerProps) {
+export function LoadingSpinner({
+  size = 'md',
+  className,
+}: LoadingSpinnerProps) {
   const sizeClasses = {
     sm: 'h-4 w-4',
     md: 'h-6 w-6',
     lg: 'h-8 w-8',
-  };
+  }
 
   return (
     <Loader2
@@ -25,13 +28,13 @@ export function LoadingSpinner({ size = 'md', className }: LoadingSpinnerProps) 
         className
       )}
     />
-  );
+  )
 }
 
 export interface LoadingOverlayProps {
-  fullScreen?: boolean;
-  message?: string;
-  className?: string;
+  fullScreen?: boolean
+  message?: string
+  className?: string
 }
 
 /**
@@ -59,11 +62,11 @@ export function LoadingOverlay({
         </p>
       )}
     </div>
-  );
+  )
 }
 
 export interface LoadingDotsProps {
-  className?: string;
+  className?: string
 }
 
 /**
@@ -78,13 +81,13 @@ export function LoadingDots({ className }: LoadingDotsProps) {
         <span className="h-2 w-2 animate-bounce rounded-full bg-apple-accent" />
       </div>
     </div>
-  );
+  )
 }
 
 export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'text' | 'circular' | 'rectangular';
-  width?: string | number;
-  height?: string | number;
+  variant?: 'text' | 'circular' | 'rectangular'
+  width?: string | number
+  height?: string | number
 }
 
 /**
@@ -101,7 +104,7 @@ export function Skeleton({
     text: 'rounded max-w-sm',
     circular: 'rounded-full',
     rectangular: 'rounded-md',
-  };
+  }
 
   return (
     <div
@@ -113,11 +116,11 @@ export function Skeleton({
       style={{ width, height }}
       {...props}
     />
-  );
+  )
 }
 
 export interface CardSkeletonProps {
-  className?: string;
+  className?: string
 }
 
 /**
@@ -125,19 +128,14 @@ export interface CardSkeletonProps {
  */
 export function CardSkeleton({ className }: CardSkeletonProps) {
   return (
-    <div
-      className={cn(
-        'liquid-glass rounded-xl p-6 space-y-4',
-        className
-      )}
-    >
-      <Skeleton variant="text" width="60%" height={24} />
+    <div className={cn('liquid-glass rounded-xl p-6 space-y-4', className)}>
+      <Skeleton height={24} variant="text" width="60%" />
       <Skeleton variant="text" width="100%" />
       <Skeleton variant="text" width="80%" />
       <div className="flex gap-2 pt-2">
-        <Skeleton variant="rectangular" width={60} height={24} />
-        <Skeleton variant="rectangular" width={60} height={24} />
+        <Skeleton height={24} variant="rectangular" width={60} />
+        <Skeleton height={24} variant="rectangular" width={60} />
       </div>
     </div>
-  );
+  )
 }

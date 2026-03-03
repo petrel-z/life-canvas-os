@@ -1,10 +1,10 @@
-import React from 'react';
-import { Search } from 'lucide-react';
-import { cn } from '~/renderer/lib/utils';
+import type React from 'react'
+import { Search } from 'lucide-react'
+import { cn } from '~/renderer/lib/utils'
 
 export interface SearchInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
-  iconClassName?: string;
+  iconClassName?: string
 }
 
 /**
@@ -26,8 +26,6 @@ export function SearchInput({
         size={18}
       />
       <input
-        type="text"
-        placeholder={placeholder}
         className={cn(
           'w-full pl-10 pr-4 py-2.5',
           'bg-black/5 dark:bg-white/5',
@@ -39,8 +37,10 @@ export function SearchInput({
           'transition-all',
           className
         )}
+        placeholder={placeholder}
+        type="text"
         {...props}
       />
     </div>
-  );
+  )
 }

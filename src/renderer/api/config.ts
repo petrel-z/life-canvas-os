@@ -2,7 +2,7 @@
  * API 配置
  */
 
-export const API_BASE_URL = 'http://127.0.0.1:8000';
+export const API_BASE_URL = 'http://127.0.0.1:8000'
 
 /**
  * API 端点定义
@@ -54,4 +54,4 @@ export const API_ENDPOINTS = {
   TIMELINE: {
     EVENTS: '/api/timeline/events',
   },
-} as const;
+} as const

@@ -2,17 +2,17 @@
  * PIN 相关 API
  */
 
-import { API_BASE_URL } from './config';
+import { API_BASE_URL } from './config'
 import type {
   PinVerifyRequest,
   PinChangeRequest,
   PinDeleteRequest,
   PinSetupRequest,
-} from '../lib/pin/types';
+} from '../lib/pin/types'
 
 export const pinApi = {
   status(): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/pin/status`);
+    return fetch(`${API_BASE_URL}/api/pin/status`)
   },
 
   setup(pin: string): Promise<Response> {
@@ -20,7 +20,7 @@ export const pinApi = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin } as PinSetupRequest),
-    });
+    })
   },
 
   verify(pin: string): Promise<Response> {
@@ -28,7 +28,7 @@ export const pinApi = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin } as PinVerifyRequest),
-    });
+    })
   },
 
   change(oldPin: string, newPin: string): Promise<Response> {
@@ -39,7 +39,7 @@ export const pinApi = {
         old_pin: oldPin,
         new_pin: newPin,
       } as PinChangeRequest),
-    });
+    })
   },
 
   delete(pin: string): Promise<Response> {
@@ -47,6 +47,6 @@ export const pinApi = {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin } as PinDeleteRequest),
-    });
+    })
   },
-};
+}

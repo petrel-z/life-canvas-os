@@ -1,13 +1,13 @@
-import React from 'react';
-import { cn } from '~/renderer/lib/utils';
+import type React from 'react'
+import { cn } from '~/renderer/lib/utils'
 
 export interface PageHeaderProps {
-  title: string;
-  description?: string;
-  icon?: React.ReactNode;
-  actions?: React.ReactNode;
-  extra?: React.ReactNode; // 右侧额外内容（如评分、统计等）
-  className?: string;
+  title: string
+  description?: string
+  icon?: React.ReactNode
+  actions?: React.ReactNode
+  extra?: React.ReactNode // 右侧额外内容（如评分、统计等）
+  className?: string
 }
 
 export function PageHeader({
@@ -26,7 +26,9 @@ export function PageHeader({
           {title}
         </h1>
         {description && (
-          <p className="text-apple-textSec dark:text-white/40 mt-1">{description}</p>
+          <p className="text-apple-textSec dark:text-white/40 mt-1">
+            {description}
+          </p>
         )}
       </div>
       <div className="flex items-center gap-4">
@@ -34,5 +36,5 @@ export function PageHeader({
         {actions && <div className="flex gap-2">{actions}</div>}
       </div>
     </header>
-  );
+  )
 }

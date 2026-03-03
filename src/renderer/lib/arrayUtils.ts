@@ -6,17 +6,17 @@
  */
 export function groupByDate<T extends { timestamp: number }>(
   items: T[],
-  dateFormatter: (timestamp: number) => string,
+  dateFormatter: (timestamp: number) => string
 ): Record<string, T[]> {
   return items.reduce(
     (groups, item) => {
-      const date = dateFormatter(item.timestamp);
+      const date = dateFormatter(item.timestamp)
       if (!groups[date]) {
-        groups[date] = [];
+        groups[date] = []
       }
-      groups[date].push(item);
-      return groups;
+      groups[date].push(item)
+      return groups
     },
-    {} as Record<string, T[]>,
-  );
+    {} as Record<string, T[]>
+  )
 }

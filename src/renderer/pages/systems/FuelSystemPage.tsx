@@ -1,110 +1,141 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Beef, Plus, AlertCircle, CheckCircle2, Trash2, Edit, Check, X } from 'lucide-react';
-import { useApp } from '~/renderer/contexts/AppContext';
-import { GlassCard } from '~/renderer/components/GlassCard';
-import { Button } from '~/renderer/components/ui/button';
-import { Textarea } from '~/renderer/components/ui/textarea';
-import { Label } from '~/renderer/components/ui/label';
-import { TagInput } from '~/renderer/components/ui/tag-input';
-import { Input } from '~/renderer/components/ui/input';
-import { Badge } from '~/renderer/components/ui/badge';
-import { useDietApi, BaselineData, Deviation } from '~/renderer/hooks/useDietApi';
-import { MealItem } from '~/renderer/api/diet';
+import { useState, useEffect, useRef } from 'react'
+import {
+  Plus,
+  AlertCircle,
+  CheckCircle2,
+  Trash2,
+  Edit,
+  Check,
+  X,
+} from 'lucide-react'
+import { useApp } from '~/renderer/contexts/AppContext'
+import { GlassCard } from '~/renderer/components/GlassCard'
+import { Button } from '~/renderer/components/ui/button'
+import { Textarea } from '~/renderer/components/ui/textarea'
+import { Label } from '~/renderer/components/ui/label'
+import { TagInput } from '~/renderer/components/ui/tag-input'
+import { Input } from '~/renderer/components/ui/input'
+import { Badge } from '~/renderer/components/ui/badge'
+import {
+  useDietApi,
+  type BaselineData,
+  type Deviation,
+} from '~/renderer/hooks/useDietApi'
+import type { MealItem } from '~/renderer/api/diet'
 
-const PAGE_SIZE = 10; // 每页显示10条偏离记录
+const PAGE_SIZE = 10 // 每页显示10条偏离记录
 
 // 食物项组件
 interface MealItemRowProps {
-  item: MealItem;
-  index: number;
-  editable: boolean;
-  onUpdate: (index: number, field: 'name' | 'amount', value: string) => void;
-  onRemove: (index: number) => void;
+  item: MealItem
+  index: number
+  editable: boolean
+  onUpdate: (index: number, field: 'name' | 'amount', value: string) => void
+  onRemove: (index: number) => void
 }
 
-function MealItemRow({ item, index, editable, onUpdate, onRemove }: MealItemRowProps) {
+function MealItemRow({
+  item,
+  index,
+  editable,
+  onUpdate,
+  onRemove,
+}: MealItemRowProps) {
   return (
     <div className="flex items-center gap-2 p-2 bg-black/5 dark:bg-white/5 rounded-lg border border-apple-border dark:border-white/10">
       <div className="flex-1 flex items-center gap-2">
         <div className="flex items-center gap-2 flex-1">
-          <span className="text-sm text-apple-textTer dark:text-white/60 whitespace-nowrap">种类:</span>
+          <span className="text-sm text-apple-textTer dark:text-white/60 whitespace-nowrap">
+            种类:
+          </span>
           <Input
+            className="flex-1 h-8"
+            disabled={!editable}
+            onChange={e => onUpdate(index, 'name', e.target.value)}
+            placeholder="包子"
             type="text"
             value={item.name || ''}
-            onChange={(e) => onUpdate(index, 'name', e.target.value)}
-            placeholder="包子"
-            disabled={!editable}
-            className="flex-1 h-8"
           />
         </div>
         <div className="flex items-center gap-2 flex-1">
-          <span className="text-sm text-apple-textTer dark:text-white/60 whitespace-nowrap">分量:</span>
+          <span className="text-sm text-apple-textTer dark:text-white/60 whitespace-nowrap">
+            分量:
+          </span>
           <Input
+            className="flex-1 h-8"
+            disabled={!editable}
+            onChange={e => onUpdate(index, 'amount', e.target.value)}
+            placeholder="两个"
             type="text"
             value={item.amount || ''}
-            onChange={(e) => onUpdate(index, 'amount', e.target.value)}
-            placeholder="两个"
-            disabled={!editable}
-            className="flex-1 h-8"
           />
         </div>
       </div>
       {editable && (
         <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onRemove(index)}
           className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
+          onClick={() => onRemove(index)}
+          size="icon"
+          variant="ghost"
         >
           <X size={16} />
         </Button>
       )}
     </div>
-  );
+  )
 }
 
 export function FuelSystemPage() {
-  const { state, updateState } = useApp();
-  const { getBaseline, updateBaseline, createDeviation, getDeviations, updateDeviation, deleteDeviation } = useDietApi();
+  const { state, updateState } = useApp()
+  const {
+    getBaseline,
+    updateBaseline,
+    createDeviation,
+    getDeviations,
+    updateDeviation,
+    deleteDeviation,
+  } = useDietApi()
 
-  const [newDeviation, setNewDeviation] = useState('');
-  const [isEditingBaseline, setIsEditingBaseline] = useState(false);
+  const [newDeviation, setNewDeviation] = useState('')
+  const [isEditingBaseline, setIsEditingBaseline] = useState(false)
   const [baselineForm, setBaselineForm] = useState<BaselineData>({
     breakfast: [],
     lunch: [],
     dinner: [],
     taste: [],
-  });
+  })
 
   // 偏离记录列表状态
-  const [deviations, setDeviations] = useState<Deviation[]>([]);
-  const [displayedDeviations, setDisplayedDeviations] = useState<Deviation[]>([]);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
+  const [deviations, setDeviations] = useState<Deviation[]>([])
+  const [displayedDeviations, setDisplayedDeviations] = useState<Deviation[]>(
+    []
+  )
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
 
   // 编辑状态
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingDescription, setEditingDescription] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingDescription, setEditingDescription] = useState('')
 
   // 使用 ref 防止重复加载数据
-  const isInitializedRef = useRef(false);
+  const isInitializedRef = useRef(false)
 
   // 初始化时加载数据（只执行一次）
   useEffect(() => {
-    if (isInitializedRef.current) return;
-    isInitializedRef.current = true;
+    if (isInitializedRef.current) return
+    isInitializedRef.current = true
 
     const loadData = async () => {
       try {
         // 加载基准数据
-        const baselineData = await getBaseline();
+        const baselineData = await getBaseline()
         if (baselineData) {
-          setBaselineForm(baselineData);
+          setBaselineForm(baselineData)
           // 更新全局状态（用于一致性评分计算）
           // 将 MealItem[] 转换为字符串格式
           const formatMealItems = (items: MealItem[]) => {
-            return items.map(item => `${item.name}(${item.amount})`).join('、');
-          };
+            return items.map(item => `${item.name}(${item.amount})`).join('、')
+          }
           updateState({
             fuelSystem: {
               ...state.fuelSystem,
@@ -113,33 +144,33 @@ export function FuelSystemPage() {
 晚餐：${formatMealItems(baselineData.dinner)}
 口味：${baselineData.taste.join('、')}`,
             },
-          });
+          })
         }
 
         // 加载偏离事件列表
-        const { deviations: deviationData } = await getDeviations();
-        setDeviations(deviationData);
-        setDisplayedDeviations(deviationData.slice(0, PAGE_SIZE));
-        setHasMore(deviationData.length > PAGE_SIZE);
+        const { deviations: deviationData } = await getDeviations()
+        setDeviations(deviationData)
+        setDisplayedDeviations(deviationData.slice(0, PAGE_SIZE))
+        setHasMore(deviationData.length > PAGE_SIZE)
       } catch (error) {
-        console.log('Failed to load fuel system data:', error);
+        console.log('Failed to load fuel system data:', error)
       }
-    };
+    }
 
-    loadData();
-  }, []); // 空依赖数组，只在组件挂载时执行一次
+    loadData()
+  }, []) // 空依赖数组，只在组件挂载时执行一次
 
   const addDeviation = async () => {
-    if (!newDeviation.trim()) return;
+    if (!newDeviation.trim()) return
 
     try {
-      const newDev = await createDeviation(newDeviation);
+      const newDev = await createDeviation(newDeviation)
 
       // 更新本地状态
-      const newDeviations = [newDev, ...deviations];
-      setDeviations(newDeviations);
-      setDisplayedDeviations(newDeviations.slice(0, PAGE_SIZE));
-      setHasMore(newDeviations.length > PAGE_SIZE);
+      const newDeviations = [newDev, ...deviations]
+      setDeviations(newDeviations)
+      setDisplayedDeviations(newDeviations.slice(0, PAGE_SIZE))
+      setHasMore(newDeviations.length > PAGE_SIZE)
 
       // 更新全局状态（用于一致性评分计算）
       updateState({
@@ -147,23 +178,23 @@ export function FuelSystemPage() {
           ...state.fuelSystem,
           deviations: newDeviations,
         },
-      });
+      })
 
-      setNewDeviation('');
+      setNewDeviation('')
     } catch (error) {
-      console.log('Failed to create deviation:', error);
+      console.log('Failed to create deviation:', error)
     }
-  };
+  }
 
   const removeDeviation = async (id: string) => {
     try {
-      await deleteDeviation(id);
+      await deleteDeviation(id)
 
       // 更新本地状态
-      const newDeviations = deviations.filter((d) => d.id !== id);
-      setDeviations(newDeviations);
-      setDisplayedDeviations(newDeviations.slice(0, PAGE_SIZE));
-      setHasMore(newDeviations.length > PAGE_SIZE);
+      const newDeviations = deviations.filter(d => d.id !== id)
+      setDeviations(newDeviations)
+      setDisplayedDeviations(newDeviations.slice(0, PAGE_SIZE))
+      setHasMore(newDeviations.length > PAGE_SIZE)
 
       // 更新全局状态（用于一致性评分计算）
       updateState({
@@ -171,37 +202,35 @@ export function FuelSystemPage() {
           ...state.fuelSystem,
           deviations: newDeviations,
         },
-      });
+      })
     } catch (error) {
-      console.log('Failed to delete deviation:', error);
+      console.log('Failed to delete deviation:', error)
     }
-  };
+  }
 
   // 开始编辑
   const startEdit = (deviation: Deviation) => {
-    setEditingId(deviation.id);
-    setEditingDescription(deviation.description);
-  };
+    setEditingId(deviation.id)
+    setEditingDescription(deviation.description)
+  }
 
   // 取消编辑
   const cancelEdit = () => {
-    setEditingId(null);
-    setEditingDescription('');
-  };
+    setEditingId(null)
+    setEditingDescription('')
+  }
 
   // 保存编辑
   const saveEdit = async (id: string) => {
-    if (!editingDescription.trim()) return;
+    if (!editingDescription.trim()) return
 
     try {
-      const updated = await updateDeviation(id, editingDescription);
+      const updated = await updateDeviation(id, editingDescription)
 
       // 更新本地状态
-      const newDeviations = deviations.map((d) =>
-        d.id === id ? updated : d
-      );
-      setDeviations(newDeviations);
-      setDisplayedDeviations(newDeviations.slice(0, displayedDeviations.length));
+      const newDeviations = deviations.map(d => (d.id === id ? updated : d))
+      setDeviations(newDeviations)
+      setDisplayedDeviations(newDeviations.slice(0, displayedDeviations.length))
 
       // 更新全局状态
       updateState({
@@ -209,35 +238,38 @@ export function FuelSystemPage() {
           ...state.fuelSystem,
           deviations: newDeviations,
         },
-      });
+      })
 
-      cancelEdit();
+      cancelEdit()
     } catch (error) {
-      console.log('Failed to update deviation:', error);
+      console.log('Failed to update deviation:', error)
     }
-  };
+  }
 
   const loadMoreDeviations = () => {
-    if (isLoadingMore || !hasMore) return;
+    if (isLoadingMore || !hasMore) return
 
-    setIsLoadingMore(true);
-    const currentLength = displayedDeviations.length;
-    const nextDeviations = deviations.slice(currentLength, currentLength + PAGE_SIZE);
+    setIsLoadingMore(true)
+    const currentLength = displayedDeviations.length
+    const nextDeviations = deviations.slice(
+      currentLength,
+      currentLength + PAGE_SIZE
+    )
 
     setTimeout(() => {
-      setDisplayedDeviations([...displayedDeviations, ...nextDeviations]);
-      setHasMore(currentLength + PAGE_SIZE < deviations.length);
-      setIsLoadingMore(false);
-    }, 300);
-  };
+      setDisplayedDeviations([...displayedDeviations, ...nextDeviations])
+      setHasMore(currentLength + PAGE_SIZE < deviations.length)
+      setIsLoadingMore(false)
+    }, 300)
+  }
 
   // 添加食物项
   const addMealItem = (mealType: 'breakfast' | 'lunch' | 'dinner') => {
     setBaselineForm({
       ...baselineForm,
       [mealType]: [...baselineForm[mealType], { name: '', amount: '' }],
-    });
-  };
+    })
+  }
 
   // 更新食物项
   const updateMealItem = (
@@ -246,32 +278,35 @@ export function FuelSystemPage() {
     field: 'name' | 'amount',
     value: string
   ) => {
-    const newItems = [...baselineForm[mealType]];
-    newItems[index] = { ...newItems[index], [field]: value };
+    const newItems = [...baselineForm[mealType]]
+    newItems[index] = { ...newItems[index], [field]: value }
     setBaselineForm({
       ...baselineForm,
       [mealType]: newItems,
-    });
-  };
+    })
+  }
 
   // 删除食物项
-  const removeMealItem = (mealType: 'breakfast' | 'lunch' | 'dinner', index: number) => {
+  const removeMealItem = (
+    mealType: 'breakfast' | 'lunch' | 'dinner',
+    index: number
+  ) => {
     setBaselineForm({
       ...baselineForm,
       [mealType]: baselineForm[mealType].filter((_, i) => i !== index),
-    });
-  };
+    })
+  }
 
   const saveBaseline = async () => {
     try {
-      const updatedBaseline = await updateBaseline(baselineForm);
-      setBaselineForm(updatedBaseline);
+      const updatedBaseline = await updateBaseline(baselineForm)
+      setBaselineForm(updatedBaseline)
 
       // 更新全局状态
       // 将 MealItem[] 转换为字符串格式
       const formatMealItems = (items: MealItem[]) => {
-        return items.map(item => `${item.name}(${item.amount})`).join('、');
-      };
+        return items.map(item => `${item.name}(${item.amount})`).join('、')
+      }
       updateState({
         fuelSystem: {
           ...state.fuelSystem,
@@ -280,15 +315,18 @@ export function FuelSystemPage() {
 晚餐：${formatMealItems(updatedBaseline.dinner)}
 口味：${updatedBaseline.taste.join('、')}`,
         },
-      });
+      })
 
-      setIsEditingBaseline(false);
+      setIsEditingBaseline(false)
     } catch (error) {
-      console.log('Failed to update baseline:', error);
+      console.log('Failed to update baseline:', error)
     }
-  };
+  }
 
-  const consistencyScore = Math.max(0, 100 - state.fuelSystem.deviations.length * 5);
+  const consistencyScore = Math.max(
+    0,
+    100 - state.fuelSystem.deviations.length * 5
+  )
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -324,22 +362,24 @@ export function FuelSystemPage() {
                 <div className="space-y-2">
                   {baselineForm.breakfast.map((item, index) => (
                     <MealItemRow
-                      key={`breakfast-${index}`}
-                      item={item}
-                      index={index}
                       editable={isEditingBaseline}
-                      onUpdate={(index, field, value) => updateMealItem('breakfast', index, field, value)}
-                      onRemove={(index) => removeMealItem('breakfast', index)}
+                      index={index}
+                      item={item}
+                      key={`breakfast-${index}`}
+                      onRemove={index => removeMealItem('breakfast', index)}
+                      onUpdate={(index, field, value) =>
+                        updateMealItem('breakfast', index, field, value)
+                      }
                     />
                   ))}
                   {isEditingBaseline && (
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addMealItem('breakfast')}
                       className="w-full border-dashed"
+                      onClick={() => addMealItem('breakfast')}
+                      size="sm"
+                      variant="outline"
                     >
-                      <Plus size={16} className="mr-2" />
+                      <Plus className="mr-2" size={16} />
                       添加食物
                     </Button>
                   )}
@@ -354,22 +394,24 @@ export function FuelSystemPage() {
                 <div className="space-y-2">
                   {baselineForm.lunch.map((item, index) => (
                     <MealItemRow
-                      key={`lunch-${index}`}
-                      item={item}
-                      index={index}
                       editable={isEditingBaseline}
-                      onUpdate={(index, field, value) => updateMealItem('lunch', index, field, value)}
-                      onRemove={(index) => removeMealItem('lunch', index)}
+                      index={index}
+                      item={item}
+                      key={`lunch-${index}`}
+                      onRemove={index => removeMealItem('lunch', index)}
+                      onUpdate={(index, field, value) =>
+                        updateMealItem('lunch', index, field, value)
+                      }
                     />
                   ))}
                   {isEditingBaseline && (
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addMealItem('lunch')}
                       className="w-full border-dashed"
+                      onClick={() => addMealItem('lunch')}
+                      size="sm"
+                      variant="outline"
                     >
-                      <Plus size={16} className="mr-2" />
+                      <Plus className="mr-2" size={16} />
                       添加食物
                     </Button>
                   )}
@@ -384,22 +426,24 @@ export function FuelSystemPage() {
                 <div className="space-y-2">
                   {baselineForm.dinner.map((item, index) => (
                     <MealItemRow
-                      key={`dinner-${index}`}
-                      item={item}
-                      index={index}
                       editable={isEditingBaseline}
-                      onUpdate={(index, field, value) => updateMealItem('dinner', index, field, value)}
-                      onRemove={(index) => removeMealItem('dinner', index)}
+                      index={index}
+                      item={item}
+                      key={`dinner-${index}`}
+                      onRemove={index => removeMealItem('dinner', index)}
+                      onUpdate={(index, field, value) =>
+                        updateMealItem('dinner', index, field, value)
+                      }
                     />
                   ))}
                   {isEditingBaseline && (
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addMealItem('dinner')}
                       className="w-full border-dashed"
+                      onClick={() => addMealItem('dinner')}
+                      size="sm"
+                      variant="outline"
                     >
-                      <Plus size={16} className="mr-2" />
+                      <Plus className="mr-2" size={16} />
                       添加食物
                     </Button>
                   )}
@@ -413,21 +457,25 @@ export function FuelSystemPage() {
                 </Label>
                 {isEditingBaseline ? (
                   <TagInput
-                    value={baselineForm.taste || []}
-                    onChange={(tags) => setBaselineForm({ ...baselineForm, taste: tags })}
+                    onChange={tags =>
+                      setBaselineForm({ ...baselineForm, taste: tags })
+                    }
                     placeholder="例如：清淡、少油少盐"
                     tagClassName="bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/10"
+                    value={baselineForm.taste || []}
                   />
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {baselineForm.taste.length === 0 ? (
-                      <span className="text-sm text-apple-textTer dark:text-white/30">未设置</span>
+                      <span className="text-sm text-apple-textTer dark:text-white/30">
+                        未设置
+                      </span>
                     ) : (
                       baselineForm.taste.map((taste, index) => (
                         <Badge
+                          className="text-sm px-3 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/10"
                           key={index}
                           variant="secondary"
-                          className="text-sm px-3 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/10"
                         >
                           {taste}
                         </Badge>
@@ -442,36 +490,36 @@ export function FuelSystemPage() {
               {isEditingBaseline ? (
                 <>
                   <Button
-                    variant="ghost"
-                    size="sm"
                     onClick={async () => {
                       // 取消时重新加载数据
                       try {
-                        const data = await getBaseline();
+                        const data = await getBaseline()
                         if (data) {
-                          setBaselineForm(data);
+                          setBaselineForm(data)
                         }
                       } catch (error) {
-                        console.log('Failed to reload baseline:', error);
+                        console.log('Failed to reload baseline:', error)
                       }
-                      setIsEditingBaseline(false);
+                      setIsEditingBaseline(false)
                     }}
+                    size="sm"
+                    variant="ghost"
                   >
                     取消
                   </Button>
                   <Button
-                    size="sm"
-                    onClick={saveBaseline}
                     className="bg-orange-500 hover:bg-orange-600"
+                    onClick={saveBaseline}
+                    size="sm"
                   >
                     保存修改
                   </Button>
                 </>
               ) : (
                 <Button
-                  variant="outline"
-                  size="sm"
                   onClick={() => setIsEditingBaseline(true)}
+                  size="sm"
+                  variant="outline"
                 >
                   修改基准
                 </Button>
@@ -487,21 +535,21 @@ export function FuelSystemPage() {
             </p>
             <div className="flex gap-2">
               <Textarea
-                placeholder="例如：晚上加班太累，点了麻辣烫作为宵夜"
-                value={newDeviation}
-                onChange={(e) => setNewDeviation(e.target.value)}
-                onKeyDown={(e) => {
+                className="flex-1 min-h-[240px] bg-black/5 dark:bg-white/5 border-apple-border dark:border-white/10 focus:ring-orange-500/50 resize-none"
+                onChange={e => setNewDeviation(e.target.value)}
+                onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    addDeviation();
+                    e.preventDefault()
+                    addDeviation()
                   }
                 }}
-                className="flex-1 min-h-[240px] bg-black/5 dark:bg-white/5 border-apple-border dark:border-white/10 focus:ring-orange-500/50 resize-none"
+                placeholder="例如：晚上加班太累，点了麻辣烫作为宵夜"
+                value={newDeviation}
               />
               <Button
+                className="bg-orange-500 hover:bg-orange-600 hover:scale-105 transition-transform self-end"
                 onClick={addDeviation}
                 size="icon"
-                className="bg-orange-500 hover:bg-orange-600 hover:scale-105 transition-transform self-end"
               >
                 <Plus size={20} />
               </Button>
@@ -519,34 +567,36 @@ export function FuelSystemPage() {
         <div className="space-y-4">
           {displayedDeviations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-apple-textTer dark:text-white/20">
-              <CheckCircle2 size={48} className="mb-2 opacity-50" />
+              <CheckCircle2 className="mb-2 opacity-50" size={48} />
               <p>目前没有偏离记录。保持得非常完美！</p>
             </div>
           ) : (
             <>
               <div className="space-y-3">
-                {displayedDeviations.map((dev) => (
+                {displayedDeviations.map(dev => (
                   <div
-                    key={dev.id}
                     className="flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 rounded-xl border border-apple-border dark:border-white/5 group hover:border-orange-500/20 transition-all shadow-sm"
+                    key={dev.id}
                   >
                     <div className="flex items-center gap-4 flex-1">
                       <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]" />
                       <div className="flex-1">
                         {editingId === dev.id ? (
                           <Textarea
-                            value={editingDescription}
-                            onChange={(e) => setEditingDescription(e.target.value)}
-                            onKeyDown={(e) => {
+                            autoFocus
+                            className="min-h-[60px] bg-black/5 dark:bg-white/5 border-apple-border dark:border-white/10 focus:ring-orange-500/50 resize-none"
+                            onChange={e =>
+                              setEditingDescription(e.target.value)
+                            }
+                            onKeyDown={e => {
                               if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                saveEdit(dev.id);
+                                e.preventDefault()
+                                saveEdit(dev.id)
                               } else if (e.key === 'Escape') {
-                                cancelEdit();
+                                cancelEdit()
                               }
                             }}
-                            className="min-h-[60px] bg-black/5 dark:bg-white/5 border-apple-border dark:border-white/10 focus:ring-orange-500/50 resize-none"
-                            autoFocus
+                            value={editingDescription}
                           />
                         ) : (
                           <>
@@ -564,20 +614,20 @@ export function FuelSystemPage() {
                       {editingId === dev.id ? (
                         <>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => saveEdit(dev.id)}
                             className="opacity-100 transition-all hover:bg-green-500/10 hover:text-green-600"
+                            onClick={() => saveEdit(dev.id)}
+                            size="icon"
                             title="保存"
+                            variant="ghost"
                           >
                             <Check size={18} />
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={cancelEdit}
                             className="opacity-100 transition-all hover:bg-destructive/10 hover:text-destructive"
+                            onClick={cancelEdit}
+                            size="icon"
                             title="取消"
+                            variant="ghost"
                           >
                             <X size={18} />
                           </Button>
@@ -585,20 +635,20 @@ export function FuelSystemPage() {
                       ) : (
                         <>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => startEdit(dev)}
                             className="opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500/10 hover:text-blue-600"
+                            onClick={() => startEdit(dev)}
+                            size="icon"
                             title="编辑"
+                            variant="ghost"
                           >
                             <Edit size={18} />
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeDeviation(dev.id)}
                             className="opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => removeDeviation(dev.id)}
+                            size="icon"
                             title="删除"
+                            variant="ghost"
                           >
                             <Trash2 size={18} />
                           </Button>
@@ -613,11 +663,11 @@ export function FuelSystemPage() {
               {hasMore && displayedDeviations.length > 0 && (
                 <div className="flex justify-center pt-2">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={loadMoreDeviations}
-                    disabled={isLoadingMore}
                     className="w-full"
+                    disabled={isLoadingMore}
+                    onClick={loadMoreDeviations}
+                    size="sm"
+                    variant="outline"
                   >
                     {isLoadingMore ? '加载中...' : '加载更多'}
                   </Button>
@@ -628,5 +678,5 @@ export function FuelSystemPage() {
         </div>
       </GlassCard>
     </div>
-  );
+  )
 }

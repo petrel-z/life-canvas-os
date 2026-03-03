@@ -121,45 +121,43 @@
   --color-apple-success: var(--apple-success);
   --color-apple-error: var(--apple-error);
 
-  --shadow-apple-soft: 0 2px 8px rgba(0,0,0,0.05);
-  --shadow-apple-lg: 0 10px 40px rgba(0,0,0,0.08);
+  --shadow-apple-soft: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-apple-lg: 0 10px 40px rgba(0, 0, 0, 0.08);
 }
 
 /* Apple UI Colors */
 :root {
-  --apple-bgMain: #FAFAFC;
-  --apple-bgSidebar: #F5F5F7;
-  --apple-textMain: #1D1D1F;
-  --apple-textSec: #86868B;
-  --apple-textTer: #AEAEB2;
-  --apple-accent: #0A84FF;
-  --apple-border: #EFEFF4;
-  --apple-success: #34C759;
-  --apple-error: #FF3B30;
+  --apple-bgMain: #fafafc;
+  --apple-bgSidebar: #f5f5f7;
+  --apple-textMain: #1d1d1f;
+  --apple-textSec: #86868b;
+  --apple-textTer: #aeaeb2;
+  --apple-accent: #0a84ff;
+  --apple-border: #efeff4;
+  --apple-success: #34c759;
+  --apple-error: #ff3b30;
 }
 
 .dark {
   --apple-bgMain: #000000;
-  --apple-bgSidebar: #1C1C1E;
-  --apple-textMain: #FFFFFF;
+  --apple-bgSidebar: #1c1c1e;
+  --apple-textMain: #ffffff;
   --apple-textSec: rgba(255, 255, 255, 0.6);
   --apple-textTer: rgba(255, 255, 255, 0.3);
-  --apple-accent: #0A84FF;
+  --apple-accent: #0a84ff;
   --apple-border: rgba(255, 255, 255, 0.1);
-  --apple-success: #30D158;
-  --apple-error: #FF453A;
+  --apple-success: #30d158;
+  --apple-error: #ff453a;
 }
 
 /* Custom UI Components */
 .liquid-glass {
-  backdrop-filter: blur(10px) saturate(180%);
-  -webkit-backdrop-filter: blur(10px) saturate(180%);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Light mode default */
-  background: #FFFFFF;
-  border: 1px solid #EFEFF4;
+  background: #ffffff;
+  border: 1px solid #efeff4;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  backdrop-filter: blur(10px) saturate(180%);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dark .liquid-glass {
@@ -178,8 +176,12 @@
 }
 
 /* Custom Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 
 ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.08);
@@ -195,8 +197,8 @@
     @apply border-border outline-ring/50;
   }
   body {
+    font-family: "Inter", system-ui, sans-serif;
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, sans-serif;
   }
 }
 
@@ -259,55 +261,55 @@
 
 /* Toast 浅色模式样式 */
 [data-sonner-toast] {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  color: #1D1D1F !important;
+  color: #1d1d1f;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 [data-sonner-toast][data-type="success"] {
-  border-color: rgba(48, 209, 88, 0.3) !important;
+  border-color: rgba(48, 209, 88, 0.3);
 }
 
 [data-sonner-toast][data-type="error"] {
-  border-color: rgba(245, 64, 54, 0.3) !important;
+  border-color: rgba(245, 64, 54, 0.3);
 }
 
 /* Toast 浅色模式关闭按钮 */
 [data-sonner-toast] [data-close-button] {
-  color: #9e9c9c !important;
-  background: #FFFFFF !important;
-  border-color: #9e9c9c !important;
+  color: #9e9c9c;
+  background: #ffffff;
+  border-color: #9e9c9c;
 }
 
 [data-sonner-toast] [data-close-button]:hover {
-  color: #1D1D1F !important;
-  border-color: #1D1D1F !important;
+  color: #1d1d1f;
+  border-color: #1d1d1f;
 }
 
 /* Toast 深色模式样式 */
 .dark [data-sonner-toast] {
-  background: rgba(30, 30, 30, 0.9) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: #FFFFFF !important;
+  color: #ffffff;
+  background: rgba(30, 30, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Toast 深色模式关闭按钮 */
 .dark [data-sonner-toast] [data-close-button] {
-  color: rgba(255, 255, 255, 0.6) !important;
-  background: #1D1D1F !important;
+  color: rgba(255, 255, 255, 0.6);
+  background: #1d1d1f;
 }
 
 .dark [data-sonner-toast] [data-close-button]:hover {
-  color: #FFFFFF !important;
-  border-color: #FFFFFF !important;
+  color: #ffffff;
+  border-color: #ffffff;
 }
 
 .dark [data-sonner-toast][data-type="success"] {
-  border-color: rgba(48, 209, 88, 0.3) !important;
+  border-color: rgba(48, 209, 88, 0.3);
 }
 
 .dark [data-sonner-toast][data-type="error"] {
-  border-color: rgba(255, 69, 58, 0.3) !important;
+  border-color: rgba(255, 69, 58, 0.3);
 }
 
 /* 额外的动画 */
@@ -334,7 +336,8 @@
 }
 
 @keyframes pulse-subtle {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -344,12 +347,14 @@
 
 /* 卡片悬停效果 */
 .hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .hover-lift:hover {
-  transform: translateY(-2px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .dark .hover-lift:hover {
@@ -381,8 +386,9 @@
 /* 主题切换动画 */
 .theme-transitioning,
 .theme-transitioning * {
-  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
-              color 300ms cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition:
+    background-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }

@@ -1,5 +1,5 @@
 import { app, ipcMain, dialog } from 'electron'
-import { copyFile, mkdir } from 'node:fs'
+import { copyFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 
@@ -71,39 +71,44 @@ makeAppWithSingleInstanceLock(async () => {
   })
 
   // 导出数据 IPC handler - 保存文件到指定路径
-  ipcMain.handle('file:save-export-data', async (_event, fileData: Uint8Array, format: 'json' | 'zip') => {
+  ipcMain.handle(
+    'file:save-export-data',
+    async (_event, fileData: Uint8Array, format: 'json' | 'zip') => {
+      // 生成默认文件名
+      const defaultFileName = `life_canvas_export_${new Date().toISOString().split('T')[0]}.${format}`
 
-    // 生成默认文件名
-    const defaultFileName = `life_canvas_export_${new Date().toISOString().split('T')[0]}.${format}`
+      // 让用户选择保存路径
+      const result = await dialog.showSaveDialog({
+        title: '选择导出文件保存位置',
+        defaultPath: defaultFileName,
+        filters: [
+          {
+            name: format === 'json' ? 'JSON 文件' : 'ZIP 压缩包',
+            extensions: [format],
+          },
+          { name: '所有文件', extensions: ['*'] },
+        ],
+      })
 
-    // 让用户选择保存路径
-    const result = await dialog.showSaveDialog({
-      title: '选择导出文件保存位置',
-      defaultPath: defaultFileName,
-      filters: [
-        { name: format === 'json' ? 'JSON 文件' : 'ZIP 压缩包', extensions: [format] },
-        { name: '所有文件', extensions: ['*'] },
-      ],
-    })
+      if (result.canceled || !result.filePath) {
+        return { canceled: true }
+      }
 
-    if (result.canceled || !result.filePath) {
-      return { canceled: true }
+      const savePath = result.filePath
+
+      try {
+        // 使用 Node.js fs 模块保存文件
+        const { writeFile } = require('node:fs/promises')
+        await writeFile(savePath, fileData)
+
+        console.log(`[IPC] File saved to: ${savePath}`)
+        return { canceled: false, filePath: savePath, success: true }
+      } catch (error) {
+        console.error('[IPC] Failed to save file:', error)
+        throw error
+      }
     }
-
-    const savePath = result.filePath
-
-    try {
-      // 使用 Node.js fs 模块保存文件
-      const { writeFile } = require('node:fs/promises')
-      await writeFile(savePath, fileData)
-
-      console.log(`[IPC] File saved to: ${savePath}`)
-      return { canceled: false, filePath: savePath, success: true }
-    } catch (error) {
-      console.error('[IPC] Failed to save file:', error)
-      throw error
-    }
-  })
+  )
 
   await app.whenReady()
   const window = await makeAppSetup(MainWindow)

@@ -1,13 +1,6 @@
-import React from "react";
+import type React from 'react'
 import {
   Beef,
-  Dumbbell,
-  BookOpen,
-  Zap,
-  Moon,
-  Wallet,
-  Users,
-  TreePine,
   LayoutDashboard,
   Settings,
   History,
@@ -16,128 +9,132 @@ import {
   Smile,
   Meh,
   Frown,
-} from "lucide-react";
-import { DimensionType, DimensionInfo, AppState } from "~/shared/types";
+} from 'lucide-react'
+import {
+  DimensionType,
+  type DimensionInfo,
+  type AppState,
+} from '~/shared/types'
 
 // 情绪类型定义
-export type MoodType = "great" | "good" | "neutral" | "bad" | "terrible";
+export type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible'
 
 // 统一的情绪配置
 export const MOODS: {
-  type: MoodType;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  emoji: () => string;
-  color: string;
-  label: string;
+  type: MoodType
+  icon: React.ComponentType<{ size?: number; className?: string }>
+  emoji: () => string
+  color: string
+  label: string
 }[] = [
   {
-    type: "great",
+    type: 'great',
     icon: Heart,
-    emoji: () => "💖",
-    color: "text-pink-500",
-    label: "很棒",
+    emoji: () => '💖',
+    color: 'text-pink-500',
+    label: '很棒',
   },
   {
-    type: "good",
+    type: 'good',
     icon: Smile,
-    emoji: () => "😊",
-    color: "text-green-500",
-    label: "不错",
+    emoji: () => '😊',
+    color: 'text-green-500',
+    label: '不错',
   },
   {
-    type: "neutral",
+    type: 'neutral',
     icon: Meh,
-    emoji: () => "😐",
-    color: "text-yellow-500",
-    label: "一般",
+    emoji: () => '😐',
+    color: 'text-yellow-500',
+    label: '一般',
   },
   {
-    type: "bad",
+    type: 'bad',
     icon: Frown,
-    emoji: () => "😞",
-    color: "text-orange-500",
-    label: "不好",
+    emoji: () => '😞',
+    color: 'text-orange-500',
+    label: '不好',
   },
   {
-    type: "terrible",
+    type: 'terrible',
     icon: Frown,
-    emoji: () => "😢",
-    color: "text-red-500",
-    label: "很糟",
+    emoji: () => '😢',
+    color: 'text-red-500',
+    label: '很糟',
   },
-];
+]
 
 export const DIMENSIONS: DimensionInfo[] = [
   {
     type: DimensionType.FUEL,
-    label: "饮食 (饮食营养)",
-    icon: "Beef",
-    color: "#FF5733",
+    label: '饮食 (饮食营养)',
+    icon: 'Beef',
+    color: '#FF5733',
   },
   {
     type: DimensionType.PHYSICAL,
-    label: "运动 (身体健康)",
-    icon: "Dumbbell",
-    color: "#33FF57",
+    label: '运动 (身体健康)',
+    icon: 'Dumbbell',
+    color: '#33FF57',
   },
   {
     type: DimensionType.INTELLECTUAL,
-    label: "认知 (知识学习)",
-    icon: "BookOpen",
-    color: "#3357FF",
+    label: '认知 (知识学习)',
+    icon: 'BookOpen',
+    color: '#3357FF',
   },
   {
     type: DimensionType.OUTPUT,
-    label: "产出 (工作效能)",
-    icon: "Zap",
-    color: "#F333FF",
+    label: '产出 (工作效能)',
+    icon: 'Zap',
+    color: '#F333FF',
   },
   {
     type: DimensionType.RECOVERY,
-    label: "梦想 (恢复/睡眠)",
-    icon: "Moon",
-    color: "#33FFF3",
+    label: '梦想 (恢复/睡眠)',
+    icon: 'Moon',
+    color: '#33FFF3',
   },
   {
     type: DimensionType.ASSET,
-    label: "财务 (资产管理)",
-    icon: "Wallet",
-    color: "#FFD700",
+    label: '财务 (资产管理)',
+    icon: 'Wallet',
+    color: '#FFD700',
   },
   {
     type: DimensionType.CONNECTION,
-    label: "社交 (人际链接)",
-    icon: "Users",
-    color: "#FF33A1",
+    label: '社交 (人际链接)',
+    icon: 'Users',
+    color: '#FF33A1',
   },
   {
     type: DimensionType.ENVIRONMENT,
-    label: "环境 (居住空间)",
-    icon: "TreePine",
-    color: "#2E8B57",
+    label: '环境 (居住空间)',
+    icon: 'TreePine',
+    color: '#2E8B57',
   },
-];
+]
 
 export const NAV_ITEMS = [
   {
-    id: "dashboard",
-    label: "全局总览",
+    id: 'dashboard',
+    label: '全局总览',
     icon: <LayoutDashboard className="w-5 h-5" />,
   },
-  { id: "fuel", label: "饮食系统", icon: <Beef className="w-5 h-5" /> },
-  { id: "journal", label: "生活日记", icon: <Sparkles className="w-5 h-5" /> },
-  { id: "timeline", label: "时间轴", icon: <History className="w-5 h-5" /> },
-  { id: "settings", label: "系统设置", icon: <Settings className="w-5 h-5" /> },
-];
+  { id: 'fuel', label: '饮食系统', icon: <Beef className="w-5 h-5" /> },
+  { id: 'journal', label: '生活日记', icon: <Sparkles className="w-5 h-5" /> },
+  { id: 'timeline', label: '时间轴', icon: <History className="w-5 h-5" /> },
+  { id: 'settings', label: '系统设置', icon: <Settings className="w-5 h-5" /> },
+]
 
-const now = Date.now();
-const oneDay = 24 * 60 * 60 * 1000;
+const _now = Date.now()
+const _oneDay = 24 * 60 * 60 * 1000
 
 export const INITIAL_STATE: AppState = {
   user: {
-    name: "",
-    birthday: "",
-    mbti: "",
+    name: '',
+    birthday: '',
+    mbti: '',
     values: [],
     lifespan: 0,
   },
@@ -152,21 +149,21 @@ export const INITIAL_STATE: AppState = {
     [DimensionType.ENVIRONMENT]: 85,
   },
   fuelSystem: {
-    baseline: "",
+    baseline: '',
     deviations: [],
   },
   journals: [],
   isLocked: true, // Default to locked for security demo
-  theme: "auto",
-  language: "zh",
+  theme: 'auto',
+  language: 'zh',
   aiConfig: {
-    provider: "DeepSeek",
-    apiKey: "",
-    modelName: "deepseek-chat",
+    provider: 'DeepSeek',
+    apiKey: '',
+    modelName: 'deepseek-chat',
     frequencyLimit: 10,
   },
   systemConfig: {
     autoSaveInterval: 60,
     notificationsEnabled: true,
   },
-};
+}

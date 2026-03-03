@@ -1,18 +1,18 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { MainLayout } from '~/renderer/components/layout/MainLayout';
-import { DashboardPage } from '~/renderer/pages/dashboard/DashboardPage';
-import { FuelSystemPage } from '~/renderer/pages/systems/FuelSystemPage';
-import { JournalPage } from '~/renderer/pages/journal/JournalPage';
-import { JournalDetailPage } from '~/renderer/pages/journal/JournalDetailPage';
-import { JournalEditorPage } from '~/renderer/pages/journal/JournalEditorPage';
-import { TimelinePage } from '~/renderer/pages/timeline/TimelinePage';
-import { SettingsPage } from '~/renderer/pages/settings/SettingsPage';
-import { PinSetupPage } from '~/renderer/pages/settings/PinSetupPage';
-import { PinChangePage } from '~/renderer/pages/settings/PinChangePage';
-import { PinDeletePage } from '~/renderer/pages/settings/PinDeletePage';
-import { InsightDetailPage } from '~/renderer/pages/insight/InsightDetailPage';
-import { InsightHistoryPage } from '~/renderer/pages/insight/InsightHistoryPage';
-import { InsightHistoryDetailPage } from '~/renderer/pages/insight/InsightHistoryDetailPage';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { MainLayout } from '~/renderer/components/layout/MainLayout'
+import { DashboardPage } from '~/renderer/pages/dashboard/DashboardPage'
+import { FuelSystemPage } from '~/renderer/pages/systems/FuelSystemPage'
+import { JournalPage } from '~/renderer/pages/journal/JournalPage'
+import { JournalDetailPage } from '~/renderer/pages/journal/JournalDetailPage'
+import { JournalEditorPage } from '~/renderer/pages/journal/JournalEditorPage'
+import { TimelinePage } from '~/renderer/pages/timeline/TimelinePage'
+import { SettingsPage } from '~/renderer/pages/settings/SettingsPage'
+import { PinSetupPage } from '~/renderer/pages/settings/PinSetupPage'
+import { PinChangePage } from '~/renderer/pages/settings/PinChangePage'
+import { PinDeletePage } from '~/renderer/pages/settings/PinDeletePage'
+import { InsightDetailPage } from '~/renderer/pages/insight/InsightDetailPage'
+import { InsightHistoryPage } from '~/renderer/pages/insight/InsightHistoryPage'
+import { InsightHistoryDetailPage } from '~/renderer/pages/insight/InsightHistoryDetailPage'
 
 // 页面组件（暂时使用占位符）
 function PlaceholderPage({ name }: { name: string }) {
@@ -33,7 +33,7 @@ function PlaceholderPage({ name }: { name: string }) {
         </p>
       </div>
     </div>
-  );
+  )
 }
 
 export function AppRoutes() {
@@ -41,27 +41,33 @@ export function AppRoutes() {
     <HashRouter>
       <Routes>
         {/* 默认重定向到 dashboard */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route element={<Navigate replace to="/dashboard" />} path="/" />
 
         {/* 主应用路由（带布局） */}
         <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/system/fuel" element={<FuelSystemPage />} />
-          <Route path="/journal" element={<JournalPage />} />
-          <Route path="/journal/new" element={<JournalEditorPage />} />
-          <Route path="/journal/:id" element={<JournalDetailPage />} />
-          <Route path="/journal/:id/edit" element={<JournalEditorPage />} />
-          <Route path="/timeline" element={<TimelinePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/pin" element={<PinSetupPage />} />
-          <Route path="/settings/pin/change" element={<PinChangePage />} />
-          <Route path="/settings/pin/delete" element={<PinDeletePage />} />
-          <Route path="/insights/detail" element={<InsightDetailPage />} />
-          <Route path="/insights/history" element={<InsightHistoryPage />} />
-          <Route path="/insights/history/detail" element={<InsightHistoryDetailPage />} />
-          <Route path="/system/:type" element={<PlaceholderPage name="子系统详情" />} />
+          <Route element={<DashboardPage />} path="/dashboard" />
+          <Route element={<FuelSystemPage />} path="/system/fuel" />
+          <Route element={<JournalPage />} path="/journal" />
+          <Route element={<JournalEditorPage />} path="/journal/new" />
+          <Route element={<JournalDetailPage />} path="/journal/:id" />
+          <Route element={<JournalEditorPage />} path="/journal/:id/edit" />
+          <Route element={<TimelinePage />} path="/timeline" />
+          <Route element={<SettingsPage />} path="/settings" />
+          <Route element={<PinSetupPage />} path="/settings/pin" />
+          <Route element={<PinChangePage />} path="/settings/pin/change" />
+          <Route element={<PinDeletePage />} path="/settings/pin/delete" />
+          <Route element={<InsightDetailPage />} path="/insights/detail" />
+          <Route element={<InsightHistoryPage />} path="/insights/history" />
+          <Route
+            element={<InsightHistoryDetailPage />}
+            path="/insights/history/detail"
+          />
+          <Route
+            element={<PlaceholderPage name="子系统详情" />}
+            path="/system/:type"
+          />
         </Route>
       </Routes>
     </HashRouter>
-  );
+  )
 }
