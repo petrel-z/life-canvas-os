@@ -2,7 +2,7 @@
  * AI 相关 API
  */
 
-import { API_BASE_URL } from './config'
+import { apiRequest } from './client'
 
 // AI 提供商类型
 export type AIProvider = 'deepseek' | 'doubao' | 'openai'
@@ -58,7 +58,7 @@ export const aiApi = {
    * 保存 AI 配置
    */
   saveAIConfig(request: AIConfigRequest): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/user/ai-config`, {
+    return apiRequest('/api/user/ai-config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
@@ -69,11 +69,11 @@ export const aiApi = {
    * 获取 AI 配置（不返回完整 API Key）
    */
   getAIConfig(): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/user/ai-config`)
+    return apiRequest('/api/user/ai-config')
   },
 
   analyze(request: { type: string; data: any }): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/ai/analyze`, {
+    return apiRequest('/api/ai/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
@@ -84,7 +84,7 @@ export const aiApi = {
    * 生成洞察
    */
   generateInsight(request: GenerateInsightRequest = {}): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/insights/generate`, {
+    return apiRequest('/api/insights/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
@@ -95,7 +95,7 @@ export const aiApi = {
    * 获取最新洞察
    */
   getLatestInsight(): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/insights/latest`)
+    return apiRequest('/api/insights/latest')
   },
 
   /**
@@ -116,13 +116,13 @@ export const aiApi = {
     if (params.sort_by) queryParams.append('sort_by', params.sort_by)
     if (params.sort_order) queryParams.append('sort_order', params.sort_order)
 
-    return fetch(`${API_BASE_URL}/api/insights?${queryParams.toString()}`)
+    return apiRequest(`/api/insights?${queryParams.toString()}`)
   },
 
   /**
    * 获取单个洞察详情
    */
   getInsightById(id: number): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/insights/${id}`)
+    return apiRequest(`/api/insights/${id}`)
   },
 }

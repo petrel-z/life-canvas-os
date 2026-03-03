@@ -110,6 +110,23 @@ makeAppWithSingleInstanceLock(async () => {
     }
   )
 
+  // 通用 API 请求处理程序 - 转发到 Python 后端
+  ipcMain.handle(
+    'api:request',
+    async (_event, action: string, params: any = {}) => {
+      try {
+        const result = await pythonManager.sendRequest(action, params)
+        return { success: true, data: result }
+      } catch (error) {
+        console.error('[IPC] API request failed:', action, error)
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      }
+    }
+  )
+
   await app.whenReady()
   const window = await makeAppSetup(MainWindow)
 

@@ -2,7 +2,7 @@
  * 用户相关 API
  */
 
-import { API_BASE_URL } from './config'
+import { apiRequest } from './client'
 
 export interface UserProfile {
   id?: string
@@ -15,11 +15,11 @@ export interface UserProfile {
 
 export const userApi = {
   getProfile(): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/user/profile`)
+    return apiRequest('/api/user/profile')
   },
 
   updateProfile(data: Partial<UserProfile>): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/user/profile`, {
+    return apiRequest('/api/user/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),

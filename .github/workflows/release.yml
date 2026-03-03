@@ -26,6 +26,16 @@ jobs:
           node-version: 20
           cache: "pnpm"
 
+      - name: 设置 Electron 缓存
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
       - name: 安装 Python
         uses: actions/setup-python@v5
         with:
@@ -49,6 +59,16 @@ jobs:
         run: |
           cd backend
           python -m PyInstaller backend.spec --clean
+          
+      - name: 验证 Python 构建产物
+        run: |
+          ls -la backend/dist/
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            test -f backend/dist/backend/backend.exe || exit 1
+          else
+            test -f backend/dist/backend/backend || exit 1
+          fi
+        shell: bash
 
       - name: 安装前端依赖
         run: pnpm install

@@ -13,18 +13,44 @@ datas = [
     ('schemas', 'schemas'),
     ('services', 'services'),
     ('db', 'db'),
+    ('utils', 'utils'),
 ]
 
 # 隐藏导入
 hiddenimports = [
     'fastapi',
     'uvicorn',
+    'uvicorn.logging',
+    'uvicorn.loops',
+    'uvicorn.loops.auto',
+    'uvicorn.protocols',
+    'uvicorn.protocols.http',
+    'uvicorn.protocols.http.auto',
+    'uvicorn.protocols.websockets',
+    'uvicorn.protocols.websockets.auto',
+    'uvicorn.lifespan',
+    'uvicorn.lifespan.on',
     'sqlalchemy',
+    'sqlalchemy.ext.declarative',
     'pydantic',
+    'pydantic.fields',
+    'pydantic_core',
     'passlib',
+    'passlib.handlers',
+    'passlib.handlers.bcrypt',
     'cryptography',
     'openai',
     'httpx',
+    'httpx._transports',
+    'httpx._transports.default',
+    'starlette',
+    'starlette.middleware',
+    'starlette.middleware.cors',
+    'json',
+    'email.mime.image',
+    'email.mime.audio',
+    'email.mime.video',
+    'pkg_resources.py2_warn',
 ]
 
 block_cipher = None
@@ -61,10 +87,11 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,  # 开发测试时显示控制台，方便调试
+    console=False,  # 生产环境不显示控制台
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=None,
 )

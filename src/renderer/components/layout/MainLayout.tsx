@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar'
 import { PinLockScreen } from '../auth/PinLockScreen'
 import { PinWelcomePage } from '../auth/PinWelcomePage'
 import { useApp } from '~/renderer/contexts/AppContext'
+import { request } from '~/renderer/api/config'
 
 type PinSetupStatus = 'completed' | 'skipped' | null
 
@@ -50,7 +51,7 @@ export function MainLayout() {
     setUnlockError(undefined)
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/pin/verify', {
+      const response = await request('/api/pin/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin }),

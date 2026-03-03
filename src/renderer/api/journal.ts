@@ -2,7 +2,7 @@
  * 日记相关 API
  */
 
-import { API_BASE_URL } from './config'
+import { apiRequest } from './client'
 
 // 类型定义
 export type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible'
@@ -69,16 +69,16 @@ export const journalApi = {
     if (params?.sort_by) queryParams.append('sort_by', params.sort_by)
     if (params?.sort_order) queryParams.append('sort_order', params.sort_order)
 
-    const url = `${API_BASE_URL}/api/journal${queryParams.toString() ? `?${queryParams}` : ''}`
-    return fetch(url)
+    const url = `/api/journal${queryParams.toString() ? `?${queryParams}` : ''}`
+    return apiRequest(url)
   },
 
   get(id: number): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/journal/${id}`)
+    return apiRequest(`/api/journal/${id}`)
   },
 
   create(data: JournalCreateRequest): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/journal`, {
+    return apiRequest('/api/journal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -86,7 +86,7 @@ export const journalApi = {
   },
 
   update(id: number, data: JournalUpdateRequest): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/journal/${id}`, {
+    return apiRequest(`/api/journal/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -94,7 +94,7 @@ export const journalApi = {
   },
 
   delete(id: number): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/journal/${id}`, {
+    return apiRequest(`/api/journal/${id}`, {
       method: 'DELETE',
     })
   },

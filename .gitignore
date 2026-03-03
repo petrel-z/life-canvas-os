@@ -99,8 +99,7 @@ backend/*.db
 backend/*.log
 
 # Build artifacts
-backend/backend.spec
-backend/build/
+# backend/dist/ is needed for electron-builder extraResources
 backend/dist/
 
 # ====================

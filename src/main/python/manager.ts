@@ -27,30 +27,17 @@ export class PythonManager {
       args = ['backend/main.py', '--dev']
     } else {
       // 生产环境：使用打包的 Python 可执行文件
-      if (process.platform === 'darwin') {
-        // macOS
-        pythonPath = path.join(
-          process.resourcesPath,
-          'python-runtime',
-          'backend'
-        )
-      } else if (process.platform === 'win32') {
-        // Windows
-        pythonPath = path.join(
-          process.resourcesPath,
-          'python-runtime',
-          'backend.exe'
-        )
-      } else {
-        // Linux
-        pythonPath = path.join(
-          process.resourcesPath,
-          'python-runtime',
-          'backend'
-        )
-      }
-      // ⚠️ 临时使用 HTTP 模式便于测试（生产环境应该用 IPC）
-      args = ['--dev']
+      // electron-builder extraResources 配置:
+      // from: 'backend/dist/backend' -> to: 'python-runtime/backend'
+      const backendName = process.platform === 'win32' ? 'backend.exe' : 'backend'
+      pythonPath = path.join(
+        process.resourcesPath,
+        'python-runtime',
+        backendName
+      )
+      args = []
+
+      console.log('[Python Manager] Production mode, executable:', pythonPath)
     }
 
     console.log('[Python Manager] Starting Python:', {

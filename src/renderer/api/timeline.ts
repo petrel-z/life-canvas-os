@@ -2,7 +2,7 @@
  * 时间轴 API 客户端
  */
 
-import { API_BASE_URL } from './config'
+import { apiRequest } from './client'
 
 export type TimelineEventType = 'diary' | 'diet'
 
@@ -44,7 +44,7 @@ export const timelineApi = {
       queryParams.append('type', params.type)
     }
 
-    const url = `${API_BASE_URL}/api/timeline?${queryParams}`
-    return fetch(url)
+    const url = `/api/timeline?${queryParams}`
+    return apiRequest(url)
   },
 }

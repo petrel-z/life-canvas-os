@@ -1,8 +1,20 @@
 /**
  * API 配置
  */
+import { apiRequest } from './client'
 
-export const API_BASE_URL = 'http://127.0.0.1:8000'
+// 导出基础 URL（仅供兼容）
+export const HTTP_BASE_URL = 'http://127.0.0.1:8000'
+
+/**
+ * 通用 API 请求方法
+ */
+export async function request(
+  endpoint: string,
+  options?: RequestInit
+): Promise<Response> {
+  return apiRequest(endpoint, options)
+}
 
 /**
  * API 端点定义

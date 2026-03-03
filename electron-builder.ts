@@ -29,30 +29,53 @@ export default {
   },
 
   // ✅ 关键配置：打包 Python 可执行文件
+  // PyInstaller 输出：backend/dist/backend (单个可执行文件)
+  // 打包后路径：Resources/python-runtime/backend
   extraResources: [
     {
-      from: 'backend/dist/backend',           // PyInstaller 打包产物
-      to: 'python-runtime/backend',          // 打包后的相对路径
+      from: 'backend/dist/backend',
+      to: 'python-runtime/backend',
+      filter: ['**/*']
     },
+  ],
+
+  // 确保打包所有必要文件
+  files: [
+    '**/*',
+    '!backend/**/*',
+    '!venv/**/*',
+    '!.git/**/*',
+    '!*.md',
   ],
 
   mac: {
     artifactName,
     icon: `${resources}/build/icons/icon.icns`,
-    category: 'public.app-category.lifestyle',  // 修改为生活方式类别
-    target: ['zip', 'dmg', 'dir'],
+    category: 'public.app-category.lifestyle',
+    target: ['zip', 'dmg'],
+    // ✅ 禁用硬运行时，因为无法签名
+    hardenedRuntime: false,
+    gatekeeperAssess: false,
   },
 
   linux: {
     artifactName,
     category: 'Utility',
     synopsis: description,
-    target: ['AppImage', 'deb', 'pacman', 'freebsd', 'rpm'],
+    target: ['AppImage', 'deb', 'rpm'],
+    icon: `${resources}/build/icons`,
   },
 
   win: {
     artifactName,
     icon: `${resources}/build/icons/icon.ico`,
-    target: ['zip', 'portable'],
+    target: ['nsis', 'zip'],
+  },
+
+  nsis: {
+    oneClick: false,
+    allowToChangeInstallationDirectory: true,
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true,
   },
 }

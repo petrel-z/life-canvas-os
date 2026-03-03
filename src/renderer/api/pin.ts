@@ -2,7 +2,7 @@
  * PIN 相关 API
  */
 
-import { API_BASE_URL } from './config'
+import { apiRequest } from './client'
 import type {
   PinVerifyRequest,
   PinChangeRequest,
@@ -12,11 +12,11 @@ import type {
 
 export const pinApi = {
   status(): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/pin/status`)
+    return apiRequest('/api/pin/status')
   },
 
   setup(pin: string): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/pin/setup`, {
+    return apiRequest('/api/pin/setup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin } as PinSetupRequest),
@@ -24,7 +24,7 @@ export const pinApi = {
   },
 
   verify(pin: string): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/pin/verify`, {
+    return apiRequest('/api/pin/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin } as PinVerifyRequest),
@@ -32,7 +32,7 @@ export const pinApi = {
   },
 
   change(oldPin: string, newPin: string): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/pin/change`, {
+    return apiRequest('/api/pin/change', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -43,7 +43,7 @@ export const pinApi = {
   },
 
   delete(pin: string): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/pin`, {
+    return apiRequest('/api/pin', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin } as PinDeleteRequest),

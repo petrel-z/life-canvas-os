@@ -1,8 +1,7 @@
 /**
  * 饮食系统 API 客户端
  */
-
-const API_BASE_URL = 'http://localhost:8000'
+import { apiRequest } from './client'
 
 export interface MealItem {
   name: string
@@ -48,7 +47,7 @@ export const dietApi = {
    * 获取饮食基准
    */
   getBaseline(): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/diet/baseline`)
+    return apiRequest('/api/diet/baseline')
   },
 
   /**
@@ -60,7 +59,7 @@ export const dietApi = {
     dinner: MealItem[] | null
     taste: string[]
   }): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/diet/baseline`, {
+    return apiRequest('/api/diet/baseline', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -71,7 +70,7 @@ export const dietApi = {
    * 创建偏离事件
    */
   createDeviation(data: MealDeviationCreate): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/diet/deviations`, {
+    return apiRequest('/api/diet/deviations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -88,8 +87,8 @@ export const dietApi = {
     if (params.start_date) queryParams.append('start_date', params.start_date)
     if (params.end_date) queryParams.append('end_date', params.end_date)
 
-    const url = `${API_BASE_URL}/api/diet/deviations?${queryParams}`
-    return fetch(url)
+    const url = `/api/diet/deviations?${queryParams}`
+    return apiRequest(url)
   },
 
   /**
@@ -99,7 +98,7 @@ export const dietApi = {
     deviationId: number,
     data: MealDeviationUpdate
   ): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/diet/deviations/${deviationId}`, {
+    return apiRequest(`/api/diet/deviations/${deviationId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -110,7 +109,7 @@ export const dietApi = {
    * 删除偏离事件
    */
   deleteDeviation(deviationId: number): Promise<Response> {
-    return fetch(`${API_BASE_URL}/api/diet/deviations/${deviationId}`, {
+    return apiRequest(`/api/diet/deviations/${deviationId}`, {
       method: 'DELETE',
     })
   },
