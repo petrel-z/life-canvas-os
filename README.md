@@ -45,22 +45,56 @@ Life Canvas OS 是一款创新的个人成长管理工具，基于**八维生命
 
 ### 当前已实现 ✅
 
+**基础架构：**
 - **跨平台桌面应用** - 基于 Electron，支持 macOS、Windows、Linux
 - **现代化前端** - React 19 + TypeScript + Vite
 - **Python 后端** - FastAPI + SQLite 双模式架构
 - **进程管理** - 健康检查和自动重启机制
 - **代码规范** - Biome 统一代码格式化
 
+**用户系统：**
+- **PIN 码认证** - 6 位数字快速锁定应用
+- **用户配置** - 个人信息、生命周期、MBTI、价值观
+- **设置管理** - AI 配置、外观设置、数据管理
+- **本地缓存** - PIN 状态缓存（5分钟过期）
+
+**AI 智能洞察：**
+- **洞察生成** - 支持 DeepSeek/豆包/OpenAI
+- **智能分类** - 自动分为：值得庆祝、需要关注、行动建议
+- **横向展示** - 三列布局，颜色编码系统
+- **历史记录** - 查看历史洞察详情
+- **系统评分快照** - 八维评分可视化
+
+**用户日记：**
+- **日记 CRUD** - 创建、编辑、删除、查看
+- **心情记录** - 5 档心情选择
+- **系统关联** - 关联 8 个子系统
+- **Markdown 支持** - 富文本编辑
+- **私密日记** - PIN 码保护
+
+**数据管理：**
+- **数据导出** - JSON/ZIP 格式导出
+- **数据导入** - 支持导入历史数据
+- **数据备份** - 一键备份所有数据
+- **时间轴审计** - 完整的操作记录
+- **进度追踪** - 实时显示导入/导出进度
+
+**性能优化：**
+- **按需加载** - 设置页面按 Tab 加载数据
+- **防止重复调用** - 使用 useRef 防止 StrictMode 双重调用
+- **代码重构** - 统一工具函数，消除重复代码
+- **本地缓存** - 减少不必要的 API 调用
+
 ### 规划中 🔜
 
-- **PIN 码认证** - 6 位数字快速锁定应用
 - **八维评分系统** - 可视化雷达图展示
-- **AI 智能洞察** - 支持 DeepSeek/豆包，提供个性化建议
-- **用户日记** - 记录心情、关联系统、统计分析
-- **时间轴审计** - 完整的生活轨迹回顾
-- **数据管理** - 导入/导出、备份恢复
+- **8 个子系统 CRUD** - 完整的子系统管理
+- **数据可视化** - 趋势图表、统计分析
+- **AI 对话功能** - 实时对话获取建议
+- **移动端适配** - 响应式布局优化
+- **主题系统** - 多主题切换
 
-> **注意：** 项目处于早期开发阶段（约 7% 完成）。详细的实现进度请查看 [docs/STRUCTURE_AUDIT.md](./docs/STRUCTURE_AUDIT.md)
+> **注意：** 项目处于活跃开发阶段（约 35% 完成）。详细的实现进度请查看 [docs/STRUCTURE_AUDIT.md](./docs/STRUCTURE_AUDIT.md)
 
 ---
 
@@ -161,19 +195,44 @@ npm run dev
 ```
 life-canvas-os/
 ├── backend/                 # Python 后端
-│   ├── api/                # API 路由（待开发）
+│   ├── api/                # API 路由
+│   │   ├── auth.py        # PIN 认证
+│   │   ├── users.py       # 用户配置
+│   │   ├── journals.py    # 用户日记
+│   │   ├── insights.py    # AI 洞察
+│   │   ├── systems.py     # 系统数据
+│   │   ├── timeline.py    # 时间轴审计
+│   │   └── data.py        # 数据管理
 │   ├── core/               # 核心逻辑
-│   ├── models/             # 数据模型（待开发）
-│   ├── schemas/            # Pydantic Schema（待开发）
-│   ├── services/           # 业务服务（待开发）
-│   ├── db/                 # 数据库模块（待开发）
+│   │   ├── config.py      # 配置管理
+│   │   ├── exceptions.py  # 异常处理
+│   │   ├── logging.py     # 日志系统
+│   │   └── middleware.py  # 中间件
+│   ├── models/             # 数据模型
+│   │   ├── user.py        # 用户模型
+│   │   ├── diary.py       # 日记模型
+│   │   ├── insight.py     # 洞察模型
+│   │   └── dimension.py   # 维度模型
+│   ├── schemas/            # Pydantic Schema
+│   ├── services/           # 业务服务
+│   │   ├── auth_service.py
+│   │   ├── user_service.py
+│   │   ├── journal_service.py
+│   │   ├── insight_service.py
+│   │   └── system_service.py
+│   ├── db/                 # 数据库模块
+│   │   ├── session.py     # 会话管理
+│   │   ├── base.py        # Base 模型
+│   │   └── init_db.py     # 初始化
 │   └── main.py             # 应用入口
 │
 ├── docs/                   # 项目文档
 │   ├── REQUIREMENT.md      # 产品需求文档
 │   ├── DESIGN.md           # 设计文档
 │   ├── PROJECT_STANDARDS.md # 项目规范
-│   └── STRUCTURE_AUDIT.md  # 结构审计报告
+│   ├── STRUCTURE_AUDIT.md  # 结构审计报告
+│   ├── API.md              # API 文档
+│   └── DEVELOPMENT_ROADMAP.md # 开发路线图
 │
 ├── scripts/                # 构建和发布脚本
 │
@@ -189,12 +248,27 @@ life-canvas-os/
 │   ├── renderer/           # 渲染进程（React）
 │   │   ├── components/     # React 组件
 │   │   │   ├── ui/        # shadcn/ui 组件
-│   │   │   ├── canvas/    # 画布组件（待开发）
-│   │   │   ├── insights/  # AI 洞察（待开发）
-│   │   │   └── system/    # 系统组件（待开发）
-│   │   ├── hooks/         # 自定义 Hooks（待开发）
-│   │   ├── pages/         # 页面组件（待开发）
-│   │   ├── queries/       # TanStack Query（待开发）
+│   │   │   ├── layout/    # 布局组件
+│   │   │   ├── pin/       # PIN 相关组件
+│   │   │   └── GlassCard.tsx
+│   │   ├── hooks/         # 自定义 Hooks
+│   │   │   ├── useUserApi.ts
+│   │   │   ├── useAiApi.ts
+│   │   │   ├── useDataApi.ts
+│   │   │   └── usePinStatus.ts
+│   │   ├── pages/         # 页面组件
+│   │   │   ├── dashboard/   # 仪表盘
+│   │   │   ├── settings/    # 设置
+│   │   │   ├── journal/     # 日记
+│   │   │   ├── timeline/    # 时间轴
+│   │   │   ├── systems/     # 系统管理
+│   │   │   └── insight/     # AI 洞察
+│   │   ├── api/           # API 客户端
+│   │   ├── lib/           # 工具库
+│   │   │   ├── constants.ts
+│   │   │   ├── cacheUtils.ts
+│   │   │   ├── insightUtils.ts
+│   │   │   └── ...
 │   │   └── routes.tsx     # 路由配置
 │   │
 │   ├── shared/             # 共享模块
@@ -271,47 +345,81 @@ pnpm lint:fix
 
 ## 📊 当前实现状态
 
-### ✅ 已完成（约 7%）
+### ✅ 已完成（约 35%）
 
-**前端：**
+**前端架构：**
 - [x] Electron + React 19 基础框架
 - [x] TypeScript + Vite 配置
-- [x] 路由配置
-- [x] 共享类型定义
-- [x] shadcn/ui Alert 组件示例
+- [x] React Router 路由配置
+- [x] shadcn/ui 组件库集成
+- [x] TailwindCSS 样式系统
+- [x] TanStack Query 状态管理
 
-**主进程：**
-- [x] 主进程入口
-- [x] 窗口管理
+**主进程功能：**
+- [x] 主进程入口和窗口管理
 - [x] Python 进程管理器（带健康检查）
+- [x] IPC 通信机制
+- [x] 文件对话框集成
 
-**后端：**
+**后端 API：**
 - [x] FastAPI 应用框架
+- [x] SQLAlchemy ORM 配置
+- [x] 统一响应格式
 - [x] 健康检查接口
-- [x] 基础目录结构
+
+**认证系统：**
+- [x] PIN 码设置/验证/修改/删除
+- [x] 用户配置管理
+- [x] PIN 状态本地缓存
+- [x] 设置页面按需加载
+
+**AI 洞察功能：**
+- [x] AI 配置管理（DeepSeek/豆包/OpenAI）
+- [x] API Key 验证
+- [x] 洞察生成接口
+- [x] 洞察详情展示（三列横向布局）
+- [x] 洞察分类系统（庆祝/警告/行动）
+- [x] 历史洞察列表
+- [x] 历史洞察详情（路由状态传递）
+- [x] 系统评分快照
+- [x] 防止重复调用优化
+
+**用户日记功能：**
+- [x] 日记 CRUD 接口
+- [x] 日记编辑器
+- [x] 日记详情页
+- [x] 心情记录（5档选择）
+- [x] 系统关联（8个维度）
+- [x] 私密日记（PIN保护）
+- [x] 日记列表展示
+
+**数据管理功能：**
+- [x] 数据导出（JSON/ZIP）
+- [x] 数据导入（支持历史数据）
+- [x] 进度追踪（实时反馈）
+- [x] 数据备份
+- [x] 时间轴审计（操作记录）
+- [x] IPC 文件保存
+
+**性能优化：**
+- [x] 代码重构（消除重复）
+- [x] 本地缓存机制
+- [x] 按需加载策略
+- [x] 防止重复调用
 
 ### 🔴 待开发
 
 **核心功能：**
-- [ ] PIN 码认证系统
-- [ ] 用户配置管理
 - [ ] 8 个子系统 CRUD
-- [ ] AI 洞察生成
-- [ ] 用户日记功能
-- [ ] 数据库模型和初始化
+- [ ] 系统评分录入界面
+- [ ] 可视化雷达图
+- [ ] 趋势分析图表
 
-**前端组件：**
-- [ ] 页面组件（Canvas、Insights、History、Settings）
-- [ ] UI 组件库（Button、Input、Dialog、Toast 等）
-- [ ] 布局组件（Sidebar、Header）
-- [ ] 雷达图可视化
-
-**后端 API：**
-- [ ] PIN 认证 API
-- [ ] 用户配置 API
-- [ ] 系统数据 API
-- [ ] AI 洞察 API
-- [ ] 用户日记 API
+**增强功能：**
+- [ ] AI 对话功能
+- [ ] 数据统计分析
+- [ ] 深色模式完整支持
+- [ ] 响应式布局优化
 
 详细的实现计划请查看：[docs/DESIGN.md#开发优先级建议](./docs/DESIGN.md)
 
@@ -366,38 +474,92 @@ git commit -m "docs(readme): update installation guide"
 - [x] Electron + React + Python 框架
 - [x] 基础目录结构
 - [x] Python 进程管理
+- [x] 代码规范配置
 
-### Phase 1: 数据层 🔜
-- [ ] 数据库模型设计
-- [ ] 数据库初始化脚本
-- [ ] Pydantic schemas
-- [ ] 数据库迁移机制
+### Phase 1: 数据层 ✅
+- [x] 数据库模型设计
+- [x] 数据库初始化脚本
+- [x] Pydantic schemas
+- [x] 统一响应格式
 
-### Phase 2: 后端 API 🔜
-- [ ] PIN 认证系统
-- [ ] 用户配置 API
-- [ ] 系统数据 API
-- [ ] AI 洞察 API
-- [ ] 用户日记 API
+### Phase 2: 后端 API ✅
+- [x] PIN 认证系统
+- [x] 用户配置 API
+- [x] 用户日记 API
+- [x] AI 洞察 API
+- [x] 时间轴审计 API
+- [x] 数据管理 API
 
-### Phase 3: 前端组件 🔜
-- [ ] UI 基础组件库
-- [ ] 布局组件
-- [ ] 页面组件
-- [ ] React Query 集成
-- [ ] 雷达图可视化
+### Phase 3: 前端基础 ✅
+- [x] 路由配置
+- [x] 布局组件
+- [x] UI 组件库集成
+- [x] 状态管理
 
-### Phase 4: 业务逻辑 🔜
-- [ ] 8 个子系统详细功能
-- [ ] AI 洞察生成
-- [ ] 用户日记
-- [ ] 时间轴审计
+### Phase 4: 核心功能 ✅
+- [x] PIN 码认证流程
+- [x] 用户设置页面
+- [x] 日记编辑器
+- [x] AI 洞察展示
+- [x] 数据导入/导出
 
-### Phase 5: 打包发布 🔜
-- [ ] macOS 安装包
-- [ ] Windows 安装包
-- [ ] Linux 安装包
-- [ ] 自动更新机制
+### Phase 5: 性能优化 ✅
+- [x] 按需加载策略
+- [x] 本地缓存机制
+- [x] 防止重复调用
+- [x] 代码重构优化
+
+### Phase 6: 子系统管理 🔜
+- [ ] 8 个子系统 CRUD
+- [ ] 系统评分录入
+- [ ] 可视化雷达图
+- [ ] 趋势分析
+
+### Phase 7: 高级功能 🔜
+- [ ] AI 对话功能
+- [ ] 数据统计分析
+- [ ] 深色模式完善
+- [ ] 响应式布局优化
+
+---
+
+## 📜 更新日志
+
+### 2025-01 (最近更新)
+
+#### 新功能 ✨
+- **AI 洞察优化**
+  - 三列横向布局（庆祝/警告/行动）
+  - 颜色编码系统
+  - 历史洞察详情页（路由状态传递）
+  - 系统评分快照展示
+
+- **PIN 状态缓存机制**
+  - 本地缓存（5分钟过期）
+  - 自动同步更新
+  - 减少接口调用
+
+- **设置页面优化**
+  - 按需加载策略
+  - 初始只加载用户信息
+  - 切换 tab 时加载对应数据
+
+#### 性能优化 🚀
+- **防止重复调用**
+  - 使用 useRef 防止 StrictMode 双重调用
+  - InsightDetailPage 优化
+  - InsightHistoryPage 优化
+
+- **代码重构**
+  - 创建 insightUtils.ts 工具库
+  - 消除重复代码（120行 → 0行）
+  - 统一配置管理
+  - 图标映射解耦
+
+#### Bug 修复 🐛
+- 修复生成洞察接口传参方式（改为 body 传参）
+- 修复 Buffer 未定义错误（改用 Uint8Array）
+- 优化数据导入/导出进度追踪
 
 ---
 

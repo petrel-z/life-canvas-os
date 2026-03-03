@@ -7,11 +7,13 @@ import { Input } from '~/renderer/components/ui/input';
 import { toast } from '~/renderer/lib/toast';
 import { pinApi } from '~/renderer/api';
 import { PIN_CONFIG } from '~/renderer/lib/pin';
+import { usePinStatus } from '~/renderer/hooks/usePinStatus';
 import type { PinApiError } from '~/renderer/lib/pin';
 
 export function PinSetupPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { updatePinStatusAfterOperation } = usePinStatus();
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [showPin, setShowPin] = useState(false);
@@ -61,6 +63,9 @@ export function PinSetupPage() {
 
       // 标记 PIN 设置已完成
       localStorage.setItem('pin-setup-status', 'completed');
+
+      // 更新 PIN 状态缓存
+      await updatePinStatusAfterOperation();
 
       toast.success('PIN 设置成功', {
         description: '您现在可以使用私密日记功能了',

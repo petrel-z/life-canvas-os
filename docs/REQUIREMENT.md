@@ -788,7 +788,6 @@ CREATE TABLE systems_fuel (
 **外观与行为**
 - 主题设置（light/dark/auto）
 - 语言设置（简体中文/English）
-- 自动保存间隔（默认 60 秒）
 - 通知设置（开启/关闭系统通知）
 
 ---

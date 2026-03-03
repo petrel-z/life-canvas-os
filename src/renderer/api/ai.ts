@@ -36,6 +36,7 @@ export interface InsightResponse {
   generated_at_ts: number;
   created_at: string;
   created_at_ts: number;
+  _limit_reached?: boolean; // 是否达到每日限制
 }
 
 // 洞察列表响应
@@ -83,14 +84,10 @@ export const aiApi = {
    * 生成洞察
    */
   generateInsight(request: GenerateInsightRequest = {}): Promise<Response> {
-    const params = new URLSearchParams();
-    if (request.force !== undefined) {
-      params.append('force', request.force.toString());
-    }
-
-    return fetch(`${API_BASE_URL}/api/insights/generate?${params.toString()}`, {
+    return fetch(`${API_BASE_URL}/api/insights/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
     });
   },
 
@@ -117,5 +114,12 @@ export const aiApi = {
     if (params.sort_order) queryParams.append('sort_order', params.sort_order);
 
     return fetch(`${API_BASE_URL}/api/insights?${queryParams.toString()}`);
+  },
+
+  /**
+   * 获取单个洞察详情
+   */
+  getInsightById(id: number): Promise<Response> {
+    return fetch(`${API_BASE_URL}/api/insights/${id}`);
   },
 };

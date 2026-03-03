@@ -10,6 +10,7 @@ import {
   type PinApiError,
 } from "~/renderer/lib/pin";
 import { usePinApi, handlePinApiError } from "~/renderer/hooks";
+import { usePinStatus } from "~/renderer/hooks/usePinStatus";
 import {
   PinInput,
   PinStrengthIndicator,
@@ -22,6 +23,7 @@ type Step = "verify-old" | "enter-new" | "confirm-new";
 export function PinChangePage() {
   const navigate = useNavigate();
   const { verifyWithErrorHandling, changeWithErrorHandling } = usePinApi();
+  const { updatePinStatusAfterOperation } = usePinStatus();
 
   const [currentStep, setCurrentStep] = useState<Step>("verify-old");
   const [oldPin, setOldPin] = useState("");
@@ -77,6 +79,10 @@ export function PinChangePage() {
 
     try {
       await changeWithErrorHandling(verifiedOldPin, newPin, toast);
+
+      // 更新 PIN 状态缓存
+      await updatePinStatusAfterOperation();
+
       toast.success(PIN_MESSAGES.CHANGE_SUCCESS, {
         description: PIN_MESSAGES.CHANGE_SUCCESS_DESC,
       });

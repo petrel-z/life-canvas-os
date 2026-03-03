@@ -1,11 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, History, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, History, Sparkles, Loader2, PartyPopper, AlertTriangle, Target } from 'lucide-react';
 import { Button } from '~/renderer/components/ui/button';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { aiApi, InsightResponse } from '~/renderer/api/ai';
 import { toast } from 'sonner';
-import { DIMENSIONS } from '~/renderer/lib/constants';
+import {
+  INSIGHT_CATEGORIES,
+  getSystemName,
+  getSystemColor,
+  getInsightCategory,
+  groupInsightsByCategory,
+} from '~/renderer/lib/insightUtils';
+
+// 图标映射
+const ICON_MAP = {
+  celebration: PartyPopper,
+  warning: AlertTriangle,
+  action: Target,
+} as const;
 
 export function InsightDetailPage() {
   const navigate = useNavigate();
@@ -13,9 +26,18 @@ export function InsightDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // 使用 useRef 防止 StrictMode 双重调用
+  const isLoadingRef = useRef(false);
+
   // 加载最新洞察
   const loadLatestInsight = async () => {
+    // 防止重复调用
+    if (isLoadingRef.current) {
+      return;
+    }
+
     try {
+      isLoadingRef.current = true;
       setIsLoading(true);
       const response = await aiApi.getLatestInsight();
 
@@ -41,6 +63,7 @@ export function InsightDetailPage() {
       });
     } finally {
       setIsLoading(false);
+      isLoadingRef.current = false;
     }
   };
 
@@ -65,6 +88,17 @@ export function InsightDetailPage() {
       }
 
       const result = await response.json();
+
+      // 检查是否达到每日限制
+      if (result.data._limit_reached === true) {
+        toast.warning('今日洞察次数已上限', {
+          id: 'generate-insight',
+          description: '每日只能生成 3 次洞察，请明天再来~',
+        });
+        return;
+      }
+
+      // 更新洞察数据
       setInsight(result.data);
 
       toast.success('洞察生成成功', {
@@ -85,18 +119,6 @@ export function InsightDetailPage() {
   useEffect(() => {
     loadLatestInsight();
   }, []);
-
-  // 获取系统名称
-  const getSystemName = (type: string) => {
-    const dimension = DIMENSIONS.find((d) => d.type === type);
-    return dimension?.label || type;
-  };
-
-  // 获取系统颜色
-  const getSystemColor = (type: string) => {
-    const dimension = DIMENSIONS.find((d) => d.type === type);
-    return dimension?.color || '#6B7280';
-  };
 
   if (isLoading) {
     return (
@@ -178,6 +200,9 @@ export function InsightDetailPage() {
     );
   }
 
+  // 按类别分组洞察内容
+  const groupedInsights = groupInsightsByCategory(insight.content);
+
   // 有洞察数据
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -231,28 +256,81 @@ export function InsightDetailPage() {
       </header>
 
       {/* 洞察内容 */}
-      <div className="space-y-6">
-        {/* 洞察项列表 */}
-        {insight.content.map((item, index) => (
-          <GlassCard key={index} className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div
-                  className="px-3 py-1 rounded-full text-sm font-bold"
-                  style={{
-                    backgroundColor: `${getSystemColor(item.category)}15`,
-                    color: getSystemColor(item.category),
-                  }}
-                >
-                  {item.category}
-                </div>
-              </div>
-              <p className="text-apple-textMain dark:text-white leading-relaxed">
-                {item.insight}
+      <div className="space-y-8 relative">
+        {/* 生成中的加载遮罩 */}
+        {isGenerating && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm rounded-2xl">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-12 h-12 animate-spin text-apple-accent mx-auto" />
+              <p className="text-lg font-semibold text-apple-textMain dark:text-white">
+                AI 正在分析您的数据...
+              </p>
+              <p className="text-sm text-apple-textSec dark:text-white/60">
+                这可能需要 5-10 秒钟
               </p>
             </div>
-          </GlassCard>
-        ))}
+          </div>
+        )}
+        {/* 三个类别横向排列 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {Object.entries(INSIGHT_CATEGORIES).map(([key, config]) => {
+            const items = groupedInsights[key as keyof typeof groupedInsights];
+            const Icon = ICON_MAP[key as keyof typeof ICON_MAP];
+
+            return (
+              <div key={key} className="space-y-4">
+                {/* 类别标题 */}
+                <div className={`flex items-center gap-3 p-4 rounded-xl border ${config.bgColor} ${config.borderColor}`}>
+                  <div className={`p-2 rounded-lg ${config.bgColor}`}>
+                    <Icon className={`w-5 h-5 ${config.textColor}`} />
+                  </div>
+                  <h3 className={`text-lg font-bold ${config.textColor}`}>
+                    {config.label}
+                  </h3>
+                  <span className={`ml-auto text-sm font-semibold ${config.textColor}`}>
+                    {items.length}
+                  </span>
+                </div>
+
+                {/* 洞察项列表 */}
+                <div className="space-y-3">
+                  {items.length === 0 ? (
+                    <div className={`text-center p-6 rounded-lg border border-dashed ${config.borderColor} ${config.bgColor}`}>
+                      <p className={`text-sm ${config.textColor} opacity-70`}>
+                        暂无{config.label}内容
+                      </p>
+                    </div>
+                  ) : (
+                    items.map((item, index) => (
+                      <div
+                        key={index}
+                        className={`p-4 rounded-xl border ${config.cardBg} ${config.borderColor} hover:shadow-md transition-shadow`}
+                      >
+                        {/* 系统标签 */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <div
+                            className="px-2 py-0.5 rounded text-xs font-bold"
+                            style={{
+                              backgroundColor: `${getSystemColor(item.category)}15`,
+                              color: getSystemColor(item.category),
+                            }}
+                          >
+                            {item.category}
+                          </div>
+                        </div>
+
+                        {/* 洞察内容 */}
+                        <p className="text-sm text-apple-textMain dark:text-white leading-relaxed">
+                          {item.insight}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
         {/* 系统评分快照 */}
         <GlassCard title="系统评分快照" className="p-6">
@@ -260,7 +338,7 @@ export function InsightDetailPage() {
             {Object.entries(insight.system_scores).map(([type, score]) => (
               <div
                 key={type}
-                className="text-center p-4 rounded-xl"
+                className="text-center p-4 rounded-xl transition-transform hover:scale-105"
                 style={{ backgroundColor: `${getSystemColor(type)}10` }}
               >
                 <div className="text-xs text-apple-textSec dark:text-white/60 uppercase mb-2">

@@ -10,11 +10,13 @@ import {
   type PinApiError,
 } from '~/renderer/lib/pin';
 import { usePinApi, handlePinApiError } from '~/renderer/hooks';
+import { usePinStatus } from '~/renderer/hooks/usePinStatus';
 import { PinInput, PinStrengthIndicator, LoadingSpinner } from '~/renderer/components/pin';
 
 export function PinDeletePage() {
   const navigate = useNavigate();
   const { verifyWithErrorHandling, deleteWithErrorHandling } = usePinApi();
+  const { updatePinStatusAfterOperation } = usePinStatus();
 
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
@@ -49,6 +51,9 @@ export function PinDeletePage() {
     try {
       await deleteWithErrorHandling(pin, toast);
       localStorage.setItem('pin-setup-status', 'skipped');
+
+      // 更新 PIN 状态缓存
+      await updatePinStatusAfterOperation();
 
       toast.success(PIN_MESSAGES.DELETE_SUCCESS, {
         description: PIN_MESSAGES.DELETE_SUCCESS_DESC,

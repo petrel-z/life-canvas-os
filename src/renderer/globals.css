@@ -125,8 +125,8 @@
   --shadow-apple-lg: 0 10px 40px rgba(0,0,0,0.08);
 }
 
+/* Apple UI Colors */
 :root {
-  /* Apple UI Colors (Light) */
   --apple-bgMain: #FAFAFC;
   --apple-bgSidebar: #F5F5F7;
   --apple-textMain: #1D1D1F;
@@ -139,7 +139,6 @@
 }
 
 .dark {
-  /* Apple UI Colors (Dark) */
   --apple-bgMain: #000000;
   --apple-bgSidebar: #1C1C1E;
   --apple-textMain: #FFFFFF;
@@ -258,11 +257,49 @@
   animation-duration: 700ms;
 }
 
+/* Toast 浅色模式样式 */
+[data-sonner-toast] {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  color: #1D1D1F !important;
+}
+
+[data-sonner-toast][data-type="success"] {
+  border-color: rgba(48, 209, 88, 0.3) !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  border-color: rgba(245, 64, 54, 0.3) !important;
+}
+
+/* Toast 浅色模式关闭按钮 */
+[data-sonner-toast] [data-close-button] {
+  color: #9e9c9c !important;
+  background: #FFFFFF !important;
+  border-color: #9e9c9c !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  color: #1D1D1F !important;
+  border-color: #1D1D1F !important;
+}
+
 /* Toast 深色模式样式 */
 .dark [data-sonner-toast] {
   background: rgba(30, 30, 30, 0.9) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: #FFFFFF !important;
+}
+
+/* Toast 深色模式关闭按钮 */
+.dark [data-sonner-toast] [data-close-button] {
+  color: rgba(255, 255, 255, 0.6) !important;
+  background: #1D1D1F !important;
+}
+
+.dark [data-sonner-toast] [data-close-button]:hover {
+  color: #FFFFFF !important;
+  border-color: #FFFFFF !important;
 }
 
 .dark [data-sonner-toast][data-type="success"] {

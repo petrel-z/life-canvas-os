@@ -102,19 +102,34 @@ export function TimelinePage() {
               { value: "all" as const, label: "全部", color: "blue" },
               { value: "journal" as const, label: "日记", color: "purple" },
               { value: "fuel" as const, label: "饮食", color: "orange" },
-            ].map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setFilter(f.value)}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                  filter === f.value
-                    ? `bg-white dark:bg-${f.color}-500 text-${f.color}-600 dark:text-white shadow-sm`
-                    : "text-apple-textSec dark:text-white/40 hover:text-apple-textMain dark:hover:text-white"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+            ].map((f) => {
+              // 选中状态的样式
+              const selectedBg = f.color === "blue"
+                ? "bg-white dark:bg-blue-600"
+                : f.color === "purple"
+                ? "bg-white dark:bg-purple-600"
+                : "bg-white dark:bg-orange-600";
+
+              const selectedText = f.color === "blue"
+                ? "text-blue-600 dark:text-white"
+                : f.color === "purple"
+                ? "text-purple-600 dark:text-white"
+                : "text-orange-600 dark:text-white";
+
+              return (
+                <button
+                  key={f.value}
+                  onClick={() => setFilter(f.value)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                    filter === f.value
+                      ? `${selectedBg} ${selectedText} shadow-sm`
+                      : "text-apple-textSec dark:text-white/40 hover:text-apple-textMain dark:hover:text-white"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </header>

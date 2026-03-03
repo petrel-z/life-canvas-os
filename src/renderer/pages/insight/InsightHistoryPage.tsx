@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Calendar, ChevronRight } from 'lucide-react';
 import { Button } from '~/renderer/components/ui/button';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { aiApi, InsightResponse } from '~/renderer/api/ai';
 import { toast } from 'sonner';
-import { DIMENSIONS } from '~/renderer/lib/constants';
+import { getSystemName } from '~/renderer/lib/insightUtils';
 
 export function InsightHistoryPage() {
   const navigate = useNavigate();
@@ -16,9 +16,18 @@ export function InsightHistoryPage() {
   const [total, setTotal] = useState(0);
   const pageSize = 10;
 
+  // 使用 useRef 防止 StrictMode 双重调用
+  const isLoadingRef = useRef(false);
+
   // 加载洞察列表
   const loadInsights = async (page: number) => {
+    // 防止重复调用
+    if (isLoadingRef.current) {
+      return;
+    }
+
     try {
+      isLoadingRef.current = true;
       setIsLoading(true);
       const response = await aiApi.getInsights({
         page,
@@ -46,6 +55,7 @@ export function InsightHistoryPage() {
       });
     } finally {
       setIsLoading(false);
+      isLoadingRef.current = false;
     }
   };
 
@@ -59,12 +69,6 @@ export function InsightHistoryPage() {
   useEffect(() => {
     loadInsights(currentPage);
   }, [currentPage]);
-
-  // 获取系统名称
-  const getSystemName = (type: string) => {
-    const dimension = DIMENSIONS.find((d) => d.type === type);
-    return dimension?.label || type;
-  };
 
   if (isLoading && insights.length === 0) {
     return (
@@ -109,7 +113,7 @@ export function InsightHistoryPage() {
               <GlassCard
                 key={insight.id}
                 className="p-6 cursor-pointer hover:shadow-lg transition-all"
-                onClick={() => navigate(`/insights/${insight.id}`)}
+                onClick={() => navigate('/insights/history/detail', { state: { insight } })}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 space-y-3">

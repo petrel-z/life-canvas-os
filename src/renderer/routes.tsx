@@ -12,6 +12,7 @@ import { PinChangePage } from '~/renderer/pages/settings/PinChangePage';
 import { PinDeletePage } from '~/renderer/pages/settings/PinDeletePage';
 import { InsightDetailPage } from '~/renderer/pages/insight/InsightDetailPage';
 import { InsightHistoryPage } from '~/renderer/pages/insight/InsightHistoryPage';
+import { InsightHistoryDetailPage } from '~/renderer/pages/insight/InsightHistoryDetailPage';
 
 // 页面组件（暂时使用占位符）
 function PlaceholderPage({ name }: { name: string }) {
@@ -57,6 +58,7 @@ export function AppRoutes() {
           <Route path="/settings/pin/delete" element={<PinDeletePage />} />
           <Route path="/insights/detail" element={<InsightDetailPage />} />
           <Route path="/insights/history" element={<InsightHistoryPage />} />
+          <Route path="/insights/history/detail" element={<InsightHistoryDetailPage />} />
           <Route path="/system/:type" element={<PlaceholderPage name="子系统详情" />} />
         </Route>
       </Routes>

@@ -43,6 +43,7 @@ import { pinApi } from "~/renderer/api";
 import { useUserApi, type UserProfile } from "~/renderer/hooks/useUserApi";
 import { useAiApi, type AIConfigData } from "~/renderer/hooks/useAiApi";
 import { useDataApi, type ExportFormat } from "~/renderer/hooks/useDataApi";
+import { usePinStatus } from "~/renderer/hooks/usePinStatus";
 import { toast } from "sonner";
 
 export function SettingsPage() {
@@ -50,17 +51,24 @@ export function SettingsPage() {
   const { getUserProfile, updateUserProfile } = useUserApi();
   const { getAIConfig, saveAIConfig } = useAiApi();
   const { exportData, importData } = useDataApi();
+  const {
+    pinStatus,
+    isLoading: isPinStatusLoading,
+    fetchPinStatus,
+    updatePinStatusAfterOperation,
+  } = usePinStatus();
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "success" | "error"
   >("idle");
-  const [pinStatus, setPinStatus] = useState<{ has_pin_set: boolean } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingAI, setIsSavingAI] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [aiConfigLoaded, setAiConfigLoaded] = useState(false);
-  const isLoadingRef = useRef(false);
+  const [activeTab, setActiveTab] = useState('profile');
+  const [isEditingAI, setIsEditingAI] = useState(false); // 是否处于编辑模式
+  const [existingAIConfig, setExistingAIConfig] = useState<any>(null); // 已存在的 AI 配置
   const isLoadingProfileRef = useRef(false);
   const getUserProfileRef = useRef(getUserProfile);
 
@@ -118,62 +126,58 @@ export function SettingsPage() {
     loadUserProfile();
   }, []);
 
-  // 加载 AI 配置
-  useEffect(() => {
-    const loadAIConfig = async () => {
-      if (aiConfigLoaded) return;
-
-      try {
-        const config = await getAIConfig();
-        if (config) {
-          setAiFormData({
-            provider: config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
-            apiKey: '', // 不显示完整的 API Key
-            modelName: config.model_name || 'deepseek-chat',
-            frequencyLimit: state.aiConfig.frequencyLimit || 10,
-          });
-          // 更新全局状态
-          updateState({
-            aiConfig: {
-              ...state.aiConfig,
-              provider: config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
-              modelName: config.model_name || 'deepseek-chat',
-              apiKey: state.aiConfig.apiKey, // 保留原有的 API Key
-            },
-          });
-        }
-        setAiConfigLoaded(true);
-      } catch (error) {
-        console.log('AI config not set yet');
-        setAiConfigLoaded(true);
-      }
-    };
-
-    loadAIConfig();
-  }, [aiConfigLoaded]);
-
   const lifeProgress = calculateLifeProgress(formData.birthday, formData.lifespan);
 
-  // 检查 PIN 状态
+  // 按 Tab 加载对应的接口
   useEffect(() => {
-    const checkPinStatus = async () => {
-      if (isLoadingRef.current) return;
-      isLoadingRef.current = true;
+    const loadTabData = async () => {
+      // AI 配置 - 只在首次切换到该 tab 时加载
+      if (activeTab === 'ai' && !aiConfigLoaded) {
+        try {
+          const config = await getAIConfig();
+          if (config) {
+            // 保存完整的配置信息
+            setExistingAIConfig(config);
 
-      try {
-        const response = await pinApi.status();
-        const result = await response.json();
-        if (response.ok) {
-          setPinStatus(result.data);
+            setAiFormData({
+              provider: config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
+              apiKey: '', // 不显示完整的 API Key
+              modelName: config.model_name || 'deepseek-chat',
+              frequencyLimit: state.aiConfig.frequencyLimit || 10,
+            });
+            // 更新全局状态
+            updateState({
+              aiConfig: {
+                ...state.aiConfig,
+                provider: config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
+                modelName: config.model_name || 'deepseek-chat',
+                apiKey: state.aiConfig.apiKey, // 保留原有的 API Key
+              },
+            });
+          } else {
+            // 没有配置
+            setExistingAIConfig(null);
+          }
+          setAiConfigLoaded(true);
+        } catch (error) {
+          console.log('AI config not set yet');
+          setExistingAIConfig(null);
+          setAiConfigLoaded(true);
         }
-      } catch (error) {
-        console.error('Failed to check PIN status:', error);
-      } finally {
-        isLoadingRef.current = false;
+      }
+
+      // 数据管理 - 只在首次切换到该 tab 时加载 PIN 状态（使用缓存）
+      if (activeTab === 'security') {
+        try {
+          await fetchPinStatus();
+        } catch (error) {
+          console.error('Failed to load PIN status:', error);
+        }
       }
     };
-    checkPinStatus();
-  }, []);
+
+    loadTabData();
+  }, [activeTab, aiConfigLoaded]);
 
   const handleTestAI = async () => {
     if (!aiFormData.apiKey && !state.aiConfig.apiKey) {
@@ -213,7 +217,11 @@ export function SettingsPage() {
 
       const result = await saveAIConfig(configData);
 
-      // 保存成功后，更新全局状态
+      // 保存成功后，重新加载配置
+      const updatedConfig = await getAIConfig();
+      setExistingAIConfig(updatedConfig);
+
+      // 更新全局状态
       updateState({
         aiConfig: {
           ...state.aiConfig,
@@ -229,11 +237,28 @@ export function SettingsPage() {
         ...aiFormData,
         apiKey: '',
       });
+
+      // 退出编辑模式
+      setIsEditingAI(false);
     } catch (error) {
       console.error('Failed to save AI config:', error);
     } finally {
       setIsSavingAI(false);
     }
+  };
+
+  // 进入编辑模式
+  const handleEditAI = () => {
+    setIsEditingAI(true);
+  };
+
+  // 取消编辑
+  const handleCancelEditAI = () => {
+    setIsEditingAI(false);
+    setAiFormData({
+      ...aiFormData,
+      apiKey: '',
+    });
   };
 
   const handleSaveProfile = async () => {
@@ -339,7 +364,7 @@ export function SettingsPage() {
         </p>
       </header>
 
-      <Tabs defaultValue="profile" className="space-y-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
         <TabsList className="bg-apple-bg2 dark:bg-white/5 border border-apple-border dark:border-white/10">
           <TabsTrigger value="profile">个人档案</TabsTrigger>
           <TabsTrigger value="ai">AI 配置</TabsTrigger>
@@ -481,111 +506,186 @@ export function SettingsPage() {
 
         <TabsContent value="ai" className="space-y-5">
           <GlassCard className="space-y-10 !p-8">
-            <div className="space-y-5">
-              <Label className="text-base font-semibold">模型供应商</Label>
-              <div className="grid grid-cols-2 gap-4">
-                {(["DeepSeek", "Doubao"] as const).map((p) => (
+            {/* 未配置或编辑模式 */}
+            {!existingAIConfig || isEditingAI ? (
+              <>
+                <div className="space-y-3 mb-8">
+                  <Label className="text-base font-semibold">模型供应商</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {(["DeepSeek", "Doubao"] as const).map((p) => (
+                      <Button
+                        key={p}
+                        variant={
+                          aiFormData.provider === p ? "default" : "outline"
+                        }
+                        onClick={() =>
+                          setAiFormData({ ...aiFormData, provider: p })
+                        }
+                        disabled={!isEditingAI && existingAIConfig !== null}
+                        className={
+                          aiFormData.provider === p
+                            ? "bg-apple-accent hover:bg-apple-accent/90 h-12 text-base"
+                            : "h-12 text-base"
+                        }
+                      >
+                        {p}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3 mb-8">
+                  <Label htmlFor="api-key" className="text-base font-semibold">
+                    API 密钥 (加密存储)
+                  </Label>
+                  <div className="relative flex gap-3">
+                    <Input
+                      id="api-key"
+                      type="password"
+                      value={aiFormData.apiKey}
+                      placeholder={
+                        existingAIConfig && !isEditingAI
+                          ? "********"
+                          : "请输入您的 API Key"
+                      }
+                      onChange={(e) =>
+                        setAiFormData({ ...aiFormData, apiKey: e.target.value })
+                      }
+                      disabled={!isEditingAI && existingAIConfig !== null}
+                      className="flex-1 h-11"
+                    />
+                    {(isEditingAI || !existingAIConfig) && (
+                      <Button
+                        onClick={handleTestAI}
+                        disabled={testStatus === "testing" || !aiFormData.apiKey}
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0 h-11 w-11"
+                      >
+                        {testStatus === "idle" && <RefreshCw size={18} />}
+                        {testStatus === "testing" && (
+                          <RefreshCw size={18} className="animate-spin" />
+                        )}
+                        {testStatus === "success" && (
+                          <CheckCircle2 size={18} className="text-green-500" />
+                        )}
+                        {testStatus === "error" && (
+                          <X size={18} className="text-destructive" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-3 mb-8">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-base font-semibold">日生成上限</Label>
+                    <Badge
+                      variant="secondary"
+                      className="text-apple-accent bg-apple-accent/10 text-sm px-3 py-1"
+                    >
+                      {aiFormData.frequencyLimit} 次/日
+                    </Badge>
+                  </div>
+                  <Slider
+                    value={[aiFormData.frequencyLimit]}
+                    onValueChange={([value]) =>
+                      setAiFormData({ ...aiFormData, frequencyLimit: value })
+                    }
+                    disabled={!isEditingAI && existingAIConfig !== null}
+                    min={1}
+                    max={50}
+                    step={1}
+                    className="pt-2"
+                  />
+                  <div className="flex justify-between text-xs text-apple-textTer dark:text-white/30">
+                    <span>极简</span>
+                    <span>深度</span>
+                  </div>
+                </div>
+
+                <div className="pt-6 flex justify-end gap-3">
+                  {isEditingAI && (
+                    <Button
+                      onClick={handleCancelEditAI}
+                      variant="outline"
+                      disabled={isSavingAI}
+                    >
+                      取消
+                    </Button>
+                  )}
                   <Button
-                    key={p}
-                    variant={
-                      aiFormData.provider === p ? "default" : "outline"
-                    }
-                    onClick={() =>
-                      setAiFormData({ ...aiFormData, provider: p })
-                    }
-                    className={
-                      aiFormData.provider === p
-                        ? "bg-apple-accent hover:bg-apple-accent/90 h-12 text-base"
-                        : "h-12 text-base"
-                    }
+                    onClick={handleSaveAIConfig}
+                    disabled={isSavingAI || (!isEditingAI && existingAIConfig !== null)}
+                    className="bg-apple-accent hover:bg-apple-accent/90"
                   >
-                    {p}
+                    {isSavingAI ? (
+                      <>
+                        <Loader2 size={18} className="mr-2 animate-spin" />
+                        保存中...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={18} className="mr-2" />
+                        {existingAIConfig && !isEditingAI ? '已配置' : '保存 AI 配置'}
+                      </>
+                    )}
                   </Button>
-                ))}
-              </div>
-            </div>
+                </div>
+              </>
+            ) : (
+              /* 已配置，展示模式 */
+              <>
+                <div className="space-y-8">
+                  <div className="flex items-center gap-3 p-4 bg-apple-accent/5 rounded-xl border border-apple-accent/20">
+                    <div className="p-3 rounded-full bg-apple-accent/10">
+                      <KeyRound className="w-6 h-6 text-apple-accent" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm text-apple-textSec dark:text-white/60 mb-1">
+                        {existingAIConfig.provider === 'deepseek' ? 'DeepSeek' : 'Doubao'} · {existingAIConfig.model_name}
+                      </div>
+                      <div className="text-lg font-mono font-semibold text-apple-textMain dark:text-white">
+                        {'sk-******************************************'}
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleEditAI}
+                      variant="outline"
+                      className="gap-2"
+                    >
+                      修改 AI 配置
+                    </Button>
+                  </div>
 
-            <div className="space-y-5">
-              <Label htmlFor="api-key" className="text-base font-semibold">
-                API 密钥 (加密存储)
-              </Label>
-              <div className="relative flex gap-3">
-                <Input
-                  id="api-key"
-                  type="password"
-                  value={aiFormData.apiKey}
-                  placeholder="请输入您的 API Key"
-                  onChange={(e) =>
-                    setAiFormData({ ...aiFormData, apiKey: e.target.value })
-                  }
-                  className="flex-1 h-11"
-                />
-                <Button
-                  onClick={handleTestAI}
-                  disabled={testStatus === "testing"}
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0 h-11 w-11"
-                >
-                  {testStatus === "idle" && <RefreshCw size={18} />}
-                  {testStatus === "testing" && (
-                    <RefreshCw size={18} className="animate-spin" />
-                  )}
-                  {testStatus === "success" && (
-                    <CheckCircle2 size={18} className="text-green-500" />
-                  )}
-                  {testStatus === "error" && (
-                    <X size={18} className="text-destructive" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-5">
-              <div className="flex justify-between items-center">
-                <Label className="text-base font-semibold">日生成上限</Label>
-                <Badge
-                  variant="secondary"
-                  className="text-apple-accent bg-apple-accent/10 text-sm px-3 py-1"
-                >
-                  {aiFormData.frequencyLimit} 次/日
-                </Badge>
-              </div>
-              <Slider
-                value={[aiFormData.frequencyLimit]}
-                onValueChange={([value]) =>
-                  setAiFormData({ ...aiFormData, frequencyLimit: value })
-                }
-                min={1}
-                max={50}
-                step={1}
-                className="pt-2"
-              />
-              <div className="flex justify-between text-xs text-apple-textTer dark:text-white/30">
-                <span>极简</span>
-                <span>深度</span>
-              </div>
-            </div>
-
-            <div className="pt-6 flex justify-end">
-              <Button
-                onClick={handleSaveAIConfig}
-                disabled={isSavingAI}
-                className="bg-apple-accent hover:bg-apple-accent/90"
-              >
-                {isSavingAI ? (
-                  <>
-                    <Loader2 size={18} className="mr-2 animate-spin" />
-                    保存中...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 size={18} className="mr-2" />
-                    保存 AI 配置
-                  </>
-                )}
-              </Button>
-            </div>
+                  <div className="space-y-5">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-base font-semibold">日生成上限</Label>
+                      <Badge
+                        variant="secondary"
+                        className="text-apple-accent bg-apple-accent/10 text-sm px-3 py-1"
+                      >
+                        {aiFormData.frequencyLimit} 次/日
+                      </Badge>
+                    </div>
+                    <Slider
+                      value={[aiFormData.frequencyLimit]}
+                      onValueChange={([value]) =>
+                        setAiFormData({ ...aiFormData, frequencyLimit: value })
+                      }
+                      min={1}
+                      max={50}
+                      step={1}
+                      className="pt-2"
+                    />
+                    <div className="flex justify-between text-xs text-apple-textTer dark:text-white/30">
+                      <span>极简</span>
+                      <span>深度</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </GlassCard>
         </TabsContent>
 
@@ -616,7 +716,7 @@ export function SettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 mt-4">
               <div className="flex items-center justify-between p-4 bg-apple-bg2 dark:bg-white/5 rounded-xl border border-apple-border dark:border-white/5">
                 <div className="space-y-0.5">
                   <div className="text-sm font-semibold text-apple-textMain dark:text-white">
@@ -639,7 +739,7 @@ export function SettingsPage() {
                 />
               </div>
 
-              <div className="space-y-4">
+              {/* <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-semibold">
                     自动保存间隔
@@ -663,7 +763,7 @@ export function SettingsPage() {
                   step={30}
                   className="pt-2"
                 />
-              </div>
+              </div> */}
             </div>
           </GlassCard>
         </TabsContent>
