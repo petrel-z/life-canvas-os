@@ -37,8 +37,13 @@ export async function apiRequest(
       })
     }
 
-    return new Response(JSON.stringify({ error: result.error }), {
-      status: 500,
+    // 处理错误响应
+    // 检查 result.data 是否包含错误数据（有 code 字段）
+    const errorData = result.data?.data || result.data || result.error
+    const statusCode = errorData?.code || (result.data?.status === 'error' ? errorData?.code : 500)
+
+    return new Response(JSON.stringify(errorData), {
+      status: statusCode,
       headers: { 'Content-Type': 'application/json' },
     })
   }

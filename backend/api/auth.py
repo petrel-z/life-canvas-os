@@ -161,10 +161,11 @@ def handle_auth_action(action: str, params: dict) -> dict:
                     'data': result['data']
                 }
             except HTTPException as e:
+                # e.detail 包含完整的响应数据（包括 code 字段）
                 return {
                     'action': 'verify_pin',
                     'status': 'error',
-                    'error': e.detail
+                    'data': e.detail  # 保留完整的响应数据
                 }
 
         elif action == 'set_pin':
@@ -181,7 +182,7 @@ def handle_auth_action(action: str, params: dict) -> dict:
                 return {
                     'action': 'set_pin',
                     'status': 'error',
-                    'error': e.detail
+                    'data': e.detail
                 }
 
         else:
