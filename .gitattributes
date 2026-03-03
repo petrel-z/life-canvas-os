@@ -1,0 +1,21 @@
+# Force Unix LF line endings for all text files
+* text eol=lf
+
+# Special cases
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.dll binary
+*.exe binary
+*.dylib binary
+*.so binary
+*.dmg binary
+*.zip binary
+*.tar.gz binary

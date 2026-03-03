@@ -51,6 +51,8 @@ export default {
     // ✅ 禁用硬运行时，因为无法签名
     hardenedRuntime: false,
     gatekeeperAssess: false,
+    // ✅ 明确禁用代码签名（避免 "app 已损坏" 提示）
+    identity: null,
   },
 
   // Linux 构建配置
