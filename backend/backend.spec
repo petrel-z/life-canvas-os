@@ -7,13 +7,7 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 # 收集数据文件 - 打包到 backend/ 子目录下
 datas = [
-    ('__init__.py', 'backend/__init__.py'),
-    ('api', 'backend/api'),
-    ('core', 'backend/core'),
-    ('models', 'backend/models'),
-    ('schemas', 'backend/schemas'),
-    ('services', 'backend/services'),
-    ('db', 'backend/db'),
+    ('.', 'backend'),
 ]
 
 # 隐藏导入 - 使用 collect_submodules 自动收集
