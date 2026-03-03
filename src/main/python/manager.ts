@@ -184,7 +184,15 @@ export class PythonManager {
 
       const process = this.process
       if (process?.stdin && process.stdin.writable) {
-        process.stdin.write(message)
+        process.stdin.write(message, (err) => {
+          // 处理 EPIPE 错误（管道已关闭）
+          if (err && (err as any).code === 'EPIPE') {
+            console.warn('[Python Manager] EPIPE: Python process may have exited')
+            clearTimeout(timer)
+            this.responseCallbacks.delete(id)
+            reject(new Error('Python process is not running'))
+          }
+        })
       } else {
         clearTimeout(timer)
         this.responseCallbacks.delete(id)
