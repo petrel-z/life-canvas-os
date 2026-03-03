@@ -1,28 +1,21 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Shield, Trash2, AlertTriangle } from 'lucide-react'
-import { GlassCard } from '~/renderer/components/GlassCard'
-import { Button } from '~/renderer/components/ui/button'
-import { toast } from '~/renderer/lib/toast'
-import { PIN_CONFIG, PIN_MESSAGES, type PinApiError } from '~/renderer/lib/pin'
-import { usePinApi, handlePinApiError } from '~/renderer/hooks'
-import { usePinStatus } from '~/renderer/hooks/usePinStatus'
-import {
-  PIN_CONFIG,
-  PIN_MESSAGES,
-  type PinApiError,
-} from '~/renderer/lib/pin';
-import { usePinApi } from '~/renderer/hooks';
-import { usePinStatus } from '~/renderer/hooks/usePinStatus';
-import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen';
-import { LoadingSpinner } from '~/renderer/components/pin';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AlertTriangle } from "lucide-react";
+import { GlassCard } from "~/renderer/components/GlassCard";
+import { Button } from "~/renderer/components/ui/button";
+import { toast } from "~/renderer/lib/toast";
+import { PIN_CONFIG, PIN_MESSAGES } from "~/renderer/lib/pin";
+import { usePinApi } from "~/renderer/hooks";
+import { usePinStatus } from "~/renderer/hooks/usePinStatus";
+import { PinLockScreen } from "~/renderer/components/auth/PinLockScreen";
+import { LoadingSpinner } from "~/renderer/components/pin";
 
 export function PinDeletePage() {
-  const navigate = useNavigate()
-  const { verifyWithErrorHandling, deleteWithErrorHandling } = usePinApi()
-  const { updatePinStatusAfterOperation } = usePinStatus()
+  const navigate = useNavigate();
+  const { verifyWithErrorHandling, deleteWithErrorHandling } = usePinApi();
+  const { updatePinStatusAfterOperation } = usePinStatus();
 
-  const [verifiedPin, setVerifiedPin] = useState('');
+  const [verifiedPin, setVerifiedPin] = useState("");
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -33,29 +26,29 @@ export function PinDeletePage() {
   };
 
   const handleDelete = async () => {
-    setIsDeleting(true)
+    setIsDeleting(true);
 
     try {
       await deleteWithErrorHandling(verifiedPin, toast);
 
       // 更新 PIN 状态缓存
-      await updatePinStatusAfterOperation()
+      await updatePinStatusAfterOperation();
 
       toast.success(PIN_MESSAGES.DELETE_SUCCESS, {
         description: PIN_MESSAGES.DELETE_SUCCESS_DESC,
-      })
+      });
 
       setTimeout(
-        () => navigate('/settings', { replace: true }),
-        PIN_CONFIG.NAVIGATION_DELAY
-      )
+        () => navigate("/settings", { replace: true }),
+        PIN_CONFIG.NAVIGATION_DELAY,
+      );
     } catch (_error: unknown) {
       // 错误已在 hook 中处理
     } finally {
-      setIsDeleting(false)
-      setShowConfirmDialog(false)
+      setIsDeleting(false);
+      setShowConfirmDialog(false);
     }
-  }
+  };
 
   return (
     <>
@@ -67,7 +60,7 @@ export function PinDeletePage() {
           unlockingText="验证中..."
           showCancelButton={true}
           cancelButtonText="取消"
-          onCancel={() => navigate('/settings')}
+          onCancel={() => navigate("/settings")}
           onUnlock={handleVerifyPin}
         />
       ) : (
@@ -126,7 +119,7 @@ export function PinDeletePage() {
                   {isDeleting ? (
                     <LoadingSpinner text="删除中..." />
                   ) : (
-                    '确认删除'
+                    "确认删除"
                   )}
                 </Button>
               </div>
