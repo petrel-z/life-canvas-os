@@ -30,7 +30,7 @@ export class PythonManager {
       // 注意：不传递 --dev 参数，让 Python 后端以 IPC 模式启动
       // 这样可以在开发环境测试生产模式的 IPC 通信
       args = [mainPyPath]
-      
+
       console.log('[Python Manager] Dev paths:', {
         projectRoot,
         pythonPath,
@@ -107,7 +107,9 @@ export class PythonManager {
       const newlineIndex = this.stdoutBuffer.indexOf('\n')
       if (newlineIndex === -1) break
 
-      const lengthStr = this.stdoutBuffer.subarray(0, newlineIndex).toString('utf-8')
+      const lengthStr = this.stdoutBuffer
+        .subarray(0, newlineIndex)
+        .toString('utf-8')
       const length = parseInt(lengthStr, 10)
 
       if (Number.isNaN(length)) {
@@ -133,8 +135,14 @@ export class PythonManager {
         console.error('[Python Manager] Failed to parse response:', e)
         console.error('[Python Manager] Length:', length)
         console.error('[Python Manager] JSON bytes length:', jsonBytes.length)
-        console.error('[Python Manager] JSON string (first 500 chars):', jsonStr.substring(0, 500))
-        console.error('[Python Manager] JSON string (last 100 chars):', jsonStr.substring(Math.max(0, jsonStr.length - 100)))
+        console.error(
+          '[Python Manager] JSON string (first 500 chars):',
+          jsonStr.substring(0, 500)
+        )
+        console.error(
+          '[Python Manager] JSON string (last 100 chars):',
+          jsonStr.substring(Math.max(0, jsonStr.length - 100))
+        )
       }
     }
   }

@@ -57,8 +57,12 @@ export function usePinStatus() {
       setError(null)
 
       const response = await pinApi.verifyRequirements()
-      
-      console.log('[usePinStatus] Response status:', response.status, response.ok)
+
+      console.log(
+        '[usePinStatus] Response status:',
+        response.status,
+        response.ok
+      )
 
       if (!response.ok) {
         const errorData = await response.json()

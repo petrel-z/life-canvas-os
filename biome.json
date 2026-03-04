@@ -38,6 +38,7 @@
       },
       "complexity": {
         "noBannedTypes": "warn",
+        "noImportantStyles": "off",
         "useLiteralKeys": "off"
       },
       "correctness": {
