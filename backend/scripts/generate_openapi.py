@@ -16,7 +16,7 @@ def create_app_for_docs():
     # 导入所有路由
     from backend.core.health import router as health_router
     from backend.api.auth import router as auth_router
-    from backend.api.systems import router as systems_router
+    from backend.api.diet import router as systems_router
     from backend.api.users import router as users_router
     from backend.api.journals import router as journals_router
     from backend.api.insights import router as insights_router
