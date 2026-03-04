@@ -215,22 +215,24 @@ The eight-dimensional system types are defined in [`backend/models/dimension.py`
 
 ### Current Implementation Status
 
-The project is in early development (~7% complete). Implemented features:
+The project is in early development (~10% complete). Implemented features:
 - Electron + React 19 foundation
 - Python backend with FastAPI
 - PIN authentication system
 - User settings management
 - Diary/journal CRUD
 - AI insights (supports DeepSeek, OpenAI, 豆包/Doubao)
-- Diet system (baseline and deviation tracking)
+- Diet system (baseline and deviation tracking with score history)
 - Data export/import/backup
 - Timeline/audit trail functionality
 - API Key auto-verification
+- Eight-dimensional system scores summary
 
 Backend API routes implemented:
 - `/api/auth/*` - Authentication (PIN code)
 - `/api/users/*` - User management and settings
-- `/api/systems/*` - Eight-dimensional system data
+- `/api/systems/*` - Eight-dimensional system scores
+- `/api/diet/*` - Diet system (baseline, deviations, statistics, score history)
 - `/api/journals/*` - Diary/journal entries
 - `/api/insights/*` - AI-generated insights (with daily limits)
 - `/api/data/*` - Data export/import/backup
@@ -245,8 +247,10 @@ See [`README.md`](README.md) for detailed roadmap and feature list.
 - **Entry point**: [`backend/main.py`](backend/main.py) - Dual-mode server (HTTP/IPC)
 - **Response helpers**: [`backend/schemas/common.py`](backend/schemas/common.py) - `success_response()`, `error_response()`
 - **Database config**: [`backend/db/session.py`](backend/db/session.py) - Session management
-- **Database init**: [`backend/db/init_db.py`](backend/db/init_db.py) - Auto-initialization
-- **System types**: [`backend/models/dimension.py`](backend/models/dimension.py) - Eight-dimensional enums
+- **Database init**: [`backend/db/init_db.py`](backend/db/init_db.py) - Auto-initialization (systems default score: 100)
+- **System types**: [`backend/models/dimension.py`](backend/models/dimension.py) - Eight-dimensional enums and models
+- **Diet service**: [`backend/services/diet_service.py`](backend/services/diet_service.py) - Diet system business logic
+- **System service**: [`backend/services/system_service.py`](backend/services/system_service.py) - Eight-dimensional scores summary
 
 ### Frontend
 

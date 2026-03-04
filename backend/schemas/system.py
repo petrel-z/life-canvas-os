@@ -199,3 +199,36 @@ class SystemLogListParams(BaseModel):
     page_size: int = Field(default=20, ge=1, le=100)
     sort_by: str = "created_at"
     sort_order: Literal["asc", "desc"] = "desc"
+
+
+# ============ 评分日志 ============
+
+class SystemScoreLogResponse(BaseModel):
+    """评分变化日志响应"""
+    id: int
+    system_id: int
+    old_score: int
+    new_score: int
+    change_reason: Optional[str] = None
+    related_id: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ScoreHistoryResponse(BaseModel):
+    """评分变化历史响应"""
+    system_type: str
+    current_score: int
+    history: List[SystemScoreLogResponse]
+
+
+# ============ 偏移值响应扩展 ============
+
+class ScoreInfo(BaseModel):
+    """评分信息"""
+    current_score: int = Field(..., description="当前评分")
+    consistency: int = Field(..., description="一致性分数")
+    total_deviations: int = Field(..., description="总偏离次数")
+    monthly_deviations: int = Field(..., description="本月偏离次数")

@@ -39,6 +39,7 @@ if IS_DEV:
     from backend.core.health import router as health_router
     from backend.api.test import router as test_router
     from backend.api.auth import router as auth_router
+    from backend.api.diet import router as diet_router
     from backend.api.systems import router as systems_router
     from backend.api.users import router as users_router
     from backend.api.journals import router as journals_router
@@ -90,6 +91,7 @@ if IS_DEV:
     app.include_router(health_router, tags=["health"])
     app.include_router(test_router, tags=["test"])
     app.include_router(auth_router, tags=["authentication"])
+    app.include_router(diet_router, tags=["diet"])
     app.include_router(systems_router, tags=["systems"])
     app.include_router(users_router, tags=["users"])
     app.include_router(journals_router, tags=["journals"])
@@ -181,6 +183,7 @@ else:
                     from backend.core.health import router as health_router
                     from backend.api.test import router as test_router
                     from backend.api.auth import router as auth_router
+                    from backend.api.diet import router as diet_router
                     from backend.api.systems import router as systems_router
                     from backend.api.users import router as users_router
                     from backend.api.journals import router as journals_router

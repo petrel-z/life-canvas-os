@@ -11,6 +11,7 @@ from backend.models.dimension import (
     SystemLog,
     SystemAction,
     MealDeviation,
+    SystemScoreLog,
     SYSTEM_TYPES,
     DEFAULT_SYSTEM_DETAILS
 )
@@ -121,7 +122,7 @@ def _create_default_systems(db: Session) -> None:
             system = System(
                 user_id=user.id,
                 type=system_type,
-                score=50,
+                score=100,
                 details=DEFAULT_SYSTEM_DETAILS.get(system_type, {})
             )
             db.add(system)

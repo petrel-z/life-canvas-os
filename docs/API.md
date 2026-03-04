@@ -1,12 +1,18 @@
 # Life Canvas OS API 接口文档
 
-> 版本：v1.5.0
-> 最后更新：2026-03-03
+> 版本：v1.6.0
+> 最后更新：2026-03-04
 > 基础 URL：`http://127.0.0.1:8000`（开发环境）
 > 数据格式：JSON
 > 遵循规范：[API_STANDARDS.md](./API_STANDARDS.md)
 
 ## 📝 更新日志
+
+### v1.6.0 (2026-03-04)
+- ✨ **饮食系统**：偏离事件列表接口新增 `score_info` 字段，返回当前评分和统计数据
+- ✨ **饮食系统**：新增 `GET /api/diet/score-history` 评分变化历史接口
+- ✨ **系统评分**：新增 `GET /api/diet/systems/scores` 获取八大系统评分摘要
+- 📝 **数据库**：新增 `system_score_logs` 表记录评分变化历史
 
 ### v1.5.0 (2026-03-03)
 - ✨ **数据导入**：新增 JSON 数据直接导入功能，无需 ZIP 文件
@@ -826,15 +832,90 @@
     "page_size": 20,
     "total_pages": 1,
     "has_next": false,
-    "has_prev": false
+    "has_prev": false,
+    "score_info": {
+      "current_score": 92,
+      "consistency": 92,
+      "total_deviations": 4,
+      "monthly_deviations": 1
+    }
   },
   "timestamp": 1707219200000
 }
 ```
 
+**score_info 字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| current_score | Integer | 当前系统评分（0-100） |
+| consistency | Integer | 一致性分数（基础100分，每次偏离扣2分） |
+| total_deviations | Integer | 总偏离次数 |
+| monthly_deviations | Integer | 本月偏离次数 |
+
 ---
 
-### 13. 获取饮食偏离事件详情
+### 13. 获取评分变化历史
+
+**接口地址**：`GET /api/diet/score-history`
+
+**描述**：获取饮食系统评分变化历史记录，每次偏离事件导致的评分变化都会被记录
+
+**查询参数**：
+```typescript
+?days=30
+```
+
+**参数说明**：
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| days | Integer | 否 | 30 | 查询天数范围（1-365） |
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "获取评分历史成功",
+  "data": {
+    "system_type": "FUEL",
+    "current_score": 92,
+    "history": [
+      {
+        "id": 1,
+        "system_id": 1,
+        "old_score": 94,
+        "new_score": 92,
+        "change_reason": "偏离事件",
+        "related_id": 4,
+        "created_at": "2026-03-04T09:12:42"
+      }
+    ]
+  },
+  "timestamp": 1772586768638
+}
+```
+
+**history 字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | Integer | 日志记录 ID |
+| system_id | Integer | 系统ID |
+| old_score | Integer | 变化前评分 |
+| new_score | Integer | 变化后评分 |
+| change_reason | String | 变化原因（如：偏离事件、手动更新） |
+| related_id | Integer | 关联ID（如偏离事件ID） |
+| created_at | String | 记录创建时间 |
+
+**使用场景**：
+- 绘制评分变化趋势图
+- 分析评分下降原因
+- 追踪偏离事件对评分的影响
+
+---
+
+### 14. 获取饮食偏离事件详情
 
 **接口地址**：`GET /api/diet/deviations/{deviation_id}`
 
@@ -845,7 +926,7 @@
 
 ---
 
-### 14. 更新饮食偏离事件
+### 15. 更新饮食偏离事件
 
 **接口地址**：`PATCH /api/diet/deviations/{deviation_id}`
 
@@ -860,7 +941,7 @@
 
 ---
 
-### 15. 删除饮食偏离事件
+### 16. 删除饮食偏离事件
 
 **接口地址**：`DELETE /api/diet/deviations/{deviation_id}`
 
@@ -878,7 +959,7 @@
 
 ---
 
-### 16. 获取饮食统计信息
+### 17. 获取饮食统计信息
 
 **接口地址**：`GET /api/diet/statistics`
 
@@ -895,6 +976,51 @@
   "timestamp": 1707219200000
 }
 ```
+---
+
+### 18. 获取八大系统评分摘要
+
+**接口地址**：`GET /api/systems/scores`
+
+**描述**：获取八大生命系统的当前评分和总体平均分
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "获取系统评分成功",
+  "data": {
+    "systems": [
+      { "type": "FUEL", "score": 92 },
+      { "type": "PHYSICAL", "score": 50 },
+      { "type": "INTELLECTUAL", "score": 50 },
+      { "type": "OUTPUT", "score": 50 },
+      { "type": "DREAM", "score": 50 },
+      { "type": "ASSET", "score": 50 },
+      { "type": "CONNECTION", "score": 50 },
+      { "type": "ENVIRONMENT", "score": 50 }
+    ],
+    "average_score": 55.2,
+    "total_systems": 8
+  },
+  "timestamp": 1772592430247
+}
+```
+
+**响应字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| systems | Array | 八大系统评分列表 |
+| systems[].type | String | 系统类型（FUEL/PHYSICAL/INTELLECTUAL/OUTPUT/DREAM/ASSET/CONNECTION/ENVIRONMENT） |
+| systems[].score | Integer | 系统评分（0-100） |
+| average_score | Float | 八大系统的平均分（保留1位小数） |
+| total_systems | Integer | 系统总数（固定为8） |
+
+**使用场景**：
+- 首页雷达图展示
+- 仪表盘评分概览
+- 快速了解各系统状态
 
 ---
 

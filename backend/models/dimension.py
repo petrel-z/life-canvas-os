@@ -62,6 +62,20 @@ class MealDeviation(Base):
     created_at = Column(DateTime, server_default=localnow_func())
 
 
+class SystemScoreLog(Base):
+    """系统评分变化日志表"""
+    __tablename__ = "system_score_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    system_id = Column(Integer, ForeignKey("systems.id"), nullable=False)
+    old_score = Column(Integer, nullable=False)  # 变化前评分
+    new_score = Column(Integer, nullable=False)  # 变化后评分
+    change_reason = Column(String(100), nullable=True)  # 变化原因（如：偏离事件、手动更新）
+    related_id = Column(Integer, nullable=True)  # 关联ID（如偏离事件ID）
+
+    created_at = Column(DateTime, server_default=localnow_func())
+
+
 # 系统类型枚举
 SYSTEM_TYPES = [
     "FUEL",         # 饮食系统

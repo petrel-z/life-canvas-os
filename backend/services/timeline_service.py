@@ -16,7 +16,7 @@ from backend.schemas.timeline import (
     TimelineEventType,
 )
 from backend.schemas.common import error_response
-from backend.services.system_service import SystemService
+from backend.services.diet_service import DietService
 
 
 class TimelineService:
@@ -69,7 +69,7 @@ class TimelineService:
 
         # 获取饮食偏离事件（使用 occurred_at 作为事件时间）
         if type in ["all", "diet"]:
-            system = SystemService.get_or_create_fuel_system(db, user.id)
+            system = DietService.get_or_create_fuel_system(db, user.id)
             deviations = db.query(MealDeviation).filter(
                 MealDeviation.system_id == system.id
             ).all()
