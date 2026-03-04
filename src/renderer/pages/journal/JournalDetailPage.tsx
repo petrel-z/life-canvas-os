@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import { ArrowLeft, Trash2, Edit, Calendar, LockKeyhole } from 'lucide-react'
 import { useApp } from '~/renderer/contexts/AppContext'
 import { GlassCard } from '~/renderer/components/GlassCard'
@@ -16,21 +16,20 @@ import type { JournalEntry } from '~/shared/types'
 
 export function JournalDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const location = useLocation()
+  const navigate = useNavigate()
   const { getJournal, deleteJournal } = useJournalApi()
-  const { fetchPinStatus, pinStatus } = usePinStatus()
+  const { fetchPinStatus, pinStatus, setPinStatusManually } = usePinStatus()
   const { verifyPin } = usePinApi()
   const [isPinVerified, setIsPinVerified] = useState(false)
-  const [showPinDialog, setShowPinDialog] = useState(false)
+  const [isCheckingPinStatus, setIsCheckingPinStatus] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [isCheckingPin, setIsCheckingPin] = useState(false)
   const [entry, setEntry] = useState<JournalEntry | null>(null)
   const [unlockError, setUnlockError] = useState<string | undefined>(undefined)
 
-  // 从路由状态获取是否私密（如果有的话）
-  const isPrivateFromList = location.state?.isPrivate || false
+  // 从路由状态获取 isPrivate（从日记列表页传递过来）
+  const isPrivateFromState = (location.state as { isPrivate?: boolean })?.isPrivate
 
   // 使用 ref 避免重复调用
   const isLoadingRef = useRef(false)
@@ -41,84 +40,74 @@ export function JournalDetailPage() {
     getJournalRef.current = getJournal
   }, [getJournal])
 
-  // 当离开详情页时，清除 PIN 验证状态，确保下次查看需要重新验证
+  // 每次切换日记时重置 PIN 验证状态
   useEffect(() => {
-    return () => {
-      sessionStorage.removeItem('pin-verified')
-    }
-  }, [])
+    setIsPinVerified(false)
+  }, [id])
 
-  // 检查会话中是否已验证 PIN
-  useEffect(() => {
-    const verified = sessionStorage.getItem('pin-verified') === 'true'
-    setIsPinVerified(verified)
-    // 如果是私密日记且未验证 PIN，则不需要显示加载状态
-    if (isPrivateFromList && !verified) {
-      setIsLoading(false)
-    }
-  }, [])
-
-  // 加载日记详情
-  const loadJournal = async () => {
-    if (!id || isLoadingRef.current) return
-    isLoadingRef.current = true
-
-    try {
-      setIsLoading(true)
-      const journalData = await getJournalRef.current(id)
-      setEntry(journalData)
-    } catch (error) {
-      console.error('Failed to load journal:', error)
-      setEntry(null)
-    } finally {
-      setIsLoading(false)
-      isLoadingRef.current = false
-    }
-  }
-
-  // 根据私密状态决定是否加载
-  useEffect(() => {
-    // 如果非私密，或已经验证 PIN，则立即加载
-    if (!isPrivateFromList || isPinVerified) {
-      loadJournal()
-    }
-  }, [id, isPinVerified]) // 依赖 isPinVerified 以便验证后加载
-
-  // 检查 PIN 状态（优先从缓存获取）
+  // 检查 PIN 状态和是否需要验证（只在进入页面时检查一次）
   useEffect(() => {
     const checkPinStatus = async () => {
-      // 只在私密日记且未验证 PIN 时检查
-      if (isPrivateFromList && !isPinVerified && !isLoading) {
-        setIsCheckingPin(true)
-        try {
-          // fetchPinStatus 会优先从缓存读取，如果缓存没有或过期才调用接口
-          const status = await fetchPinStatus()
-          setIsCheckingPin(false)
-
-          // 如果没有设置 PIN，则不允许查看私密日记
-          if (!status?.has_pin_set) {
-            navigate('/journal')
-          }
-        } catch (error) {
-          console.error('Failed to check PIN status:', error)
-          setIsCheckingPin(false)
-          // 出错时也返回列表页
-          navigate('/journal')
+      if (isCheckingPinStatus) return
+      setIsCheckingPinStatus(true)
+      try {
+        const status = await fetchPinStatus()
+        if (status) {
+          setPinStatusManually(status)
         }
+
+        // 判断是否需要 PIN 验证
+        // 1. 如果没有设置 PIN，不需要验证
+        // 2. 如果 private_journal = false，不需要验证
+        // 3. 如果日记不是私密的，不需要验证
+        // 4. 其他情况需要验证
+        const needsPinVerification =
+          status?.has_pin &&
+          status?.requirements?.private_journal &&
+          isPrivateFromState === true
+
+        if (!needsPinVerification) {
+          // 不需要验证，直接加载日记
+          
+          setIsPinVerified(true)
+        }
+        // 如果需要验证，isPinVerified 保持 false，等待用户验证
+      } catch (error) {
+        console.error('Failed to check PIN status:', error)
+        navigate('/journal')
+      } finally {
+        setIsCheckingPinStatus(false)
       }
     }
 
     checkPinStatus()
-  }, [isPrivateFromList, isPinVerified, isLoading])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 私密日记，需要验证 PIN（使用从列表页传递的信息）
-  // 这个判断要在加载中判断之前，因为私密日记未验证时 entry 为 null 是正常的
-  if (isPrivateFromList && !isPinVerified && !isLoading && !isCheckingPin) {
-    // 确认已设置 PIN 后才显示验证弹窗
-    if (!pinStatus?.has_pin_set) {
-      return null // 等待 PIN 状态加载
-    }
+  // 加载日记详情（只有在 PIN 验证通过后才调用接口）
+  useEffect(() => {
+    if (!id || isLoadingRef.current || !isPinVerified) return
 
+    isLoadingRef.current = true
+    setIsLoading(true)
+
+    getJournalRef.current(id)
+      .then(journalData => {
+        setEntry(journalData)
+      })
+      .catch(error => {
+        console.error('Failed to load journal:', error)
+        setEntry(null)
+      })
+      .finally(() => {
+        setIsLoading(false)
+        isLoadingRef.current = false
+      })
+  }, [id, isPinVerified])
+
+  // 需要 PIN 验证（在进入页面时已经判断过，这里只显示验证界面）
+  // 注意：这个判断要在"加载中"判断之前，因为私密日记在验证前不会加载
+  const needsVerification = !isPinVerified && isPrivateFromState && pinStatus?.has_pin && pinStatus?.requirements?.private_journal
+  if (needsVerification && !isCheckingPinStatus) {
     return (
       <PinLockScreen
         cancelButtonText="返回列表"
@@ -131,14 +120,11 @@ export function JournalDetailPage() {
           const result = await verifyPin(pin)
 
           if (!result.success) {
-            setUnlockError(result.error || 'PIN验证失败')
+            setUnlockError(result.error || 'PIN 验证失败')
             return
           }
-
-          sessionStorage.setItem('pin-verified', 'true')
+          // 验证成功后，isPinVerified 变为 true，触发日记加载
           setIsPinVerified(true)
-          // PIN 验证成功后，加载日记详情
-          await loadJournal()
         }}
         showCancelButton={true}
         title="查看私密日记"

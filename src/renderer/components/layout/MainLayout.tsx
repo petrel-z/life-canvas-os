@@ -113,8 +113,8 @@ export function MainLayout() {
     )
   }
 
-  // 已设置 PIN，显示锁屏
-  if (pinStatus.has_pin_set) {
+  // 已设置 PIN 且启动时需要验证，显示锁屏
+  if (pinStatus.has_pin && pinStatus.requirements.startup) {
     // 如果应用已解锁，直接进入系统
     if (!state.isLocked) {
       return (
@@ -132,7 +132,7 @@ export function MainLayout() {
     return <PinLockScreen error={unlockError} onUnlock={handleUnlock} />
   }
 
-  // 未设置 PIN，直接进入系统
+  // 未设置 PIN 或启动时不需要验证，直接进入系统
   return (
     <div className="min-h-screen bg-apple-bgMain dark:bg-black text-apple-textMain dark:text-white flex overflow-hidden">
       {/* 背景装饰 */}

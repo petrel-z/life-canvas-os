@@ -40,6 +40,7 @@ import { useAiApi, type AIConfigData } from '~/renderer/hooks/useAiApi'
 import { useDataApi, type ExportFormat } from '~/renderer/hooks/useDataApi'
 import { usePinStatus } from '~/renderer/hooks/usePinStatus'
 import { usePinApi } from '~/renderer/hooks'
+import { useUserSettings } from '~/renderer/hooks/useUserSettings'
 import { toast } from 'sonner'
 
 export function SettingsPage() {
@@ -54,6 +55,13 @@ export function SettingsPage() {
     updatePinStatusAfterOperation,
   } = usePinStatus()
   const { verifyPin } = usePinApi()
+  const {
+    settings: userSettings,
+    fetchSettings,
+    updateSettings,
+    getPinVerifySwitch,
+    updatePinVerifySwitch,
+  } = useUserSettings()
   const [testStatus, setTestStatus] = useState<
     'idle' | 'testing' | 'success' | 'error'
   >('idle')
@@ -174,12 +182,13 @@ export function SettingsPage() {
         }
       }
 
-      // 数据管理 - 只在首次切换到该 tab 时加载 PIN 状态（使用缓存）
+      // 数据管理 - 只在首次切换到该 tab 时加载 PIN 状态和用户设置
       if (activeTab === 'security') {
         try {
           await fetchPinStatus()
+          await fetchSettings()
         } catch (error) {
-          console.error('Failed to load PIN status:', error)
+          console.error('Failed to load PIN status or user settings:', error)
         }
       }
     }
@@ -214,12 +223,18 @@ export function SettingsPage() {
   }
 
   const handleSaveAIConfig = async () => {
+    // 表单校验 - 检查 API Key 是否为空
+    if (!aiFormData.apiKey || aiFormData.apiKey.trim() === '') {
+      toast.error('请输入 API 密钥')
+      return
+    }
+
     setIsSavingAI(true)
 
     try {
       const configData: AIConfigData = {
         provider: aiFormData.provider,
-        apiKey: aiFormData.apiKey || state.aiConfig.apiKey,
+        apiKey: aiFormData.apiKey,
         modelName: aiFormData.modelName,
       }
 
@@ -296,6 +311,11 @@ export function SettingsPage() {
       return
     }
 
+    if (formData.lifespan < 50 || formData.lifespan > 120) {
+      toast.error('预期寿命必须在 50-120 岁之间')
+      return
+    }
+
     setIsSaving(true)
     try {
       const profileData: UserProfile = {
@@ -326,15 +346,18 @@ export function SettingsPage() {
   }
 
   const handleClearData = async () => {
-    // 检查 PIN 是否已设置
+    // 检查 PIN 是否已设置以及是否需要验证
     try {
       const status = await fetchPinStatus()
-      if (status?.has_pin_set) {
-        // 有 PIN，显示 PIN 验证界面
+      // 检查是否有 PIN 且设置了修改设置时需要验证
+      const needVerify = status?.has_pin && getPinVerifySwitch('pin_verify_for_settings_change')
+
+      if (needVerify) {
+        // 需要验证 PIN
         setPinVerifyAction('reset')
         setShowPinDialog(true)
       } else {
-        // 无 PIN，直接显示确认对话框
+        // 不需要验证 PIN，直接显示确认对话框
         setShowResetConfirmDialog(true)
       }
     } catch (error) {
@@ -362,11 +385,10 @@ export function SettingsPage() {
     try {
       await resetData()
 
-      // 清空本地所有数据
+      // 清空本地所有数据（但保留首次启动标记）
       localStorage.removeItem('life-canvas-state')
-      localStorage.removeItem('pin-setup-status')
       localStorage.removeItem('journal-draft')
-      sessionStorage.removeItem('pin-verified')
+      localStorage.removeItem('pin_status')
 
       // 重置成功后刷新页面
       setTimeout(() => {
@@ -380,15 +402,18 @@ export function SettingsPage() {
   }
 
   const handleExportClick = async () => {
-    // 检查 PIN 是否已设置
+    // 检查 PIN 是否已设置以及是否需要验证
     try {
       const status = await fetchPinStatus()
-      if (status?.has_pin_set) {
-        // 有 PIN，先验证 PIN
+      // 检查是否有 PIN 且设置了导出数据时需要验证
+      const needVerify = status?.has_pin && getPinVerifySwitch('pin_verify_for_data_export')
+
+      if (needVerify) {
+        // 需要验证 PIN
         setPinVerifyAction('export')
         setShowPinDialog(true)
       } else {
-        // 无 PIN，直接显示导出对话框
+        // 不需要验证 PIN，直接显示导出对话框
         setShowExportDialog(true)
       }
     } catch (error) {
@@ -514,12 +539,14 @@ export function SettingsPage() {
                   min={50}
                   onChange={e => {
                     const value = parseInt(e.target.value, 10)
-                    // 限制输入范围在50-120之间
-                    if (Number.isNaN(value) || value < 50) {
-                      setFormData({ ...formData, lifespan: 50 })
-                    } else if (value > 120) {
-                      setFormData({ ...formData, lifespan: 120 })
+                    // 允许空输入，让用户可以清空后重新输入
+                    if (e.target.value === '') {
+                      setFormData({ ...formData, lifespan: 0 })
+                    } else if (Number.isNaN(value)) {
+                      // 无效输入，忽略
+                      return
                     } else {
+                      // 允许输入任何大于 0 的数字，保存时再做 50-120 的限制校验
                       setFormData({ ...formData, lifespan: value })
                     }
                   }}
@@ -856,7 +883,7 @@ export function SettingsPage() {
 
         <TabsContent className="space-y-5" value="security">
           {/* PIN 设置提醒 */}
-          {pinStatus && !pinStatus.has_pin_set && (
+          {pinStatus && !pinStatus.has_pin && (
             <GlassCard className="!p-6 bg-gradient-to-r from-purple-500/5 to-indigo-500/5 border-purple-500/20">
               <div className="flex items-start gap-4">
                 <div className="p-3 rounded-xl bg-purple-500/10 text-purple-500 shrink-0">
@@ -884,48 +911,53 @@ export function SettingsPage() {
           )}
 
           {/* PIN 管理 - 已设置时显示 */}
-          {pinStatus?.has_pin_set && (
-            <GlassCard className="space-y-4 !p-8">
-              <div className="flex items-center gap-3 pb-4 border-b border-apple-border dark:border-white/5">
-                <div className="p-2 rounded-lg bg-purple-500/10">
-                  <Shield className="text-purple-500" size={20} />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-apple-textMain dark:text-white">
-                    PIN 码管理
+          {pinStatus?.has_pin && (
+            <>
+              <GlassCard className="space-y-4 !p-8">
+                <div className="flex items-center gap-3 pb-4 border-b border-apple-border dark:border-white/5">
+                  <div className="p-2 rounded-lg bg-purple-500/10">
+                    <Shield className="text-purple-500" size={20} />
                   </div>
-                  <div className="text-xs text-apple-textSec dark:text-white/40">
-                    管理您的私密日记保护设置
-                  </div>
-                </div>
-              </div>
-
-              <Link className="block" to="/settings/pin/change">
-                <Button
-                  className="w-full justify-start h-auto py-4 px-5"
-                  variant="outline"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-purple-500/5 text-purple-500">
-                      <KeyRound size={20} />
+                  <div>
+                    <div className="text-sm font-semibold text-apple-textMain dark:text-white">
+                      PIN 码管理
                     </div>
-                    <div className="text-left flex-1">
-                      <div className="text-sm font-semibold">修改 PIN 码</div>
-                      <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
-                        更改您的私密日记保护密码
+                    <div className="text-xs text-apple-textSec dark:text-white/40">
+                      管理您的私密日记保护设置
+                    </div>
+                  </div>
+                </div>
+
+                <Link className="block" to="/settings/pin/change">
+                  <Button
+                    className="w-full justify-start h-auto py-4 px-5"
+                    variant="outline"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-purple-500/5 text-purple-500">
+                        <KeyRound size={20} />
+                      </div>
+                      <div className="text-left flex-1">
+                        <div className="text-sm font-semibold">修改 PIN 码</div>
+                        <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
+                          更改您的私密日记保护密码
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <ChevronRight
-                    className="ml-auto text-apple-textTer shrink-0"
-                    size={16}
-                  />
-                </Button>
-              </Link>
+                    <ChevronRight
+                      className="ml-auto text-apple-textTer shrink-0"
+                      size={16}
+                    />
+                  </Button>
+                </Link>
 
-              <Link className="block" to="/settings/pin/delete">
                 <Button
                   className="w-full justify-start h-auto py-4 px-5 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
+                  onClick={() => {
+                    toast.info('该功能暂不开放', {
+                      description: '删除 PIN 码功能将在后续版本中提供',
+                    })
+                  }}
                   variant="outline"
                 >
                   <div className="flex items-center gap-4">
@@ -944,8 +976,97 @@ export function SettingsPage() {
                     size={16}
                   />
                 </Button>
-              </Link>
-            </GlassCard>
+              </GlassCard>
+
+              {/* PIN 验证开关 */}
+              <GlassCard className="space-y-4 !p-8">
+                <div className="flex items-center gap-3 pb-4 border-b border-apple-border dark:border-white/5">
+                  <div className="p-2 rounded-lg bg-blue-500/10">
+                    <KeyRound className="text-blue-500" size={20} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-apple-textMain dark:text-white">
+                      PIN 验证开关
+                    </div>
+                    <div className="text-xs text-apple-textSec dark:text-white/40">
+                      控制在哪些场景下需要验证 PIN 码
+                    </div>
+                  </div>
+                </div>
+
+                {/* 启动时验证 */}
+                <div className="flex items-center justify-between py-3">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-apple-textMain dark:text-white">
+                      启动时验证
+                    </div>
+                    <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
+                      应用启动时需要输入 PIN 码
+                    </div>
+                  </div>
+                  <Switch
+                    checked={getPinVerifySwitch('pin_verify_on_startup')}
+                    onCheckedChange={(checked) =>
+                      updatePinVerifySwitch('pin_verify_on_startup', checked)
+                    }
+                  />
+                </div>
+
+                {/* 查看私密日记时验证 */}
+                <div className="flex items-center justify-between py-3 border-t border-apple-border dark:border-white/5">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-apple-textMain dark:text-white">
+                      查看私密日记
+                    </div>
+                    <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
+                      查看标记为私密的日记时需要验证
+                    </div>
+                  </div>
+                  <Switch
+                    checked={getPinVerifySwitch('pin_verify_for_private_journal')}
+                    onCheckedChange={(checked) =>
+                      updatePinVerifySwitch('pin_verify_for_private_journal', checked)
+                    }
+                  />
+                </div>
+
+                {/* 导出数据时验证 */}
+                <div className="flex items-center justify-between py-3 border-t border-apple-border dark:border-white/5">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-apple-textMain dark:text-white">
+                      导出数据
+                    </div>
+                    <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
+                      导出备份数据时需要验证
+                    </div>
+                  </div>
+                  <Switch
+                    checked={getPinVerifySwitch('pin_verify_for_data_export')}
+                    onCheckedChange={(checked) =>
+                      updatePinVerifySwitch('pin_verify_for_data_export', checked)
+                    }
+                  />
+                </div>
+
+                {/* 修改设置时验证 */}
+                <div className="flex items-center justify-between py-3 border-t border-apple-border dark:border-white/5">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-apple-textMain dark:text-white">
+                      修改设置
+                    </div>
+                    <div className="text-xs text-apple-textSec dark:text-white/30 mt-0.5">
+                      清除系统数据时需要验证
+                    </div>
+                  </div>
+                  <Switch
+                    checked={getPinVerifySwitch('pin_verify_for_settings_change')}
+                    onCheckedChange={(checked) =>
+                      updatePinVerifySwitch('pin_verify_for_settings_change', checked)
+                    }
+                  />
+                </div>
+              </GlassCard>
+            </>
           )}
 
           <GlassCard className="space-y-4 !p-8">

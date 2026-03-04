@@ -275,7 +275,7 @@ export function JournalPage() {
                                 </h4>
                                 {j.isPrivate ? (
                                   <p className="text-xs text-apple-textTer dark:text-white/30 italic leading-relaxed">
-                                    此日记为私密日记，需要 PIN 码才能查看
+                                    {/* 此日记为私密日记，需要 PIN 码才能查看 */}
                                   </p>
                                 ) : (
                                   <p className="text-xs text-apple-textSec dark:text-white/60 leading-relaxed line-clamp-2">

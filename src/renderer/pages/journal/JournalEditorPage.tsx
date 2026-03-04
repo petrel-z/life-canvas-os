@@ -98,7 +98,7 @@ export function JournalEditorPage() {
       }
 
       // 如果没有设置 PIN
-      if (!pinStatus.has_pin_set) {
+      if (!pinStatus.has_pin) {
         toast.error('需要设置 PIN 码', {
           description: '私密日记功能需要先设置 PIN 码保护',
         })
@@ -129,7 +129,7 @@ export function JournalEditorPage() {
     if (!content.trim()) return
 
     // 安全检查：如果要保存为私密日记，必须有 PIN
-    if (isPrivate && !pinStatus?.has_pin_set) {
+    if (isPrivate && !pinStatus?.has_pin) {
       toast.error('无法保存私密日记', {
         description: '私密日记功能需要先设置 PIN 码保护',
       })
@@ -298,7 +298,7 @@ export function JournalEditorPage() {
                       ? '正在检查 PIN 状态...'
                       : isPrivate
                         ? '需要 PIN 码才能查看此日记'
-                        : pinStatus?.has_pin_set
+                        : pinStatus?.has_pin
                           ? '开启后需要 PIN 码才能查看'
                           : '需要先设置 PIN 码'}
                   </div>
@@ -310,7 +310,7 @@ export function JournalEditorPage() {
                   isPrivate ? 'data-[state=checked]:bg-purple-500' : ''
                 }
                 disabled={
-                  pinStatus === null || (!pinStatus?.has_pin_set && !isPrivate)
+                  pinStatus === null || (!pinStatus?.has_pin && !isPrivate)
                 }
                 onCheckedChange={handlePrivateToggle}
               />

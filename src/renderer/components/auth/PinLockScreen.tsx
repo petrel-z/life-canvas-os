@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Lock, Unlock } from 'lucide-react'
 import { GlassCard } from '~/renderer/components/GlassCard'
 
