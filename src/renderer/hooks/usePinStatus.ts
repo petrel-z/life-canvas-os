@@ -66,12 +66,12 @@ export function usePinStatus() {
       const statusData = result.data as PinVerifyRequirements
 
       // 更新状态
-      setPinStatus(status)
+      setPinStatus(statusData)
 
       // 保存到缓存（5 分钟过期）
       setCache(CACHE_KEYS.PIN_STATUS, statusData, 5)
 
-      return status
+      return statusData
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : '获取 PIN 验证要求失败'
