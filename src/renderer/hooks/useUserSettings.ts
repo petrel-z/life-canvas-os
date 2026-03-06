@@ -62,15 +62,14 @@ export function useUserSettings() {
       } catch (err) {
         console.error('Failed to update user settings:', err)
         toast.error('更新设置失败', {
-          description:
-            err instanceof Error ? err.message : '请稍后重试',
+          description: err instanceof Error ? err.message : '请稍后重试',
         })
         return false
       } finally {
         setIsLoading(false)
       }
     },
-    [settings],
+    [settings]
   )
 
   /**
@@ -82,11 +81,11 @@ export function useUserSettings() {
         | 'pin_verify_on_startup'
         | 'pin_verify_for_private_journal'
         | 'pin_verify_for_data_export'
-        | 'pin_verify_for_settings_change',
+        | 'pin_verify_for_settings_change'
     ): boolean => {
       return settings?.[key] ?? true
     },
-    [settings],
+    [settings]
   )
 
   /**
@@ -99,7 +98,7 @@ export function useUserSettings() {
         | 'pin_verify_for_private_journal'
         | 'pin_verify_for_data_export'
         | 'pin_verify_for_settings_change',
-      value: boolean,
+      value: boolean
     ) => {
       const success = await updateSettings({ [key]: value })
       // 刷新 PIN 状态缓存，确保各个页面获取到最新的验证要求
@@ -108,7 +107,7 @@ export function useUserSettings() {
       }
       return success
     },
-    [updateSettings, refreshPinStatus],
+    [updateSettings, refreshPinStatus]
   )
 
   return {

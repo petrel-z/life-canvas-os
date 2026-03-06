@@ -350,7 +350,8 @@ export function SettingsPage() {
     try {
       const status = await fetchPinStatus()
       // 检查是否有 PIN 且设置了修改设置时需要验证
-      const needVerify = status?.has_pin && getPinVerifySwitch('pin_verify_for_settings_change')
+      const needVerify =
+        status?.has_pin && getPinVerifySwitch('pin_verify_for_settings_change')
 
       if (needVerify) {
         // 需要验证 PIN
@@ -406,7 +407,8 @@ export function SettingsPage() {
     try {
       const status = await fetchPinStatus()
       // 检查是否有 PIN 且设置了导出数据时需要验证
-      const needVerify = status?.has_pin && getPinVerifySwitch('pin_verify_for_data_export')
+      const needVerify =
+        status?.has_pin && getPinVerifySwitch('pin_verify_for_data_export')
 
       if (needVerify) {
         // 需要验证 PIN
@@ -1006,7 +1008,7 @@ export function SettingsPage() {
                   </div>
                   <Switch
                     checked={getPinVerifySwitch('pin_verify_on_startup')}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={checked =>
                       updatePinVerifySwitch('pin_verify_on_startup', checked)
                     }
                   />
@@ -1023,9 +1025,14 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <Switch
-                    checked={getPinVerifySwitch('pin_verify_for_private_journal')}
-                    onCheckedChange={(checked) =>
-                      updatePinVerifySwitch('pin_verify_for_private_journal', checked)
+                    checked={getPinVerifySwitch(
+                      'pin_verify_for_private_journal'
+                    )}
+                    onCheckedChange={checked =>
+                      updatePinVerifySwitch(
+                        'pin_verify_for_private_journal',
+                        checked
+                      )
                     }
                   />
                 </div>
@@ -1042,8 +1049,11 @@ export function SettingsPage() {
                   </div>
                   <Switch
                     checked={getPinVerifySwitch('pin_verify_for_data_export')}
-                    onCheckedChange={(checked) =>
-                      updatePinVerifySwitch('pin_verify_for_data_export', checked)
+                    onCheckedChange={checked =>
+                      updatePinVerifySwitch(
+                        'pin_verify_for_data_export',
+                        checked
+                      )
                     }
                   />
                 </div>
@@ -1059,9 +1069,14 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <Switch
-                    checked={getPinVerifySwitch('pin_verify_for_settings_change')}
-                    onCheckedChange={(checked) =>
-                      updatePinVerifySwitch('pin_verify_for_settings_change', checked)
+                    checked={getPinVerifySwitch(
+                      'pin_verify_for_settings_change'
+                    )}
+                    onCheckedChange={checked =>
+                      updatePinVerifySwitch(
+                        'pin_verify_for_settings_change',
+                        checked
+                      )
                     }
                   />
                 </div>

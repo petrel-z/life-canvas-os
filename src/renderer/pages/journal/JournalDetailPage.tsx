@@ -21,7 +21,8 @@ export function JournalDetailPage() {
   const { fetchPinStatus, pinStatus, setPinStatusManually } = usePinStatus()
   const { verifyPin } = usePinApi()
 
-  const isPrivateFromState = (location.state as { isPrivate?: boolean })?.isPrivate
+  const isPrivateFromState = (location.state as { isPrivate?: boolean })
+    ?.isPrivate
   const [isPinVerified, setIsPinVerified] = useState(false)
   const [isCheckingPinStatus, setIsCheckingPinStatus] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -77,7 +78,8 @@ export function JournalDetailPage() {
     isLoadingRef.current = true
     setIsLoading(true)
 
-    getJournalRef.current(id)
+    getJournalRef
+      .current(id)
       .then(setEntry)
       .catch(error => {
         console.error('Failed to load journal:', error)
@@ -90,7 +92,11 @@ export function JournalDetailPage() {
   }, [id, isPinVerified])
 
   // PIN 验证界面
-  const needsVerification = !isPinVerified && isPrivateFromState && pinStatus?.has_pin && pinStatus?.requirements?.private_journal
+  const needsVerification =
+    !isPinVerified &&
+    isPrivateFromState &&
+    pinStatus?.has_pin &&
+    pinStatus?.requirements?.private_journal
   if (needsVerification && !isCheckingPinStatus) {
     return (
       <PinLockScreen
@@ -178,7 +184,12 @@ export function JournalDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button onClick={handleEdit} size="icon" title="编辑" variant="outline">
+          <Button
+            onClick={handleEdit}
+            size="icon"
+            title="编辑"
+            variant="outline"
+          >
             <Edit size={18} />
           </Button>
           <Button

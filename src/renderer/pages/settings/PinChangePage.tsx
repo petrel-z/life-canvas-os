@@ -92,10 +92,10 @@ export function PinChangePage() {
   if (currentStep === 'verify-old') {
     return (
       <PinLockScreen
-        key="verify-old"
         cancelButtonText="取消"
         description="请输入当前密码以继续修改密码"
         error={unlockError}
+        key="verify-old"
         onCancel={() => {
           navigate('/settings')
           setUnlockError(undefined)
@@ -113,10 +113,10 @@ export function PinChangePage() {
   if (currentStep === 'enter-new') {
     return (
       <PinLockScreen
-        key="enter-new"
         cancelButtonText="返回"
         description="请输入新的密码"
         error={unlockError}
+        key="enter-new"
         onCancel={() => {
           setCurrentStep('verify-old')
           setUnlockError(undefined)
@@ -133,10 +133,10 @@ export function PinChangePage() {
   // 步骤3：确认新PIN
   return (
     <PinLockScreen
-      key="confirm-new"
       cancelButtonText="返回"
       description="请再次输入新密码以确认"
       error={unlockError}
+      key="confirm-new"
       onCancel={() => {
         setCurrentStep('enter-new')
         setUnlockError(undefined)

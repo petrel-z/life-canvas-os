@@ -36,7 +36,7 @@ export function usePinStatus() {
     // 如果不是强制刷新，先尝试从缓存读取
     if (!forceRefresh) {
       const cachedStatus = getCache<PinVerifyRequirements>(
-        CACHE_KEYS.PIN_STATUS,
+        CACHE_KEYS.PIN_STATUS
       )
       if (cachedStatus) {
         setPinStatus(cachedStatus)
