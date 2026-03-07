@@ -191,7 +191,6 @@ export function SettingsPage() {
     loadTabData()
   }, [activeTab, aiConfigLoaded])
 
-
   const handleSaveAIConfig = async () => {
     // 表单校验 - 检查 API Key 是否为空
     if (!aiFormData.apiKey || aiFormData.apiKey.trim() === '') {

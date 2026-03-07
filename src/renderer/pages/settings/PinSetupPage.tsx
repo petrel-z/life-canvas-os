@@ -94,11 +94,11 @@ export function PinSetupPage() {
   if (currentStep === 'enter-pin') {
     return (
       <PinLockScreen
-        key="enter-pin"
         cancelButtonText="取消"
         description="请输入 6 位数字 PIN 码以保护您的私密日记"
         error={unlockError}
         initialPin=""
+        key="enter-pin"
         onCancel={() => {
           handleCancel()
           setUnlockError(undefined)
@@ -115,10 +115,10 @@ export function PinSetupPage() {
   // 第二步：确认PIN码
   return (
     <PinLockScreen
-      key="confirm-pin"
       cancelButtonText="返回"
       description="请再次输入 PIN 码以确认"
       error={unlockError}
+      key="confirm-pin"
       onCancel={() => {
         setCurrentStep('enter-pin')
         setUnlockError(undefined)
