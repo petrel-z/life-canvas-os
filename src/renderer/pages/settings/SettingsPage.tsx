@@ -16,6 +16,10 @@ import {
   AlertTriangle,
   Loader2,
   Info,
+  User,
+  Brain,
+  Palette,
+  Settings,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useApp } from '~/renderer/contexts/AppContext'
@@ -424,27 +428,51 @@ export function SettingsPage() {
   }
 
   return (
-    <div className=" space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
-      <header className="space-y-1">
-        {/* <h1 className="text-3xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
-          <Monitor className="text-apple-accent" />
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+      <header className="space-y-2 mb-8">
+        <h1 className="text-3xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
+          <Settings className="text-apple-accent" size={32} />
           系统设置
-        </h1> */}
+        </h1>
         <p className="text-apple-textSec dark:text-white/40 text-base">
           管理您的生命画布环境变量与系统偏好。
         </p>
       </header>
 
       <Tabs
-        className="space-y-8"
+        className="space-y-6"
         onValueChange={setActiveTab}
         value={activeTab}
       >
-        <TabsList className="bg-apple-bg2 dark:bg-white/5 border border-apple-border dark:border-white/10">
-          <TabsTrigger value="profile">个人档案</TabsTrigger>
-          <TabsTrigger value="ai">AI 配置</TabsTrigger>
-          <TabsTrigger value="appearance">系统设置</TabsTrigger>
-          <TabsTrigger value="security">数据管理</TabsTrigger>
+        <TabsList className="bg-apple-bg2 dark:bg-white/5 border border-apple-border dark:border-white/10 p-1 gap-1">
+          <TabsTrigger
+            className="data-[state=active]:bg-apple-accent data-[state=active]:text-white"
+            value="profile"
+          >
+            <User className="w-4 h-4 mr-2" />
+            个人档案
+          </TabsTrigger>
+          <TabsTrigger
+            className="data-[state=active]:bg-apple-accent data-[state=active]:text-white"
+            value="ai"
+          >
+            <Brain className="w-4 h-4 mr-2" />
+            AI 配置
+          </TabsTrigger>
+          <TabsTrigger
+            className="data-[state=active]:bg-apple-accent data-[state=active]:text-white"
+            value="appearance"
+          >
+            <Palette className="w-4 h-4 mr-2" />
+            外观
+          </TabsTrigger>
+          <TabsTrigger
+            className="data-[state=active]:bg-apple-accent data-[state=active]:text-white"
+            value="security"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            隐私与安全
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent className="space-y-5" value="profile">
