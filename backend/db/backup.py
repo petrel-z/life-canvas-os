@@ -9,21 +9,32 @@ import zipfile
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
+from backend.core.config import settings
+
 
 class DatabaseBackup:
     """数据库备份管理器"""
 
-    def __init__(self, db_path: str, backup_dir: str = None):
+    def __init__(self, db_path: str, backup_dir: str = None, backup_type: str = "zips"):
         """
         初始化备份管理器
 
         Args:
             db_path: 数据库文件路径
-            backup_dir: 备份目录，默认在数据库目录下的 backups 文件夹
+            backup_dir: 备份目录，默认使用配置中的 BACKUP_DIR
+            backup_type: 备份类型，可选 "zips" 或 "exports"，用于分类存储
         """
         self.db_path = Path(db_path)
-        self.backup_dir = Path(backup_dir) if backup_dir else self.db_path.parent / "backups"
-        self.backup_dir.mkdir(exist_ok=True)
+        # 使用配置的 BACKUP_DIR 作为基础目录
+        base_backup_dir = Path(backup_dir) if backup_dir else settings.BACKUP_DIR
+
+        # 按类型和日期创建子目录: backups/zips/2026-03-08/
+        today = datetime.now().strftime("%Y-%m-%d")
+        self.backup_dir = base_backup_dir / backup_type / today
+        self.backup_dir.mkdir(parents=True, exist_ok=True)
+
+        # 保存备份类型信息，用于列表展示
+        self.backup_type = backup_type
 
         # 保留最近 7 天的备份
         self.retention_days = 7
@@ -237,37 +248,66 @@ class DatabaseBackup:
         except Exception as e:
             print(f"[WARN] Error closing connections: {e}")
 
-    def list_backups(self) -> list:
+    def list_backups(self, include_exports: bool = True) -> list:
         """列出所有备份"""
         backups = []
+        base_backup_dir = settings.BACKUP_DIR
 
-        for backup_file in self.backup_dir.glob("*.zip"):
-            try:
-                with zipfile.ZipFile(backup_file, 'r') as zipf:
-                    # 读取元数据
-                    metadata_json = zipf.read("metadata.json")
-                    metadata = json.loads(metadata_json)
+        # 需要检查的目录类型
+        types_to_check = []
+        if hasattr(self, 'backup_type'):
+            # 如果指定了类型，只检查该类型
+            types_to_check = [self.backup_type]
+        else:
+            types_to_check = ["zips", "exports"]
 
-                    backups.append({
-                        "name": backup_file.stem,
-                        "path": str(backup_file),
-                        "created_at": metadata.get("created_at"),
-                        "size": backup_file.stat().st_size
-                    })
-
-            except Exception:
+        for backup_type in types_to_check:
+            # 检查所有日期子目录
+            type_dir = base_backup_dir / backup_type
+            if not type_dir.exists():
                 continue
+
+            # 遍历所有日期子目录
+            for date_dir in type_dir.iterdir():
+                if not date_dir.is_dir():
+                    continue
+
+                date_str = date_dir.name  # YYYY-MM-DD 格式
+
+                for backup_file in date_dir.glob(f"*.{backup_type[:-1]}" if backup_type == "exports" else "*.zip"):
+                    try:
+                        # 对于 zips，读取元数据；对于 exports，直接获取信息
+                        metadata = {}
+                        if backup_type == "zips":
+                            with zipfile.ZipFile(backup_file, 'r') as zipf:
+                                metadata_json = zipf.read("metadata.json")
+                                metadata = json.loads(metadata_json)
+
+                        created_at = metadata.get("created_at", f"{date_str}T00:00:00")
+
+                        backups.append({
+                            "name": backup_file.stem,
+                            "path": str(backup_file),
+                            "type": backup_type,
+                            "date": date_str,
+                            "created_at": created_at,
+                            "size": backup_file.stat().st_size
+                        })
+
+                    except Exception:
+                        continue
 
         return sorted(backups, key=lambda x: x["created_at"], reverse=True)
 
 
-def export_to_json(db_path: str, output_dir: str) -> str:
+def export_to_json(db_path: str, output_dir: str = None, use_classified_dir: bool = True) -> str:
     """
     导出数据库为 JSON 文件
 
     Args:
         db_path: 数据库路径
-        output_dir: 输出目录
+        output_dir: 输出目录，如果为 None 则使用分类目录
+        use_classified_dir: 是否使用分类目录 (backups/exports/YYYY-MM-DD/)
 
     Returns:
         导出文件路径
@@ -275,8 +315,16 @@ def export_to_json(db_path: str, output_dir: str) -> str:
     from backend.db.session import SessionLocal
     from backend.models import User, UserSettings, System, Diary, Insight
 
-    output_path = Path(output_dir)
-    output_path.mkdir(exist_ok=True)
+    # 确定输出路径
+    if output_dir and not use_classified_dir:
+        output_path = Path(output_dir)
+    else:
+        # 使用分类目录: backups/exports/YYYY-MM-DD/
+        base_dir = Path(output_dir) if output_dir else settings.BACKUP_DIR
+        today = datetime.now().strftime("%Y-%m-%d")
+        output_path = base_dir / "exports" / today
+
+    output_path.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     export_file = output_path / f"export_{timestamp}.json"
@@ -308,6 +356,27 @@ def export_to_json(db_path: str, output_dir: str) -> str:
                 "created_at": user.created_at.isoformat() if user.created_at else None
             })
 
+        # 导出用户设置
+        for setting in db.query(UserSettings).all():
+            data["user_settings"].append({
+                "id": setting.id,
+                "user_id": setting.user_id,
+                "theme": setting.theme,
+                "language": setting.language,
+                "auto_save_enabled": setting.auto_save_enabled,
+                "auto_save_interval": setting.auto_save_interval,
+                "notification_enabled": setting.notification_enabled,
+                "notification_time": setting.notification_time,
+                "show_year_progress": setting.show_year_progress,
+                "show_weekday": setting.show_weekday,
+                "pin_verify_on_startup": setting.pin_verify_on_startup,
+                "pin_verify_for_private_journal": setting.pin_verify_for_private_journal,
+                "pin_verify_for_data_export": setting.pin_verify_for_data_export,
+                "pin_verify_for_settings_change": setting.pin_verify_for_settings_change,
+                "created_at": setting.created_at.isoformat() if setting.created_at else None,
+                "updated_at": setting.updated_at.isoformat() if setting.updated_at else None
+            })
+
         # 导出系统
         for system in db.query(System).all():
             data["systems"].append({
@@ -325,10 +394,13 @@ def export_to_json(db_path: str, output_dir: str) -> str:
                 "id": diary.id,
                 "user_id": diary.user_id,
                 "content": diary.content,
-                "date": diary.date.isoformat() if diary.date else None,
+                "title": diary.title,
                 "mood": diary.mood,
                 "tags": diary.tags,
-                "created_at": diary.created_at.isoformat() if diary.created_at else None
+                "related_system": diary.related_system,
+                "is_private": diary.is_private,
+                "created_at": diary.created_at.isoformat() if diary.created_at else None,
+                "updated_at": diary.updated_at.isoformat() if diary.updated_at else None
             })
 
         # 导出洞察
@@ -443,18 +515,28 @@ def import_from_json(db_path: str, data: dict) -> dict:
                 existing = db.query(Diary).filter(Diary.id == diary_data["id"]).first()
                 if existing:
                     existing.user_id = diary_data.get("user_id")
+                    existing.title = diary_data.get("title")
                     existing.content = diary_data.get("content")
-                    existing.date = dt.fromisoformat(diary_data["date"]) if diary_data.get("date") else None
                     existing.mood = diary_data.get("mood")
                     existing.tags = diary_data.get("tags")
+                    existing.related_system = diary_data.get("related_system")
+                    existing.is_private = diary_data.get("is_private")
+                    if diary_data.get("created_at"):
+                        existing.created_at = dt.fromisoformat(diary_data["created_at"])
+                    if diary_data.get("updated_at"):
+                        existing.updated_at = dt.fromisoformat(diary_data["updated_at"])
                 else:
                     diary = Diary(
                         id=diary_data["id"],
                         user_id=diary_data.get("user_id"),
+                        title=diary_data.get("title"),
                         content=diary_data.get("content"),
-                        date=dt.fromisoformat(diary_data["date"]) if diary_data.get("date") else None,
                         mood=diary_data.get("mood"),
-                        tags=diary_data.get("tags")
+                        tags=diary_data.get("tags"),
+                        related_system=diary_data.get("related_system"),
+                        is_private=diary_data.get("is_private"),
+                        created_at=dt.fromisoformat(diary_data["created_at"]) if diary_data.get("created_at") else None,
+                        updated_at=dt.fromisoformat(diary_data["updated_at"]) if diary_data.get("updated_at") else None
                     )
                     db.add(diary)
                 stats["diaries"] += 1

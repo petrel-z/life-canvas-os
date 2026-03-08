@@ -186,6 +186,10 @@ async def sqlalchemy_exception_handler(
 
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """统一处理 HTTPException，确保所有错误响应格式一致"""
+    import sys
+    print(f"[HTTP EXCEPTION] {exc.status_code}: {exc.detail}", file=sys.stderr)
+    print(f"[HTTP EXCEPTION] Path: {request.url.path}", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
 
     # 获取 detail 内容
     detail = exc.detail
@@ -219,6 +223,10 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 
 async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """处理所有未捕获的异常"""
+    import sys
+    print(f"[GENERAL EXCEPTION] {type(exc).__name__}: {exc}", file=sys.stderr)
+    print(f"[GENERAL EXCEPTION] Path: {request.url.path}", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
     logger.error(f"Unhandled exception: {str(exc)}", extra={
         "path": request.url.path,
         "error_type": type(exc).__name__,

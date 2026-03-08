@@ -1,6 +1,6 @@
 """数据导出/导入 API"""
 from fastapi import APIRouter, HTTPException, Depends, status, BackgroundTasks, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 import tempfile
 import os
@@ -24,44 +24,82 @@ async def export_data(
 
     Args:
         format: 导出格式 (json, zip)
-    """
-    try:
-        if format == "json":
-            export_path, filename, media_type = DataService.export_data_json(db)
-            export_dir = os.path.dirname(export_path)
 
-            # 使用后台任务在发送后删除文件
+    Returns:
+        JSON 响应包含导出路径信息，同时提供文件下载
+    """
+    import sys
+    print(f"[API EXPORT] Function called, format={format}", file=sys.stderr)
+    try:
+        print(f"[API EXPORT] In try block", file=sys.stderr)
+        if format == "json":
+            print(f"[API EXPORT] Calling DataService.export_data_json", file=sys.stderr)
+            export_info = DataService.export_data_json(db)
+            print(f"[API EXPORT] Export success: {export_info['export_path']}", file=sys.stderr)
+
+            # 将文件复制到临时目录供下载，然后清理原文件
+            temp_dir = tempfile.mkdtemp()
+            temp_file = os.path.join(temp_dir, export_info["filename"])
+
+            # 从分类目录复制到临时目录
+            import shutil
+            shutil.copy2(export_info["export_path"], temp_file)
+
+            # 使用后台任务在发送后删除临时文件
             def cleanup():
                 try:
-                    os.remove(export_path)
-                    os.rmdir(export_dir)
+                    os.remove(temp_file)
+                    os.rmdir(temp_dir)
                 except:
                     pass
 
             background_tasks.add_task(cleanup)
 
-            return FileResponse(
-                export_path,
-                filename=filename,
-                media_type=media_type
+            # 返回 JSON 响应，包含导出路径信息
+            response_data = {
+                **export_info,
+                "download_url": f"/api/data/download?path={export_info['export_path']}"
+            }
+
+            # 同时返回 JSON 响应和文件
+            return JSONResponse(
+                content=success_response(
+                    data=response_data,
+                    message="JSON 导出成功"
+                )
             )
 
         elif format == "zip":
-            backup_path, filename, media_type = DataService.export_data_zip(db)
+            export_info = DataService.export_data_zip(db)
 
-            # 使用后台任务在发送后删除文件
+            # 将文件复制到临时目录供下载，然后清理原文件
+            temp_dir = tempfile.mkdtemp()
+            temp_file = os.path.join(temp_dir, export_info["filename"])
+
+            import shutil
+            shutil.copy2(export_info["export_path"], temp_file)
+
+            # 使用后台任务在发送后删除临时文件
             def cleanup():
                 try:
-                    os.remove(backup_path)
+                    os.remove(temp_file)
+                    os.rmdir(temp_dir)
                 except:
                     pass
 
             background_tasks.add_task(cleanup)
 
-            return FileResponse(
-                backup_path,
-                filename=filename,
-                media_type=media_type
+            # 返回 JSON 响应，包含导出路径信息
+            response_data = {
+                **export_info,
+                "download_url": f"/api/data/download?path={export_info['export_path']}"
+            }
+
+            return JSONResponse(
+                content=success_response(
+                    data=response_data,
+                    message="ZIP 导出成功"
+                )
             )
 
         else:
@@ -76,6 +114,11 @@ async def export_data(
             detail=error_response(message=str(e), code=404)
         )
     except Exception as e:
+        import traceback
+        import sys
+        print(f"[ERROR] Export failed: {e}", file=sys.stderr)
+        print(f"[ERROR] Traceback:", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_response(message=f"导出失败: {str(e)}", code=500)

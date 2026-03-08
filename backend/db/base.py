@@ -3,6 +3,8 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import declared_attr
 
 class Base(DeclarativeBase):
+    model_config = {"protected_namespaces": ()}
+
     id: Any
 
     # 自动生成表名：将类名 UserConfig 转换为 user_config

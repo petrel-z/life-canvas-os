@@ -8,8 +8,9 @@ Life Canvas OS is an Electron desktop application for personal life management b
 
 - **Frontend**: Electron + React 19 + TypeScript + Vite + TailwindCSS + shadcn/ui
 - **Backend**: Python 3.12 + FastAPI + SQLAlchemy + SQLite
+- **Build Tool**: PyInstaller (required for building Python backend)
 - **Communication**: Dual-mode Python backend (IPC for production, HTTP for development)
-- **Package Manager**: pnpm (required, version 10.0.0)
+- **Package Manager**: pnpm (required, version 10.30.3)
 
 ## Architecture
 
@@ -22,6 +23,8 @@ The Python backend (`backend/main.py`) runs in two modes:
 
 The Electron main process (`src/main/python/manager.ts`) manages the Python process, handles the length-prefixed protocol, and provides auto-restart on crashes.
 
+**Mode Detection**: Development mode is determined by `NODE_ENV=development` environment variable.
+
 ### Backend Structure
 
 ```
@@ -31,7 +34,7 @@ backend/
 ├── db/               # Database (session management, base models, initialization)
 ├── models/           # SQLAlchemy ORM models (user, diary, insight, dimension)
 ├── schemas/          # Pydantic schemas for request/response validation
-├── services/         # Business logic layer (auth, user, journal, insight, system, diet)
+├── services/         # Business logic layer (auth, user, journal, insight, system, diet, data, timeline)
 └── main.py           # Dual-mode entry point
 ```
 
@@ -50,13 +53,25 @@ src/
 └── lib/electron-app/ # Electron utilities
 ```
 
+### IPC Communication
+
+In production mode, the renderer communicates with Python backend via IPC:
+
+- **Preload API**: `window.App.request(action, params)` - Main entry point for API calls
+- **Action Format**: `<method>_<path>` maps to HTTP method and API endpoint
+  - `get_api_user_profile` → `GET /api/user/profile`
+  - `post_api_journals` → `POST /api/journals`
+  - `delete_api_journals_123` → `DELETE /api/journals/123`
+- **Method Aliases**: `create` → `POST`, `update` → `PUT`
+- **Protocol**: Length-prefixed JSON: `<length>\n<json_bytes>`
+
 ### Key Patterns
 
 - **Unified API Response Format**: All API endpoints return `{code, message, data, timestamp}` using `success_response()` and `error_response()` from `backend/schemas/common.py`
 - **Service Layer Pattern**: Business logic is in `services/`, routes in `api/` delegate to services
 - **Auto-Initialization**: Database automatically initializes on first run (`backend/db/init_db.py`)
-- **Length-Prefixed Protocol**: IPC uses `\n<length>\n<json>` format for reliable message framing
 - **Path Aliases**: Use `~/` alias for all imports (resolves to `src/`). Never use relative imports like `../../`
+- **Database Session**: Use `Depends(get_db)` for API endpoints, `get_db_context()` for background tasks
 - **State Management Strategy**:
   - **Server State**: Must use TanStack Query (never useState for API data)
   - **Global Business State**: Use Zustand for high-frequency updates (e.g., 8-dimension scores, lock state)
@@ -87,7 +102,12 @@ python backend/main.py --dev
 
 # Run Python backend in production mode (IPC via stdin/stdout)
 python backend/main.py
+
+# Run with custom data directory (database storage location)
+python backend/main.py --data-dir /path/to/data
 ```
+
+**Note**: On Windows, use `python` or `python3` depending on your PATH configuration.
 
 ### Building
 
@@ -95,7 +115,7 @@ python backend/main.py
 # Build Electron app
 pnpm build
 
-# Build Python backend with PyInstaller
+# Build Python backend with PyInstaller (requires: pip install pyinstaller)
 pnpm build:python
 
 # Build both
@@ -111,8 +131,15 @@ python3 -m venv venv
 # Activate virtual environment (macOS/Linux)
 source venv/bin/activate
 
-# Install Python dependencies
+# Activate virtual environment (Windows)
+# cmd.exe
+venv\Scripts\activate.bat
+# PowerShell
+venv\Scripts\Activate.ps1
+
+# Install Python dependencies (requires PyInstaller for building)
 pip install -r backend/requirements.txt
+pip install pyinstaller
 ```
 
 ## Code Style & Quality Standards

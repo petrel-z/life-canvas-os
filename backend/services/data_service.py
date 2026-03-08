@@ -5,13 +5,14 @@ import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict
 from sqlalchemy.orm import Session
 
 from backend.models.user import User
 from backend.db.backup import DatabaseBackup, export_to_json, import_from_json
 from backend.db.session import DatabaseManager
 from backend.schemas.common import error_response
+from backend.core.config import settings
 
 
 class DataService:
@@ -23,47 +24,60 @@ class DataService:
         return db.query(User).first()
 
     @staticmethod
-    def export_data_json(db: Session) -> Tuple[str, str, str]:
+    def export_data_json(db: Session) -> Dict:
         """
         导出数据为 JSON 格式
 
         Returns:
-            (export_path, filename, media_type)
+            包含导出路径和元信息的字典
         """
         user = DataService.get_user(db)
         if not user:
             raise ValueError("用户不存在")
 
-        # 使用 JSON 格式导出
-        export_dir = tempfile.mkdtemp()
+        # 使用分类目录导出
         export_path = export_to_json(
             db_path=db.bind.url.database,
-            output_dir=export_dir
+            use_classified_dir=True
         )
 
-        filename = f"life_canvas_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        export_file = Path(export_path)
+        created_at = datetime.now().isoformat()
 
-        return export_path, filename, "application/json"
+        return {
+            "export_path": export_path,
+            "filename": export_file.name,
+            "format": "json",
+            "created_at": created_at,
+            "size": export_file.stat().st_size
+        }
 
     @staticmethod
-    def export_data_zip(db: Session) -> Tuple[str, str, str]:
+    def export_data_zip(db: Session) -> Dict:
         """
         导出数据为 ZIP 备份格式
 
         Returns:
-            (backup_path, filename, media_type)
+            包含导出路径和元信息的字典
         """
         user = DataService.get_user(db)
         if not user:
             raise ValueError("用户不存在")
 
-        # 使用数据库备份格式
-        backup_mgr = DatabaseBackup(db.bind.url.database)
+        # 使用数据库备份格式，保存到分类目录
+        backup_mgr = DatabaseBackup(db.bind.url.database, backup_type="zips")
         backup_path = backup_mgr.create_backup()
 
-        filename = os.path.basename(backup_path)
+        backup_file = Path(backup_path)
+        created_at = datetime.now().isoformat()
 
-        return backup_path, filename, "application/zip"
+        return {
+            "export_path": backup_path,
+            "filename": backup_file.name,
+            "format": "zip",
+            "created_at": created_at,
+            "size": backup_file.stat().st_size
+        }
 
     @staticmethod
     def import_data(db: Session, backup_path: str = None, data: dict = None, verify: bool = True) -> Tuple[dict, int]:
@@ -108,7 +122,8 @@ class DataService:
             import time
             time.sleep(0.5)
 
-            backup_mgr = DatabaseBackup(db_path)
+            # 使用 zips 类型进行恢复
+            backup_mgr = DatabaseBackup(db_path, backup_type="zips")
             success = backup_mgr.restore_backup(backup_path, verify=verify)
 
             if success:
@@ -140,8 +155,9 @@ class DataService:
             return error_response(message="用户不存在", code=404), 404
 
         try:
+            # 创建备份管理器，列出所有类型的备份
             backup_mgr = DatabaseBackup(db.bind.url.database)
-            backups = backup_mgr.list_backups()
+            backups = backup_mgr.list_backups(include_exports=True)
 
             return {
                 "backups": backups,
@@ -164,12 +180,17 @@ class DataService:
             return error_response(message="用户不存在", code=404), 404
 
         try:
-            backup_mgr = DatabaseBackup(db.bind.url.database)
+            # 使用分类目录
+            backup_mgr = DatabaseBackup(db.bind.url.database, backup_type="zips")
             backup_path = backup_mgr.create_backup()
+
+            backup_file = Path(backup_path)
 
             return {
                 "backup_path": backup_path,
-                "created_at": datetime.now().isoformat()
+                "filename": backup_file.name,
+                "created_at": datetime.now().isoformat(),
+                "size": backup_file.stat().st_size
             }, 200
 
         except Exception as e:
@@ -215,8 +236,8 @@ class DataService:
         try:
             db_path = db.bind.url.database
 
-            # 1. 创建备份
-            backup_mgr = DatabaseBackup(db_path)
+            # 1. 创建备份 (使用分类目录)
+            backup_mgr = DatabaseBackup(db_path, backup_type="zips")
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_path = backup_mgr.create_backup(f"before_reset_{timestamp}")
 

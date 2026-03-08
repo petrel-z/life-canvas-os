@@ -10,6 +10,7 @@ import threading
 import os
 import argparse
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 # ============ 早期参数解析（必须在所有业务模块导入之前）============
 # 解析命令行参数以获取数据目录
@@ -74,13 +75,56 @@ if IS_DEV:
     # 设置日志
     setup_logging(log_level="INFO", enable_json=True)
 
+    # 定义 lifespan 上下文管理器（替代已弃用的 on_event）
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        """应用生命周期管理：启动时初始化，关闭时清理"""
+        from backend.db.session import DatabaseManager
+        from backend.db.session import SessionLocal
+        from backend.db.init_db import ensure_database_initialized
+
+        # ===== 启动时 =====
+        print("\n" + "="*50)
+        print("Life Canvas OS Backend Starting...")
+        print("="*50)
+
+        # 确保数据库已初始化
+        db = SessionLocal()
+        try:
+            was_empty = ensure_database_initialized(db)
+            if was_empty:
+                print("[OK] Database auto-initialized on first run")
+        except Exception as e:
+            print(f"[ERROR] Database initialization failed: {e}")
+        finally:
+            db.close()
+
+        # 测试数据库连接
+        if DatabaseManager.test_connection():
+            print("[OK] Database connection established")
+        else:
+            print("[WARN] Database connection test failed")
+
+        # 显示连接池状态
+        pool_status = DatabaseManager.get_pool_status()
+        print(f"[INFO] Pool status: {pool_status}")
+
+        print("="*50 + "\n")
+
+        yield  # 应用运行中
+
+        # ===== 关闭时 =====
+        DatabaseManager.close_all_connections()
+        print("[INFO] All database connections closed")
+
     # 创建 FastAPI 应用
     app = FastAPI(
         title="Life Canvas OS API",
         description="八维生命平衡系统 API",
         version="1.0.0",
         docs_url="/docs",
-        redoc_url="/redoc"
+        redoc_url="/redoc",
+        lifespan=lifespan
     )
 
     # 添加 CORS 中间件
@@ -122,49 +166,6 @@ if IS_DEV:
             "docs": "/docs",
             "health": "/api/data/health"
         }
-
-    @app.on_event("startup")
-    async def startup_event():
-        """应用启动时的初始化"""
-        from backend.db.session import DatabaseManager
-        from backend.db.session import SessionLocal
-        from backend.db.init_db import ensure_database_initialized
-
-        print("\n" + "="*50)
-        print("Life Canvas OS Backend Starting...")
-        print("="*50)
-
-        # 确保数据库已初始化
-        db = SessionLocal()
-        try:
-            was_empty = ensure_database_initialized(db)
-            if was_empty:
-                print("[OK] Database auto-initialized on first run")
-        except Exception as e:
-            print(f"[ERROR] Database initialization failed: {e}")
-        finally:
-            db.close()
-
-        # 测试数据库连接
-        if DatabaseManager.test_connection():
-            print("[OK] Database connection established")
-        else:
-            print("[WARN] Database connection test failed")
-
-        # 显示连接池状态
-        pool_status = DatabaseManager.get_pool_status()
-        print(f"[INFO] Pool status: {pool_status}")
-
-        print("="*50 + "\n")
-
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        """应用关闭时的清理"""
-        from backend.db.session import DatabaseManager
-
-        # 关闭所有数据库连接
-        DatabaseManager.close_all_connections()
-        print("[INFO] All database connections closed")
 
     if __name__ == "__main__":
         uvicorn.run(

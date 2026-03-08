@@ -4,8 +4,8 @@ import packageJson from './package.json'
 import { getDevFolder } from './src/lib/electron-app/release/utils/path'
 
 const { main, name, version, resources, description, displayName } = packageJson
-const author = typeof packageJson.author === 'string' 
-  ? packageJson.author 
+const author = typeof packageJson.author === 'string'
+  ? packageJson.author
   : packageJson.author?.name ?? 'unknown'
 const currentYear = new Date().getFullYear()
 const authorInKebabCase = author.replace(/\s+/g, '-')
@@ -17,6 +17,9 @@ export default {
   appId,
   productName: displayName,
   copyright: `Copyright © ${currentYear} — ${author}`,
+
+  // 使用本地 Electron 缓存
+  electronDist: 'node_modules/electron/dist/',
 
   directories: {
     app: getDevFolder(main),
@@ -68,8 +71,14 @@ export default {
   win: {
     artifactName,
     icon: `${resources}/build/icons/icon.ico`,
-    target: ['nsis', 'zip'],
+    target: ['dir'],
+    // 禁用所有签名相关操作
+    sign: false,
   },
+
+  // 禁用 asar 完整性检查（需要签名工具）
+  asar: true,
+  asarUnpack: '**/*.exe',
 
   nsis: {
     oneClick: false,

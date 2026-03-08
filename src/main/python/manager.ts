@@ -28,7 +28,11 @@ export class PythonManager {
       // __dirname 在开发模式下指向 node_modules/.dev/main
       // 需要回到项目根目录
       const projectRoot = path.resolve(__dirname, '../../..')
-      pythonPath = path.join(projectRoot, 'venv', 'bin', 'python3')
+      // Windows: venv/Scripts/python.exe, Linux/macOS: venv/bin/python3
+      const isWindows = process.platform === 'win32'
+      const pythonBinDir = isWindows ? 'Scripts' : 'bin'
+      const pythonExe = isWindows ? 'python.exe' : 'python3'
+      pythonPath = path.join(projectRoot, 'venv', pythonBinDir, pythonExe)
       const mainPyPath = path.join(projectRoot, 'backend', 'main.py')
       args = [mainPyPath, '--dev', '--data-dir', userDataPath]
 

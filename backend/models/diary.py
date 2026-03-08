@@ -24,6 +24,11 @@ class Diary(Base):
     created_at = Column(DateTime, server_default=localnow_func())
     updated_at = Column(DateTime, server_default=localnow_func(), onupdate=localnow_func())
 
+    # 兼容属性：date 属性返回 created_at
+    @property
+    def date(self):
+        return self.created_at
+
 
 class DiaryAttachment(Base):
     """日记附件表"""
