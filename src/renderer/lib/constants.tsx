@@ -2,13 +2,13 @@ import type React from 'react'
 import {
   Beef,
   LayoutDashboard,
-  Settings,
   History,
   Sparkles,
-  Heart,
   Smile,
   Meh,
   Frown,
+  SmilePlus,
+  CircleX,
 } from 'lucide-react'
 import {
   DimensionType,
@@ -19,7 +19,7 @@ import {
 // 情绪类型定义
 export type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible'
 
-// 统一的情绪配置
+// 统一的情绪配置 - 使用圆脸表情风格图标
 export const MOODS: {
   type: MoodType
   icon: React.ComponentType<{ size?: number; className?: string }>
@@ -29,9 +29,9 @@ export const MOODS: {
 }[] = [
   {
     type: 'great',
-    icon: Heart,
-    emoji: () => '💖',
-    color: 'text-pink-500',
+    icon: SmilePlus,
+    emoji: () => '🤩',
+    color: 'text-yellow-500',
     label: '很棒',
   },
   {
@@ -45,7 +45,7 @@ export const MOODS: {
     type: 'neutral',
     icon: Meh,
     emoji: () => '😐',
-    color: 'text-yellow-500',
+    color: 'text-blue-500',
     label: '一般',
   },
   {
@@ -57,8 +57,8 @@ export const MOODS: {
   },
   {
     type: 'terrible',
-    icon: Frown,
-    emoji: () => '😢',
+    icon: CircleX,
+    emoji: () => '😭',
     color: 'text-red-500',
     label: '很糟',
   },
@@ -124,7 +124,6 @@ export const NAV_ITEMS = [
   { id: 'fuel', label: '饮食系统', icon: <Beef className="w-5 h-5" /> },
   { id: 'journal', label: '生活日记', icon: <Sparkles className="w-5 h-5" /> },
   { id: 'timeline', label: '时间轴', icon: <History className="w-5 h-5" /> },
-  { id: 'settings', label: '系统设置', icon: <Settings className="w-5 h-5" /> },
 ]
 
 const _now = Date.now()

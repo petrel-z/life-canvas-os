@@ -118,7 +118,6 @@ export function PinSetupPage() {
       cancelButtonText="返回"
       description="请再次输入 PIN 码以确认"
       error={unlockError}
-      initialPin={firstPin}
       key="confirm-pin"
       onCancel={() => {
         setCurrentStep('enter-pin')

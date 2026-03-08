@@ -85,7 +85,7 @@ export function useDataApi() {
           description: `已导出为 ${format.toUpperCase()} 格式`,
         })
       } catch (error) {
-        console.error('Export failed:', error)
+        console.error('Export failed1:', error)
         toast.error('导出失败', {
           id: 'export-progress',
           description: error instanceof Error ? error.message : '请稍后重试',

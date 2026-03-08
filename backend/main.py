@@ -230,6 +230,7 @@ else:
                     _app.include_router(health_router, tags=["health"])
                     _app.include_router(test_router, tags=["test"])
                     _app.include_router(auth_router, tags=["authentication"])
+                    _app.include_router(diet_router, tags=["diet"])
                     _app.include_router(systems_router, tags=["systems"])
                     _app.include_router(users_router, tags=["users"])
                     _app.include_router(journals_router, tags=["journals"])

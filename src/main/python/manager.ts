@@ -34,7 +34,7 @@ export class PythonManager {
       const pythonExe = isWindows ? 'python.exe' : 'python3'
       pythonPath = path.join(projectRoot, 'venv', pythonBinDir, pythonExe)
       const mainPyPath = path.join(projectRoot, 'backend', 'main.py')
-      args = [mainPyPath, '--dev', userDataPath]
+      args = [mainPyPath, '--dev', '--data-dir', userDataPath]
 
       console.log('[Python Manager] Dev paths:', {
         projectRoot,

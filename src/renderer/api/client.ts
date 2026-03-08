@@ -31,24 +31,22 @@ export async function apiRequest(
       ...body,
     })
 
-    if (result.success) {
-      // result.data 包含后端 API 响应 {code, message, data, timestamp}
-      // 保持完整的响应格式，让前端代码自己解析
-      return new Response(JSON.stringify(result.data), {
-        status: result.data?.code || 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
+    console.log('[API] IPC Result:', result)
+
+    // 修复：IPC 返回的数据可能包含 { success: true, data: ... } 的包装
+    // 我们需要剥离这层包装，只返回真正的业务数据 (result.data)
+    let responseBody = result
+    if (
+      result &&
+      typeof result === 'object' &&
+      'success' in result &&
+      'data' in result
+    ) {
+      responseBody = result.data
     }
 
-    // 处理错误响应
-    // 检查 result.data 是否包含错误数据（有 code 字段）
-    const errorData = result.data?.data || result.data || result.error
-    const statusCode =
-      errorData?.code ||
-      (result.data?.status === 'error' ? errorData?.code : 500)
-
-    return new Response(JSON.stringify(errorData), {
-      status: statusCode,
+    return new Response(JSON.stringify(responseBody), {
+      status: responseBody.code || 200,
       headers: { 'Content-Type': 'application/json' },
     })
   }
