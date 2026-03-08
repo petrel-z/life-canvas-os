@@ -4,6 +4,15 @@ from typing import Optional, Literal
 from datetime import datetime, date
 
 
+# ============ 16 种有效 MBTI 类型 ============
+VALID_MBTI_TYPES = {
+    'ISTJ', 'ISFJ', 'INFJ', 'INTJ',
+    'ISTP', 'ISFP', 'INFP', 'INTP',
+    'ESTP', 'ESFP', 'ENFP', 'ENTP',
+    'ESTJ', 'ESFJ', 'ENFJ', 'ENTJ'
+}
+
+
 # ============ 用户信息 ============
 class UserBase(BaseModel):
     """用户基础信息"""
@@ -16,9 +25,17 @@ class UserBase(BaseModel):
     @field_validator('mbti')
     @classmethod
     def validate_mbti(cls, v: Optional[str]) -> Optional[str]:
-        if v and not v.isalpha():
-            raise ValueError('MBTI 必须是 4 位大写字母')
-        return v.upper() if v else None
+        if v is None:
+            return None
+        if not v.isalpha():
+            raise ValueError('MBTI 必须是 4 位字母')
+        upper = v.upper()
+        if upper not in VALID_MBTI_TYPES:
+            raise ValueError(
+                f'无效的 MBTI 类型: {upper}，必须是以下 16 种之一: '
+                f'{", ".join(sorted(VALID_MBTI_TYPES))}'
+            )
+        return upper
 
 
 class UserCreate(UserBase):
@@ -26,13 +43,10 @@ class UserCreate(UserBase):
     pass
 
 
-class UserUpdate(BaseModel):
+class UserUpdate(UserBase):
     """更新用户信息（所有字段可选）"""
-    display_name: Optional[str] = Field(None, max_length=100)
+    # 覆盖 birthday 为字符串格式（便于 JSON 解析）
     birthday: Optional[str] = Field(None, description="生日字符串 YYYY-MM-DD")
-    mbti: Optional[str] = Field(None, min_length=4, max_length=4)
-    values: Optional[str] = Field(None)
-    life_expectancy: Optional[int] = Field(None, ge=50, le=120)
 
 
 class UserResponse(UserBase):

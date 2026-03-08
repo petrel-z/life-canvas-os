@@ -271,7 +271,23 @@ class UserService:
                 ), 422
 
         if update_data.mbti is not None:
-            user.mbti = update_data.mbti.upper() if update_data.mbti else None
+            from backend.schemas.user import VALID_MBTI_TYPES
+            mbti_value = update_data.mbti.upper() if update_data.mbti else None
+            if mbti_value and mbti_value not in VALID_MBTI_TYPES:
+                return error_response(
+                    message="参数验证失败",
+                    code=422,
+                    data={
+                        "errors": [
+                            {
+                                "field": "mbti",
+                                "message": f"无效的 MBTI 类型: {mbti_value}，必须是以下 16 种之一: {', '.join(sorted(VALID_MBTI_TYPES))}",
+                                "value": update_data.mbti
+                            }
+                        ]
+                    }
+                ), 422
+            user.mbti = mbti_value
 
         if update_data.values is not None:
             user.values = update_data.values
