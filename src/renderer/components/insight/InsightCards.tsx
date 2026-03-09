@@ -94,7 +94,7 @@ export function InsightCard({
   return (
     <div
       className={cn(
-        'relative rounded-2xl p-5 transition-all duration-300 cursor-pointer overflow-hidden',
+        'relative rounded-2xl p-6 transition-all duration-300 cursor-pointer overflow-hidden',
         `bg-gradient-to-br ${config.gradient} border ${config.border}`,
         `hover:${config.gradientHover} hover:${config.borderHover}`,
         isHovered
@@ -105,68 +105,68 @@ export function InsightCard({
       onMouseLeave={() => onHover(null)}
     >
       {/* 头部 */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className={cn('p-2.5 rounded-xl', `${config.gradient}`)}>
-          <Icon className={cn('w-5 h-5', config.textColor)} size={20} />
+      <div className="flex items-center gap-3 mb-5">
+        <div className={cn('p-3 rounded-xl', `${config.gradient}`)}>
+          <Icon className={cn('w-6 h-6', config.textColor)} size={24} />
         </div>
         <div className="flex-1">
-          <div className={cn('text-sm font-semibold', config.textColor)}>
+          <div className={cn('text-base font-bold', config.textColor)}>
             {config.label}
           </div>
-          <div className="text-xs text-apple-textSec dark:text-white/30">
+          <div className="text-sm text-apple-textSec dark:text-white/40">
             {config.subtitle}
           </div>
         </div>
         {category !== 'action' && (
           <div className="flex items-center gap-1">
-            <span className={cn('text-lg font-bold', config.textColor)}>
+            <span className={cn('text-2xl font-bold', config.textColor)}>
               {avgScore}
             </span>
             {trend === 'up' && (
-              <TrendingUp className="text-emerald-500" size={16} />
+              <TrendingUp className="text-emerald-500" size={20} />
             )}
             {trend === 'down' && (
-              <TrendingDown className="text-red-500" size={16} />
+              <TrendingDown className="text-red-500" size={20} />
             )}
           </div>
         )}
       </div>
 
-      {/* 洞察内容列表 */}
-      <div className="space-y-2 mb-4">
+      {/* 洞察内容列表 - 增大字体 */}
+      <div className="space-y-3 mb-5">
         {displayItems.length === 0 ? (
-          <div className="text-center py-6 text-xs text-apple-textSec dark:text-white/40">
+          <div className="text-center py-6 text-sm text-apple-textSec dark:text-white/40">
             暂无{config.label}内容
           </div>
         ) : (
           displayItems.map((item, index) => (
             <div
-              className="flex items-start gap-2 text-xs text-apple-textMain dark:text-white/80"
+              className="flex items-start gap-3 text-sm text-apple-textMain dark:text-white/90"
               key={index}
             >
               <div
                 className={cn(
-                  'w-1.5 h-1.5 rounded-full mt-1 shrink-0',
+                  'w-2 h-2 rounded-full mt-1.5 shrink-0',
                   config.dotColor
                 )}
               />
-              <span className="flex-1">{item.insight}</span>
+              <span className="flex-1 leading-relaxed">{item.insight}</span>
             </div>
           ))
         )}
       </div>
 
       {/* 底部评分条 */}
-      <div className={cn('space-y-2 pt-3 border-t', config.border)}>
+      <div className={cn('space-y-3 pt-4 border-t', config.border)}>
         {displayItems.slice(0, maxItems).map((item, index) => {
           const systemType = item.category.toLowerCase()
           const score = Number(systemScores[systemType]) || 0
           return (
-            <div className="flex items-center gap-2" key={index}>
-              <span className="text-[10px] text-apple-textSec dark:text-white/40 w-12 shrink-0">
-                {getSystemName(systemType).split(' ')[0]}
+            <div className="flex items-center gap-3" key={index}>
+              <span className="text-xs text-apple-textSec dark:text-white/50 w-14 shrink-0">
+                {getSystemName(systemType)}
               </span>
-              <div className="flex-1 h-2 bg-apple-bg2 dark:bg-white/10 rounded-full overflow-hidden">
+              <div className="flex-1 h-2.5 bg-apple-bg2 dark:bg-white/10 rounded-full overflow-hidden">
                 <div
                   className={cn(
                     'h-full rounded-full transition-all duration-500',
@@ -177,7 +177,7 @@ export function InsightCard({
               </div>
               <span
                 className={cn(
-                  'text-[10px] font-bold w-6 text-right',
+                  'text-xs font-bold w-8 text-right',
                   config.textColor
                 )}
               >

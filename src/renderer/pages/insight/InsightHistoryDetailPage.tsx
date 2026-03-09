@@ -6,10 +6,8 @@ import { GlassCard } from '~/renderer/components/GlassCard'
 import type { InsightResponse } from '~/renderer/api/ai'
 import { toast } from 'sonner'
 import {
-  INSIGHT_CATEGORIES,
   getSystemName,
   getSystemColor,
-  groupInsightsByCategory,
 } from '~/renderer/lib/insightUtils'
 import {
   InsightCard,
@@ -46,8 +44,13 @@ export function InsightHistoryDetailPage() {
     )
   }
 
-  // 按类别分组洞察内容
-  const groupedInsights = groupInsightsByCategory(insight.content)
+  // 按类别分组洞察内容 - 按索引位置分配
+  // content[0] = celebration, content[1] = warning, content[2] = action
+  const groupedInsights = {
+    celebration: insight.content[0] ? [insight.content[0]] : [],
+    warning: insight.content[1] ? [insight.content[1]] : [],
+    action: insight.content[2] ? [insight.content[2]] : [],
+  }
 
   // 计算每个类别的平均分数和趋势
   const getCategoryStats = (category: keyof typeof groupedInsights) => {
