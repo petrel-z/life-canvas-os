@@ -904,3 +904,11 @@
   background: transparent;
   box-shadow: none;
 }
+
+.tippy-box[data-theme~="tiptap"] .tippy-content {
+  padding: 0;
+}
+
+.tippy-box[data-theme~="tiptap"] .tippy-arrow {
+  display: none;
+}

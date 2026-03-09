@@ -37,11 +37,14 @@ export function AppProvider({ children }: AppProviderProps) {
   }, [getUserProfile])
 
   // 从 localStorage 加载初始状态
+  // 注意：isLocked 状态不从 localStorage 恢复，由 MainLayout 根据 PIN 验证状态控制
   const [state, setState] = useState<AppState>(() => {
     try {
       const saved = getCache<AppState>(CACHE_KEYS.LIFE_CANVAS_STATE)
       if (saved) {
-        return { ...INITIAL_STATE, ...saved }
+        // 排除 isLocked，使用 INITIAL_STATE 中的默认值
+        const { isLocked, ...restSaved } = saved
+        return { ...INITIAL_STATE, ...restSaved }
       }
     } catch (_error) {
       // localStorage 访问失败（隐私模式或配额超满），使用初始状态
@@ -109,10 +112,11 @@ export function AppProvider({ children }: AppProviderProps) {
     return () => clearTimeout(timeout)
   }, [state.theme])
 
-  // 保存状态到 localStorage
+  // 保存状态到 localStorage（不保存 isLocked 状态）
   useEffect(() => {
     try {
-      setCache(CACHE_KEYS.LIFE_CANVAS_STATE, state)
+      const { isLocked, ...stateWithoutLock } = state
+      setCache(CACHE_KEYS.LIFE_CANVAS_STATE, stateWithoutLock)
     } catch (_error) {
       // localStorage 保存失败，忽略错误
     }

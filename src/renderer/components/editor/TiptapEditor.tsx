@@ -1,5 +1,5 @@
 import { memo, useEffect, useState, useRef } from 'react'
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
+import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Underline from '@tiptap/extension-underline'
@@ -13,13 +13,6 @@ import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
 import TurndownService from 'turndown'
 import { cn } from '~/renderer/lib/utils'
-
-// 简化 shouldShow 函数类型
-type SimpleShouldShowProps = {
-  editor: any
-  from: number
-  to: number
-}
 
 interface TiptapEditorProps {
   value: string
@@ -333,23 +326,16 @@ export const TiptapEditor = memo(function TiptapEditor({
   }
 
   return (
-    <div className={cn('relative', className)}>
-      {/* 气泡菜单 - 选中文字时显示 */}
-      <BubbleMenu
-        editor={editor}
-        shouldShow={({ from, to }: SimpleShouldShowProps) => {
-          if (from === to) return false
-          return true
-        }}
-        tippyOptions={{ duration: 100, theme: 'tiptap' }}
-      >
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700">
+    <div className={cn('relative flex flex-col h-full', className)}>
+      {/* 顶部固定工具栏 */}
+      <div className="flex-shrink-0 border-b border-apple-border dark:border-white/5 bg-white/50 dark:bg-white/5 p-2">
+        <div className="flex items-center gap-1 flex-wrap">
           <button
             className={cn(
               'px-2 py-1 rounded text-xs font-medium transition-colors',
               editor.isActive('bold')
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() => editor.chain().focus().toggleBold().run()}
             title="粗体 (Ctrl+B)"
@@ -360,8 +346,8 @@ export const TiptapEditor = memo(function TiptapEditor({
             className={cn(
               'px-2 py-1 rounded text-xs italic transition-colors',
               editor.isActive('italic')
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() => editor.chain().focus().toggleItalic().run()}
             title="斜体 (Ctrl+I)"
@@ -372,8 +358,8 @@ export const TiptapEditor = memo(function TiptapEditor({
             className={cn(
               'px-2 py-1 rounded text-xs transition-colors',
               editor.isActive('underline')
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() => editor.chain().focus().toggleUnderline().run()}
             title="下划线 (Ctrl+U)"
@@ -384,21 +370,21 @@ export const TiptapEditor = memo(function TiptapEditor({
             className={cn(
               'px-2 py-1 rounded text-xs transition-colors line-through',
               editor.isActive('strike')
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() => editor.chain().focus().toggleStrike().run()}
             title="删除线 (Ctrl+Shift+X)"
           >
             S
           </button>
-          <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-600 mx-1" />
+          <div className="w-px h-4 bg-apple-border dark:bg-white/10 mx-1" />
           <button
             className={cn(
               'px-2 py-1 rounded text-xs font-bold transition-colors',
               editor.isActive('heading', { level: 1 })
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() =>
               editor.chain().focus().toggleHeading({ level: 1 }).run()
@@ -411,8 +397,8 @@ export const TiptapEditor = memo(function TiptapEditor({
             className={cn(
               'px-2 py-1 rounded text-xs font-bold transition-colors',
               editor.isActive('heading', { level: 2 })
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() =>
               editor.chain().focus().toggleHeading({ level: 2 }).run()
@@ -425,8 +411,8 @@ export const TiptapEditor = memo(function TiptapEditor({
             className={cn(
               'px-2 py-1 rounded text-xs font-bold transition-colors',
               editor.isActive('heading', { level: 3 })
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() =>
               editor.chain().focus().toggleHeading({ level: 3 }).run()
@@ -435,13 +421,13 @@ export const TiptapEditor = memo(function TiptapEditor({
           >
             H3
           </button>
-          <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-600 mx-1" />
+          <div className="w-px h-4 bg-apple-border dark:bg-white/10 mx-1" />
           <button
             className={cn(
               'px-2 py-1 rounded text-xs transition-colors',
               editor.isActive('bulletList')
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             title="无序列表"
@@ -452,8 +438,8 @@ export const TiptapEditor = memo(function TiptapEditor({
             className={cn(
               'px-2 py-1 rounded text-xs transition-colors',
               editor.isActive('orderedList')
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             title="有序列表"
@@ -464,21 +450,21 @@ export const TiptapEditor = memo(function TiptapEditor({
             className={cn(
               'px-2 py-1 rounded text-xs transition-colors',
               editor.isActive('taskList')
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() => editor.chain().focus().toggleTaskList().run()}
             title="任务列表"
           >
             ☑ Task
           </button>
-          <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-600 mx-1" />
+          <div className="w-px h-4 bg-apple-border dark:bg-white/10 mx-1" />
           <button
             className={cn(
               'px-2 py-1 rounded text-xs italic transition-colors',
               editor.isActive('blockquote')
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             title="引用"
@@ -489,8 +475,8 @@ export const TiptapEditor = memo(function TiptapEditor({
             className={cn(
               'px-2 py-1 rounded text-xs font-mono text-xs transition-colors',
               editor.isActive('codeBlock')
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
             title="代码块"
@@ -501,8 +487,8 @@ export const TiptapEditor = memo(function TiptapEditor({
             className={cn(
               'px-2 py-1 rounded text-xs transition-colors',
               editor.isActive('link')
-                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                ? 'bg-apple-accent/20 text-apple-textMain dark:text-white'
+                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
             )}
             onClick={() => {
               const url = window.prompt('请输入链接地址')
@@ -515,16 +501,19 @@ export const TiptapEditor = memo(function TiptapEditor({
             🔗
           </button>
           <button
-            className="px-2 py-1 rounded text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+            className="px-2 py-1 rounded text-xs text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
             onClick={() => editor.chain().focus().unsetAllMarks().run()}
             title="清除格式"
           >
             ✕
           </button>
         </div>
-      </BubbleMenu>
+      </div>
 
-      <EditorContent className="h-full" editor={editor} />
+      {/* 编辑器内容区 */}
+      <div className="flex-1 overflow-y-auto">
+        <EditorContent editor={editor} />
+      </div>
     </div>
   )
 })

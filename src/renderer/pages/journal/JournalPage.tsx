@@ -66,6 +66,9 @@ export function JournalPage() {
   const [verifyJournalId, setVerifyJournalId] = useState<string | null>(null)
   const [unlockError, setUnlockError] = useState<string | undefined>()
 
+  // 展开/收起状态 - 记录哪些日期是展开的
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
+
   // 自动保存相关
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLoadingRef = useRef(false)
@@ -90,6 +93,11 @@ export function JournalPage() {
       setIsLoading(true)
       const result = await listJournals({ page: 1, page_size: PAGE_SIZE })
       setJournals(result.items)
+      // 默认展开所有日期
+      const dates = new Set(
+        result.items.map(item => formatDateCN(item.timestamp))
+      )
+      setExpandedDates(dates)
     } catch (error) {
       console.error('Failed to load journals:', error)
     } finally {
@@ -97,6 +105,19 @@ export function JournalPage() {
       isLoadingRef.current = false
     }
   }, [listJournals])
+
+  // 切换日期的展开/收起状态
+  const toggleDateExpand = useCallback((date: string) => {
+    setExpandedDates(prev => {
+      const next = new Set(prev)
+      if (next.has(date)) {
+        next.delete(date)
+      } else {
+        next.add(date)
+      }
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     loadJournals()
@@ -458,48 +479,63 @@ export function JournalPage() {
               </p>
             </div>
           ) : (
-            sortedDates.map(date => (
-              <div className="mb-4" key={date}>
-                <div className="flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-apple-textSec dark:text-white/40 uppercase tracking-wider">
-                  <ChevronDown className="w-3.5 h-3.5" />
-                  {date}
-                </div>
-                <div className="space-y-0.5">
-                  {groupedJournals[date].map(journal => {
-                    const MoodIcon = getMoodIcon(journal.mood || 'good')
-                    const isSelected = selectedJournalId === journal.id
+            sortedDates.map(date => {
+              const isExpanded = expandedDates.has(date)
+              return (
+                <div className="mb-4" key={date}>
+                  <button
+                    className="w-full flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-apple-textSec dark:text-white/40 uppercase tracking-wider hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
+                    onClick={() => toggleDateExpand(date)}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )}
+                    <span className="flex-1 text-left">{date}</span>
+                    <span className="text-[10px] opacity-60">
+                      {groupedJournals[date].length}
+                    </span>
+                  </button>
+                  {isExpanded && (
+                    <div className="space-y-0.5">
+                      {groupedJournals[date].map(journal => {
+                        const MoodIcon = getMoodIcon(journal.mood || 'good')
+                        const isSelected = selectedJournalId === journal.id
 
-                    return (
-                      <button
-                        className={cn(
-                          'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all group',
-                          isSelected
-                            ? 'bg-apple-accent/10 dark:bg-white/10 text-apple-textMain dark:text-white'
-                            : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
-                        )}
-                        key={journal.id}
-                        onClick={() => loadJournalDetail(journal.id)}
-                      >
-                        {MoodIcon && (
-                          <MoodIcon
+                        return (
+                          <button
                             className={cn(
-                              'w-4 h-4 flex-shrink-0',
-                              getMoodColor(journal.mood || 'good')
+                              'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all group',
+                              isSelected
+                                ? 'bg-apple-accent/10 dark:bg-white/10 text-apple-textMain dark:text-white'
+                                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
                             )}
-                          />
-                        )}
-                        <span className="flex-1 truncate text-sm">
-                          {journal.title || '未命名'}
-                        </span>
-                        {journal.isPrivate && (
-                          <LockKeyhole className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
-                        )}
-                      </button>
-                    )
-                  })}
+                            key={journal.id}
+                            onClick={() => loadJournalDetail(journal.id)}
+                          >
+                            {MoodIcon && (
+                              <MoodIcon
+                                className={cn(
+                                  'w-4 h-4 flex-shrink-0',
+                                  getMoodColor(journal.mood || 'good')
+                                )}
+                              />
+                            )}
+                            <span className="flex-1 truncate text-sm">
+                              {journal.title || '未命名'}
+                            </span>
+                            {journal.isPrivate && (
+                              <LockKeyhole className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </div>

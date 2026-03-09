@@ -60,6 +60,14 @@ export function MainLayout() {
     }
   }, [isFirstLaunch])
 
+  // 当 PIN 状态加载完成后，如果不需要启动验证，自动解锁
+  useEffect(() => {
+    if (pinStatus && (!pinStatus.has_pin || !pinStatus.requirements.startup)) {
+      // 未设置 PIN 或启动时不需要验证，自动解锁
+      unlock()
+    }
+  }, [pinStatus])
+
   const handleUnlock = async (pin: string) => {
     // 验证格式
     if (pin.length !== 6) {
