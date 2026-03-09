@@ -11,12 +11,28 @@ MoodType = Literal["great", "good", "neutral", "bad", "terrible"]
 # ============ 日记 ============
 class DiaryBase(BaseModel):
     """日记基础"""
-    title: str = Field(..., min_length=1, max_length=200, description="标题")
-    content: str = Field(..., min_length=1, description="内容")
+    title: str = Field(default="未命名", max_length=200, description="标题")
+    content: str = Field(default="", description="内容")
     mood: Optional[MoodType] = Field(None, description="心情")
     tags: Optional[str] = Field(None, description="标签（JSON 数组字符串）")
     related_system: Optional[str] = Field(None, description="关联系统类型")
     is_private: bool = Field(default=False, description="是否私密")
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def validate_title(cls, v):
+        """title 空字符串或空值时使用默认值"""
+        if not v or (isinstance(v, str) and not v.strip()):
+            return "未命名"
+        return v
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def validate_content(cls, v):
+        """content 空值时使用空字符串"""
+        if v is None:
+            return ""
+        return v
 
 
 class DiaryCreate(DiaryBase):
@@ -26,12 +42,28 @@ class DiaryCreate(DiaryBase):
 
 class DiaryUpdate(BaseModel):
     """更新日记（所有字段可选）"""
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    content: Optional[str] = Field(None, min_length=1)
+    title: Optional[str] = Field(default="未命名", max_length=200)
+    content: Optional[str] = Field(default="")
     mood: Optional[MoodType] = None
     tags: Optional[str] = None
     related_system: Optional[str] = None
     is_private: Optional[bool] = None
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def validate_title(cls, v):
+        """title 空字符串或空值时使用默认值"""
+        if not v or (isinstance(v, str) and not v.strip()):
+            return "未命名"
+        return v
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def validate_content(cls, v):
+        """content 空值时使用空字符串"""
+        if v is None:
+            return ""
+        return v
 
 
 class DiaryResponse(DiaryBase):

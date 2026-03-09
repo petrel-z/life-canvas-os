@@ -174,7 +174,16 @@ async def get_ai_config(db: Session = Depends(get_db)):
     """
     获取 AI 配置（不返回完整 API Key）
     """
-    data, status_code = UserService.get_ai_config_masked(db)
+    import sys
+    print(f"[DEBUG] Starting get_ai_config", file=sys.stderr)
+    try:
+        data, status_code = UserService.get_ai_config_masked(db)
+        print(f"[DEBUG] Got data: {data}, status: {status_code}", file=sys.stderr)
+    except Exception as e:
+        print(f"[DEBUG] Error in get_ai_config: {type(e).__name__}: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        raise
 
     if status_code == 404:
         raise HTTPException(

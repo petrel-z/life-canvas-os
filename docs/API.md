@@ -1,12 +1,16 @@
 # Life Canvas OS API 接口文档
 
-> 版本：v1.6.0
-> 最后更新：2026-03-04
+> 版本：v1.7.0
+> 最后更新：2026-03-08
 > 基础 URL：`http://127.0.0.1:8000`（开发环境）
 > 数据格式：JSON
 > 遵循规范：[API_STANDARDS.md](./API_STANDARDS.md)
 
 ## 📝 更新日志
+
+### v1.7.0 (2026-03-08)
+- ✨ **数据导出**：新增下载端点 `GET /api/data/download`，支持通过 `download_url` 下载导出文件
+- ✨ **数据导出**：导出响应新增 `export_path` 和 `download_url` 字段
 
 ### v1.6.0 (2026-03-04)
 - ✨ **饮食系统**：偏离事件列表接口新增 `score_info` 字段，返回当前评分和统计数据
@@ -1938,8 +1942,29 @@ GET /api/timeline?page=2&page_size=10
 - `format`: 导出格式 (json, zip)，默认为 `json`
 
 **成功响应（200）**：
-- 返回文件流 (`application/json` 或 `application/zip`)
-- `Content-Disposition`: `attachment; filename="life_canvas_export_..."`
+```json
+{
+  "code": 200,
+  "message": "JSON 导出成功",
+  "data": {
+    "export_path": "C:\\Users\\xxx\\life-canvas-os\\backups\\exports\\2026-03-08\\export.json",
+    "filename": "export.json",
+    "download_url": "/api/data/download?path=C:\\Users\\xxx\\life-canvas-os\\backups\\exports\\2026-03-08\\export.json"
+  },
+  "timestamp": 1772529146615
+}
+```
+
+**响应字段说明**：
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| export_path | String | 导出文件的完整路径 |
+| filename | String | 导出文件名 |
+| download_url | String | 下载链接，可直接用于下载文件 |
+
+**注意事项**：
+- 导出文件保存到 `backups/exports/YYYY-MM-DD/` 目录（JSON格式）或 `backups/zips/YYYY-MM-DD/` 目录（ZIP格式）
+- 使用 `download_url` 直接下载导出文件
 
 ---
 
@@ -2127,6 +2152,35 @@ GET /api/timeline?page=2&page_size=10
   },
   "timestamp": 1707219200000
 }
+```
+
+---
+
+### 6. 下载导出文件
+
+**接口地址**：`GET /api/data/download`
+
+**查询参数**：
+- `path`: 文件的完整路径（必需）
+
+**成功响应（200）**：
+- 返回文件流
+- `Content-Type`: `application/json` 或 `application/zip`
+- `Content-Disposition`: `attachment; filename="<filename>"`
+
+**错误响应（404 - 文件不存在）**：
+```json
+{
+  "code": 404,
+  "message": "文件不存在",
+  "timestamp": 1772529146615
+}
+```
+
+**使用示例**：
+```bash
+# 从导出响应中获取 download_url 并下载
+curl -O "http://127.0.0.1:8000/api/data/download?path=C%3A%5CUsers%5Cxxx%5Clife-canvas-os%5Cbackups%5Cexports%5C2026-03-08%5Cexport.json"
 ```
 
 ---

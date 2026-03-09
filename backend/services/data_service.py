@@ -35,21 +35,34 @@ class DataService:
         if not user:
             raise ValueError("用户不存在")
 
-        # 使用分类目录导出
-        export_path = export_to_json(
-            db_path=db.bind.url.database,
-            use_classified_dir=True
-        )
+        # 使用分类目录导出，捕获可能的错误
+        try:
+            export_path = export_to_json(
+                db_path=db.bind.url.database,
+                use_classified_dir=True
+            )
+        except Exception as e:
+            raise ValueError(f"JSON 导出失败: {str(e)}")
 
         export_file = Path(export_path)
+
+        # 验证文件存在
+        if not export_file.exists():
+            raise ValueError(f"导出文件未创建: {export_path}")
+
         created_at = datetime.now().isoformat()
+
+        try:
+            file_size = export_file.stat().st_size
+        except OSError as e:
+            raise ValueError(f"无法获取导出文件大小: {str(e)}")
 
         return {
             "export_path": export_path,
             "filename": export_file.name,
             "format": "json",
             "created_at": created_at,
-            "size": export_file.stat().st_size
+            "size": file_size
         }
 
     @staticmethod

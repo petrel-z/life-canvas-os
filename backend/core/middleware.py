@@ -1,4 +1,5 @@
 """请求限流和超时处理中间件"""
+import sys
 from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -265,27 +266,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         start_time = datetime.now()
 
-        # 记录请求
-        logger.info(f"Request: {request.method} {request.url.path}", extra={
-            "method": request.method,
-            "path": request.url.path,
-            "query_params": dict(request.query_params),
-            "client_ip": request.client.host if request.client else "unknown"
-        })
-
         # 处理请求
         try:
             response = await call_next(request)
+            status_code = response.status_code
 
             # 计算处理时间
             process_time = (datetime.now() - start_time).total_seconds() * 1000
-
-            # 记录响应
-            logger.info(f"Response: {response.status_code}", extra={
-                "status_code": response.status_code,
-                "process_time_ms": round(process_time, 2),
-                "path": request.url.path
-            })
 
             # 添加处理时间到响应头
             response.headers["X-Process-Time"] = f"{process_time:.2f}ms"
@@ -294,9 +281,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             process_time = (datetime.now() - start_time).total_seconds() * 1000
-            logger.error(f"Request failed: {str(e)}", extra={
-                "path": request.url.path,
-                "process_time_ms": round(process_time, 2),
-                "error": str(e)
-            })
+            print(f"[MIDDLEWARE ERROR] {type(e).__name__}: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
             raise

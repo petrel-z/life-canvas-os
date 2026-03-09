@@ -206,6 +206,38 @@ async def health_check(db: Session = Depends(get_db)):
     )
 
 
+@router.get("/download")
+async def download_file(path: str = Query(..., description="文件完整路径")):
+    """
+    下载导出的文件
+
+    Args:
+        path: 文件的完整路径
+
+    Returns:
+        FileResponse 文件下载响应
+    """
+    from pathlib import Path
+
+    file_path = Path(path)
+
+    # 安全检查：确保文件路径存在
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=error_response(message="文件不存在", code=404)
+        )
+
+    # 确定媒体类型
+    media_type = "application/json" if file_path.suffix == ".json" else "application/zip"
+
+    return FileResponse(
+        path=str(file_path),
+        filename=file_path.name,
+        media_type=media_type
+    )
+
+
 @router.post("/reset")
 async def reset_system(db: Session = Depends(get_db)):
     """

@@ -338,7 +338,7 @@ class UserService:
             "provider": provider,
             "model_name": model,
             "api_key_masked": masked_key,
-            "updated_at": user.updated_at.isoformat()
+            "updated_at": user.updated_at.isoformat() if user.updated_at else None
         }, 200
 
     @staticmethod
