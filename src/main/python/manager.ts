@@ -295,11 +295,15 @@ export class PythonManager {
       if (isWindows) {
         // Windows: 直接使用 taskkill /F 强制终止整个进程树
         // SIGTERM 在 Windows 上会立即终止进程，没有优雅关闭的效果
-        console.log('[Python Manager] Windows: Using taskkill for termination...')
+        console.log(
+          '[Python Manager] Windows: Using taskkill for termination...'
+        )
         this.forceKill(currentPid)
       } else {
         // Unix: 先发送 SIGTERM 尝试优雅关闭
-        console.log('[Python Manager] Unix: Sending SIGTERM for graceful shutdown...')
+        console.log(
+          '[Python Manager] Unix: Sending SIGTERM for graceful shutdown...'
+        )
         const terminated = currentProcess.kill('SIGTERM')
 
         if (!terminated) {

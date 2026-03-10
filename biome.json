@@ -47,6 +47,7 @@
         "useExhaustiveDependencies": "off"
       },
       "style": {
+        "noDescendingSpecificity": "off",
         "noNonNullAssertion": "off",
         "noUselessElse": "warn"
       },
