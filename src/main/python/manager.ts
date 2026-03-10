@@ -4,8 +4,12 @@
  */
 import { spawn, type ChildProcess } from 'node:child_process'
 import path from 'node:path'
+import { platform } from 'node:os'
 
 import { app } from 'electron'
+
+// 记录启动时的进程 PID，用于清理僵尸进程
+let startedPid: number | null = null
 
 export class PythonManager {
   private process: ChildProcess | null = null
@@ -68,7 +72,15 @@ export class PythonManager {
     this.process = spawn(pythonPath, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, PYTHONUNBUFFERED: '1' },
+      // 不使用 detached 模式，确保子进程随父进程退出
+      // detached: false 是默认值，但显式设置以明确意图
     })
+
+    // 记录启动的 PID，用于后续清理
+    if (this.process.pid) {
+      startedPid = this.process.pid
+      console.log(`[Python Manager] Process started with PID: ${startedPid}`)
+    }
 
     // 监听 stdout（使用长度前缀协议）
     this.process.stdout?.on('data', data => {
@@ -229,21 +241,123 @@ export class PythonManager {
   }
 
   /**
-   * 停止 Python 进程
+   * 停止 Python 进程（带超时和强制终止）
+   * @param timeout 等待进程优雅退出的超时时间（毫秒），默认 5000ms
    */
-  stop() {
-    if (this.process) {
-      this.process.kill()
+  async stop(timeout = 5000): Promise<void> {
+    const currentProcess = this.process
+    const currentPid = this.process?.pid
+
+    if (!currentProcess || !currentPid) {
+      console.log('[Python Manager] No process to stop')
       this.process = null
       this.isReady = false
+      return
+    }
+
+    // 清除全局记录
+    startedPid = null
+
+    let resolved = false
+
+    return new Promise(resolve => {
+      // 设置超时，超时后强制终止
+      const forceKillTimer = setTimeout(() => {
+        if (!resolved) {
+          console.warn(
+            '[Python Manager] Force killing process due to timeout...'
+          )
+          resolved = true
+          this.forceKill(currentPid)
+          this.process = null
+          this.isReady = false
+          resolve()
+        }
+      }, timeout)
+
+      // 监听进程退出
+      currentProcess.on('exit', (code, signal) => {
+        if (!resolved) {
+          resolved = true
+          clearTimeout(forceKillTimer)
+          this.process = null
+          this.isReady = false
+          console.log(
+            `[Python Manager] Process stopped (code: ${code}, signal: ${signal})`
+          )
+          resolve()
+        }
+      })
+
+      // 根据平台选择终止方式
+      const isWindows = platform() === 'win32'
+
+      if (isWindows) {
+        // Windows: 直接使用 taskkill /F 强制终止整个进程树
+        // SIGTERM 在 Windows 上会立即终止进程，没有优雅关闭的效果
+        console.log(
+          '[Python Manager] Windows: Using taskkill for termination...'
+        )
+        this.forceKill(currentPid)
+      } else {
+        // Unix: 先发送 SIGTERM 尝试优雅关闭
+        console.log(
+          '[Python Manager] Unix: Sending SIGTERM for graceful shutdown...'
+        )
+        const terminated = currentProcess.kill('SIGTERM')
+
+        if (!terminated) {
+          console.warn(
+            '[Python Manager] Failed to send SIGTERM, process may already be dead'
+          )
+          resolved = true
+          clearTimeout(forceKillTimer)
+          this.process = null
+          this.isReady = false
+          resolve()
+        }
+      }
+    })
+  }
+
+  /**
+   * 强制终止进程（跨平台）
+   * Windows 使用 taskkill 确保终止整个进程树
+   */
+  private forceKill(pid: number): void {
+    const isWindows = platform() === 'win32'
+
+    if (isWindows) {
+      try {
+        // /F = 强制终止, /T = 终止进程树中的所有子进程
+        spawn('taskkill', ['/pid', pid.toString(), '/f', '/t'], {
+          stdio: 'ignore',
+          detached: true,
+        })
+        console.log(`[Python Manager] taskkill sent for PID ${pid}`)
+      } catch (e) {
+        console.error('[Python Manager] taskkill failed:', e)
+        // 回退：尝试常规 kill
+        try {
+          process.kill(pid, 'SIGKILL')
+        } catch {
+          // 进程可能已经退出
+        }
+      }
+    } else {
+      try {
+        process.kill(pid, 'SIGKILL')
+      } catch {
+        // 进程可能已经退出
+      }
     }
   }
 
   /**
    * 重启 Python 进程
    */
-  restart() {
-    this.stop()
+  async restart() {
+    await this.stop()
     setTimeout(() => this.start(), 1000)
   }
 

@@ -127,7 +127,141 @@ makeAppWithSingleInstanceLock(async () => {
 })
 
 // 应用退出时停止 Python 进程
-app.on('before-quit', () => {
-  console.log('[Main] Stopping Python backend...')
-  pythonManager.stop()
+// 使用 before-quit 和 will-quit 双重保障
+let isQuitting = false
+let pythonStopped = false
+
+/**
+ * 强制清理所有 backend 进程（防止僵尸进程）
+ * Windows: 使用 taskkill 终止所有 backend.exe 进程
+ * macOS/Linux: 使用 pkill 终止所有 backend 进程
+ */
+async function forceCleanupBackendProcesses(): Promise<void> {
+  const isWindows = process.platform === 'win32'
+  const isMac = process.platform === 'darwin'
+
+  if (isWindows) {
+    return new Promise(resolve => {
+      const { spawn } = require('node:child_process')
+      console.log('[Main] Force cleaning up all backend.exe processes...')
+
+      // 使用 taskkill 终止所有名为 backend.exe 的进程
+      const taskkill = spawn('taskkill', ['/IM', 'backend.exe', '/F'], {
+        stdio: 'ignore',
+        detached: true,
+      })
+
+      taskkill.on('close', (code: number) => {
+        console.log(`[Main] taskkill completed with code ${code}`)
+        resolve()
+      })
+
+      taskkill.on('error', (err: Error) => {
+        console.error('[Main] taskkill error:', err)
+        resolve()
+      })
+
+      // 设置超时，防止卡住
+      setTimeout(resolve, 3000)
+    })
+  }
+
+  if (isMac) {
+    return new Promise(resolve => {
+      const { spawn } = require('node:child_process')
+      console.log('[Main] Force cleaning up all backend processes...')
+
+      // 使用 pkill 终止所有 backend 进程
+      const pkill = spawn('pkill', ['-f', 'backend'], {
+        stdio: 'ignore',
+        detached: true,
+      })
+
+      pkill.on('close', (code: number) => {
+        console.log(`[Main] pkill completed with code ${code}`)
+        resolve()
+      })
+
+      pkill.on('error', (err: Error) => {
+        console.error('[Main] pkill error:', err)
+        resolve()
+      })
+
+      // 设置超时，防止卡住
+      setTimeout(resolve, 3000)
+    })
+  }
+
+  // Linux 或其他平台：使用 pkill
+  return new Promise(resolve => {
+    const { spawn } = require('node:child_process')
+    console.log('[Main] Force cleaning up all backend processes...')
+
+    const pkill = spawn('pkill', ['-f', 'backend'], {
+      stdio: 'ignore',
+      detached: true,
+    })
+
+    pkill.on('close', (code: number) => {
+      console.log(`[Main] pkill completed with code ${code}`)
+      resolve()
+    })
+
+    pkill.on('error', (err: Error) => {
+      console.error('[Main] pkill error:', err)
+      resolve()
+    })
+
+    setTimeout(resolve, 3000)
+  })
+}
+
+app.on('before-quit', async event => {
+  if (isQuitting) return
+
+  // 在 macOS 上，preventDefault 可以阻止退出
+  // 但我们只是确保 Python 进程在退出前被正确清理
+  console.log('[Main] before-quit: Stopping Python backend...')
+
+  try {
+    // 给 Python 进程最多 5 秒时间优雅退出
+    await pythonManager.stop(5000)
+    pythonStopped = true
+    console.log('[Main] Python backend stopped successfully')
+  } catch (error) {
+    console.error('[Main] Failed to stop Python backend:', error)
+    // 如果正常停止失败，强制清理
+    await forceCleanupBackendProcesses()
+  }
+})
+
+// will-quit 作为备用保障（在所有窗口关闭后触发）
+app.on('will-quit', async () => {
+  if (isQuitting) return
+  isQuitting = true
+
+  console.log('[Main] will-quit: Ensuring Python backend is stopped')
+
+  // 如果 before-quit 没有成功停止，在这里再次尝试
+  if (!pythonStopped) {
+    try {
+      await pythonManager.stop(3000)
+    } catch (err) {
+      console.error('[Main] will-quit stop failed:', err)
+    }
+
+    // 最后的保障：强制清理所有 backend.exe
+    await forceCleanupBackendProcesses()
+  }
+})
+
+// 窗口全部关闭时的处理
+app.on('window-all-closed', () => {
+  console.log('[Main] All windows closed')
+
+  // 在 macOS 上，应用通常不会退出（用户通常会按 Cmd+Q）
+  // 但我们需要确保 Python 后端停止
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
 })

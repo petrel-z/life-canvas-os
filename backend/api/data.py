@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 import tempfile
 import os
 from datetime import datetime
+from urllib.parse import quote, unquote
 
 from backend.db.session import get_db
 from backend.services.data_service import DataService
@@ -56,9 +57,10 @@ async def export_data(
             background_tasks.add_task(cleanup)
 
             # 返回 JSON 响应，包含导出路径信息
+            encoded_path = quote(export_info['export_path'], safe='')
             response_data = {
                 **export_info,
-                "download_url": f"/api/data/download?path={export_info['export_path']}"
+                "download_url": f"/api/data/download?path={encoded_path}"
             }
 
             # 同时返回 JSON 响应和文件
@@ -90,9 +92,10 @@ async def export_data(
             background_tasks.add_task(cleanup)
 
             # 返回 JSON 响应，包含导出路径信息
+            encoded_path = quote(export_info['export_path'], safe='')
             response_data = {
                 **export_info,
-                "download_url": f"/api/data/download?path={export_info['export_path']}"
+                "download_url": f"/api/data/download?path={encoded_path}"
             }
 
             return JSONResponse(
@@ -219,7 +222,9 @@ async def download_file(path: str = Query(..., description="文件完整路径")
     """
     from pathlib import Path
 
-    file_path = Path(path)
+    # 对路径进行解码，处理 URL 编码的 Windows 路径
+    decoded_path = unquote(path)
+    file_path = Path(decoded_path)
 
     # 安全检查：确保文件路径存在
     if not file_path.exists():

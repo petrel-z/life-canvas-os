@@ -88,6 +88,28 @@ export default defineConfig({
 
         output: {
           dir: resolve(devPath, 'renderer'),
+          manualChunks: {
+            // React 核心库
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            // 图表和图标
+            'vendor-ui': ['recharts', 'lucide-react'],
+            // 富文本编辑器
+            'vendor-editor': [
+              '@tiptap/core',
+              '@tiptap/react',
+              '@tiptap/starter-kit',
+              '@tiptap/extension-highlight',
+              '@tiptap/extension-image',
+              '@tiptap/extension-link',
+              '@tiptap/extension-placeholder',
+              '@tiptap/extension-table',
+              '@tiptap/extension-task-item',
+              '@tiptap/extension-task-list',
+              '@tiptap/extension-underline',
+            ],
+            // UI 工具库
+            'vendor-utils': ['clsx', 'tailwind-merge', 'class-variance-authority'],
+          },
         },
       },
     },
