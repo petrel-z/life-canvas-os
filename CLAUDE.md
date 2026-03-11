@@ -78,6 +78,8 @@ In production mode, the renderer communicates with Python backend via IPC:
   - **Global Config State**: Use React Context for low-frequency updates (e.g., theme, language, auth)
   - **Local State**: Use useState/useReducer
   - **Form State**: Use react-hook-form + zod
+- **Zustand Store Location**: Stores in `src/renderer/lib/stores/` (e.g., `app-store.ts` for app state)
+- **Eight-Dimensional Scores**: Managed via Zustand for real-time updates across components
 
 ## Common Commands
 
@@ -87,11 +89,20 @@ In production mode, the renderer communicates with Python backend via IPC:
 # Start development (Electron + Python HTTP mode)
 pnpm dev
 
+# Start production mode (Electron + Python IPC mode)
+pnpm prod
+
+# Preview built app
+pnpm start
+
 # Format code (Biome)
 pnpm lint:fix
 
 # Type check
 pnpm typecheck
+
+# Lint check only (no auto-fix)
+pnpm lint
 ```
 
 ### Python Backend
@@ -120,6 +131,9 @@ pnpm build:python
 
 # Build both
 pnpm build:all
+
+# Create release version
+pnpm release
 ```
 
 ### Python Environment
@@ -140,6 +154,8 @@ venv\Scripts\Activate.ps1
 # Install Python dependencies (requires PyInstaller for building)
 pip install -r backend/requirements.txt
 pip install pyinstaller
+
+# Note: Test framework is not yet configured (pnpm test not available)
 ```
 
 ## Code Style & Quality Standards
@@ -185,6 +201,28 @@ Run `pnpm lint:fix` before committing.
 - **Props interfaces**: All component props must have defined interfaces
 - **Pydantic schemas**: All API endpoints must use Pydantic models for validation
 
+### Commit Convention
+
+Project uses [Conventional Commits](https://www.conventionalcommits.org/) format:
+
+```
+<type>(<scope>): <subject>
+
+[optional body]
+
+[optional footer]
+```
+
+**Types**:
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation
+- `style`: Code format
+- `refactor`: Refactoring
+- `perf`: Performance
+- `test`: Tests
+- `chore`: Build/tools
+
 ## Important Notes
 
 ### Unified Response Format
@@ -209,7 +247,7 @@ Defined in `backend/models/dimension.py`:
 - `PHYSICAL` - Exercise system (运动系统)
 - `INTELLECTUAL` - Learning system (读书系统)
 - `OUTPUT` - Work system (工作系统)
-- `DREAM` - Dreams system (梦想系统)
+- `DREAM` - Dreams/Recovery system (梦想系统)
 - `ASSET` - Finance system (财务系统)
 - `CONNECTION` - Social system (社交系统)
 - `ENVIRONMENT` - Environment system (环境系统)

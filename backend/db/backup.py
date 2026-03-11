@@ -133,7 +133,7 @@ class DatabaseBackup:
             # 恢复数据库文件
             restored_db = temp_dir / self.db_path.name
             if not restored_db.exists():
-                raise FileNotFoundError("Database file not found in backup")
+                raise FileNotFoundError("Database file not found in backup") 
 
             # 关闭所有数据库连接
             self._close_all_connections()
@@ -488,6 +488,44 @@ def import_from_json(db_path: str, data: dict) -> dict:
                     )
                     db.add(user)
                 stats["users"] += 1
+
+        # 导入用户设置
+        if "user_settings" in data:
+            for setting_data in data["user_settings"]:
+                existing = db.query(UserSettings).filter(UserSettings.id == setting_data["id"]).first()
+                if existing:
+                    existing.user_id = setting_data.get("user_id")
+                    existing.theme = setting_data.get("theme")
+                    existing.language = setting_data.get("language")
+                    existing.auto_save_enabled = setting_data.get("auto_save_enabled")
+                    existing.auto_save_interval = setting_data.get("auto_save_interval")
+                    existing.notification_enabled = setting_data.get("notification_enabled")
+                    existing.notification_time = setting_data.get("notification_time")
+                    existing.show_year_progress = setting_data.get("show_year_progress")
+                    existing.show_weekday = setting_data.get("show_weekday")
+                    existing.pin_verify_on_startup = setting_data.get("pin_verify_on_startup")
+                    existing.pin_verify_for_private_journal = setting_data.get("pin_verify_for_private_journal")
+                    existing.pin_verify_for_data_export = setting_data.get("pin_verify_for_data_export")
+                    existing.pin_verify_for_settings_change = setting_data.get("pin_verify_for_settings_change")
+                else:
+                    user_setting = UserSettings(
+                        id=setting_data["id"],
+                        user_id=setting_data.get("user_id"),
+                        theme=setting_data.get("theme"),
+                        language=setting_data.get("language"),
+                        auto_save_enabled=setting_data.get("auto_save_enabled"),
+                        auto_save_interval=setting_data.get("auto_save_interval"),
+                        notification_enabled=setting_data.get("notification_enabled"),
+                        notification_time=setting_data.get("notification_time"),
+                        show_year_progress=setting_data.get("show_year_progress"),
+                        show_weekday=setting_data.get("show_weekday"),
+                        pin_verify_on_startup=setting_data.get("pin_verify_on_startup"),
+                        pin_verify_for_private_journal=setting_data.get("pin_verify_for_private_journal"),
+                        pin_verify_for_data_export=setting_data.get("pin_verify_for_data_export"),
+                        pin_verify_for_settings_change=setting_data.get("pin_verify_for_settings_change")
+                    )
+                    db.add(user_setting)
+                stats["user_settings"] += 1
 
         # 导入系统
         if "systems" in data:

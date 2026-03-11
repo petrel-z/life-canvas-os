@@ -1,14 +1,21 @@
 # Life Canvas OS API 接口文档
 
-> 版本：v1.7.0
-> 最后更新：2026-03-08
+> 版本：v1.8.1
+> 最后更新：2026-03-11
 > 基础 URL：`http://127.0.0.1:8000`（开发环境）
 > 数据格式：JSON
 > 遵循规范：[API_STANDARDS.md](./API_STANDARDS.md)
 
 ## 📝 更新日志
 
-### v1.7.0 (2026-03-08)
+### v1.8.1 (2026-03-11)
+- ✨ **数据导入**：`backup_path` 参数新增支持 `.json` 文件路径导入
+- 🔧 **数据导入**：根据文件扩展名自动判断导入类型（.zip → 完整覆盖，.json → upsert）
+- 📝 **文档**：更新导入数据接口文档，添加 JSON 文件路径导入示例
+
+### v1.8.0 (2026-03-10)
+- ✨ **数据管理**：新增 `POST /api/data/reset` 系统重置接口，支持危险操作下的数据重置
+- 📝 **文档**：更新数据管理接口文档，添加系统重置功能说明
 - ✨ **数据导出**：新增下载端点 `GET /api/data/download`，支持通过 `download_url` 下载导出文件
 - ✨ **数据导出**：导出响应新增 `export_path` 和 `download_url` 字段
 
@@ -1972,20 +1979,32 @@ GET /api/timeline?page=2&page_size=10
 
 **接口地址**：`POST /api/data/import`
 
-**描述**：支持两种导入方式：ZIP 备份文件导入和 JSON 数据直接导入
+**描述**：支持三种导入方式：ZIP 备份文件导入、JSON 文件路径导入和 JSON 数据直接导入
 
-**方式一：ZIP 备份文件导入**
+**方式一：ZIP 备份文件导入（完整覆盖数据库）**
 
-**请求参数**：
+**请求参数示例**：
+
+Windows:
 ```json
 {
-  "backup_path": "D:\\pythonCode\\life-canvas-os\\backups\\backup_20260302_104334.zip",
+  "backup_path": "D:\\backups\\life-canvas\\backup_20260302_104334.zip",
+  "verify": true
+}
+```
+
+macOS:
+```json
+{
+  "backup_path": "/Users/username/backups/life-canvas/backup_20260302_104334.zip",
   "verify": true
 }
 ```
 
 **参数说明**：
 - `backup_path`: ZIP 备份文件的完整路径
+  - Windows: 使用反斜杠 `\`（需转义为 `\\`）或正斜杠 `/`
+  - macOS/Linux: 使用正斜杠 `/`
 - `verify`: 是否验证备份文件完整性，默认为 `true`
 
 **成功响应（200）**：
@@ -2002,7 +2021,51 @@ GET /api/timeline?page=2&page_size=10
 }
 ```
 
-**方式二：JSON 数据直接导入**
+**方式二：JSON 文件路径导入（upsert 模式）**
+
+根据 `backup_path` 的文件扩展名自动判断导入类型：
+- `.json` → JSON 文件导入（upsert 模式，不会删除现有数据）
+- `.zip` → ZIP 备份恢复（完整覆盖数据库）
+
+**请求参数示例**：
+
+Windows:
+```json
+{
+  "backup_path": "D:\\backups\\life-canvas\\export_20260302.json"
+}
+```
+
+macOS:
+```json
+{
+  "backup_path": "/Users/username/backups/life-canvas/export_20260302.json"
+}
+```
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "数据导入成功",
+  "data": {
+    "import_type": "json",
+    "source": "file",
+    "json_path": "D:\\backups\\life-canvas\\export_20260302.json",
+    "stats": {
+      "users": 1,
+      "user_settings": 0,
+      "systems": 8,
+      "diaries": 0,
+      "insights": 0
+    },
+    "imported_at": "2026-03-11T10:30:00.000000"
+  },
+  "timestamp": 1772529146615
+}
+```
+
+**方式三：JSON 数据直接导入（upsert 模式）**
 
 **请求参数**：
 ```json
@@ -2052,6 +2115,7 @@ GET /api/timeline?page=2&page_size=10
   "message": "数据导入成功",
   "data": {
     "import_type": "json",
+    "source": "data",
     "stats": {
       "users": 1,
       "user_settings": 0,
@@ -2085,8 +2149,9 @@ GET /api/timeline?page=2&page_size=10
 
 **注意事项**：
 - `backup_path` 和 `data` 参数二选一，不能同时提供
+- `backup_path` 支持 `.zip` 和 `.json` 两种扩展名，根据扩展名自动判断导入类型
 - ZIP 导入会完全覆盖当前数据库
-- JSON 导入采用 upsert 策略：存在相同 ID 则更新，否则创建
+- JSON 导入（文件或数据）采用 upsert 策略：存在相同 ID 则更新，否则创建
 - JSON 导入不会删除现有数据，只会更新或新增
 - 建议在导入前先创建当前数据的备份
 
@@ -2182,6 +2247,43 @@ GET /api/timeline?page=2&page_size=10
 # 从导出响应中获取 download_url 并下载
 curl -O "http://127.0.0.1:8000/api/data/download?path=C%3A%5CUsers%5Cxxx%5Clife-canvas-os%5Cbackups%5Cexports%5C2026-03-08%5Cexport.json"
 ```
+
+---
+
+### 7. 系统重置（危险操作）
+
+**接口地址**：`POST /api/data/reset`
+
+**警告**：此操作会删除所有用户数据，请谨慎使用！
+
+**请求体**：无
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "系统重置成功",
+  "data": {
+    "backup_created": true,
+    "backup_path": "C:\\path\\to\\backup\\life-canvas-os-2026-03-10.db"
+  },
+  "timestamp": 1772529146615
+}
+```
+
+**错误响应（500）**：
+```json
+{
+  "code": 500,
+  "message": "系统重置失败: <error_message>",
+  "timestamp": 1772529146615
+}
+```
+
+**注意**：
+- 此操作会自动创建当前数据库的备份
+- 备份文件保存在 `backups/` 目录下
+- 重置后会恢复到初始状态（默认用户、设置、8个系统）
 
 ---
 

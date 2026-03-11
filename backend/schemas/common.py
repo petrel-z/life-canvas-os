@@ -87,13 +87,16 @@ class ErrorResponse(BaseModel):
 class DataImportRequest(BaseModel):
     """数据导入请求
 
-    支持两种导入方式：
-    1. ZIP 备份文件：通过 backup_path 指定文件路径
-    2. JSON 数据：通过 data 字段直接传入 JSON 数据
+    支持三种导入方式：
+    1. ZIP 备份文件：通过 backup_path 指定 .zip 文件路径（完整覆盖数据库）
+    2. JSON 文件：通过 backup_path 指定 .json 文件路径（upsert 模式）
+    3. JSON 数据：通过 data 字段直接传入 JSON 数据（upsert 模式）
+
+    注意：backup_path 和 data 参数二选一，不能同时提供
     """
-    backup_path: Optional[str] = Field(default=None, description="备份文件路径 (ZIP 格式)")
+    backup_path: Optional[str] = Field(default=None, description="备份文件路径（支持 .zip 和 .json 扩展名）")
     data: Optional[dict] = Field(default=None, description="JSON 格式的导入数据")
-    verify: bool = Field(default=True, description="是否验证备份文件")
+    verify: bool = Field(default=True, description="是否验证备份文件（仅 ZIP 导入有效）")
 
     class Config:
         json_schema_extra = {

@@ -1,6 +1,7 @@
 """
 数据服务 - 数据管理业务逻辑（导出、导入、备份）
 """
+import json
 import os
 import tempfile
 from datetime import datetime
@@ -97,9 +98,10 @@ class DataService:
         """
         导入数据
 
-        支持两种导入方式：
-        1. ZIP 备份文件：通过 backup_path 指定
-        2. JSON 数据：通过 data 字段直接传入
+        支持三种导入方式：
+        1. ZIP 备份文件：通过 backup_path 指定（.zip 扩展名）
+        2. JSON 文件：通过 backup_path 指定（.json 扩展名）
+        3. JSON 数据：通过 data 字段直接传入
 
         Returns:
             (response_data, status_code)
@@ -115,11 +117,33 @@ class DataService:
         try:
             db_path = db.bind.url.database
 
-            # JSON 数据导入
+            # JSON 数据直接导入
             if data:
                 stats = import_from_json(db_path, data)
                 return {
                     "import_type": "json",
+                    "source": "data",
+                    "stats": stats,
+                    "imported_at": datetime.now().isoformat()
+                }, 200
+
+            # 文件导入：根据扩展名判断类型
+            backup_path_lower = backup_path.lower()
+
+            # JSON 文件导入
+            if backup_path_lower.endswith('.json'):
+                json_path = Path(backup_path)
+                if not json_path.exists():
+                    return error_response(message=f"JSON 文件不存在: {backup_path}", code=404), 404
+
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    json_data = json.load(f)
+
+                stats = import_from_json(db_path, json_data)
+                return {
+                    "import_type": "json",
+                    "source": "file",
+                    "json_path": backup_path,
                     "stats": stats,
                     "imported_at": datetime.now().isoformat()
                 }, 200

@@ -109,6 +109,9 @@ backend/dist/
 .vite/
 node_modules/.vite/
 
+# Electron-vite temp config files
+electron.vite.config.*.mjs
+
 # Electron Builder output
 *.dmg
 *.exe
