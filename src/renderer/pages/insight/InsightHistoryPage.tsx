@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, FileText, Calendar, ChevronRight } from 'lucide-react'
 import { Button } from '~/renderer/components/ui/button'
@@ -6,32 +6,26 @@ import { GlassCard } from '~/renderer/components/GlassCard'
 import { aiApi, type InsightResponse } from '~/renderer/api/ai'
 import { toast } from 'sonner'
 import { getSystemName } from '~/renderer/lib/insightUtils'
+import { usePagination } from '~/renderer/hooks/usePagination'
 
 export function InsightHistoryPage() {
   const navigate = useNavigate()
-  const [insights, setInsights] = useState<InsightResponse[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(0)
-  const [total, setTotal] = useState(0)
-  const pageSize = 10
 
-  // 使用 useRef 防止 StrictMode 双重调用
-  const isLoadingRef = useRef(false)
-
-  // 加载洞察列表
-  const loadInsights = async (page: number) => {
-    // 防止重复调用
-    if (isLoadingRef.current) {
-      return
-    }
-
-    try {
-      isLoadingRef.current = true
-      setIsLoading(true)
+  // 使用分页 hook（页码切换模式）
+  const {
+    data: insights,
+    currentPage,
+    hasMore,
+    isLoading,
+    loadPage,
+    refresh,
+  } = usePagination<InsightResponse>({
+    pageSize: 10,
+    incremental: false, // 使用页码切换模式
+    fetchData: async params => {
       const response = await aiApi.getInsights({
-        page,
-        page_size: pageSize,
+        page: params.page,
+        page_size: params.page_size,
         sort_by: 'generated_at',
         sort_order: 'desc',
       })
@@ -41,42 +35,18 @@ export function InsightHistoryPage() {
         toast.error('加载洞察历史失败', {
           description: error.detail?.message || '请稍后重试',
         })
-        return
+        throw error
       }
 
       const result = await response.json()
-      setInsights(result.data.items)
-      setTotalPages(result.data.total_pages)
-      setTotal(result.data.total)
-    } catch (error) {
-      console.error('Failed to load insights:', error)
-      toast.error('加载洞察历史失败', {
-        description: '请稍后重试',
-      })
-    } finally {
-      setIsLoading(false)
-      isLoadingRef.current = false
-    }
-  }
+      return {
+        items: result.data.items,
+        hasMore: params.page < result.data.total_pages,
+      }
+    },
+  })
 
-  // 切换页面
-  const handlePageChange = (page: number) => {
-    if (page < 1 || page > totalPages) return
-    setCurrentPage(page)
-    loadInsights(page)
-  }
-
-  useEffect(() => {
-    loadInsights(currentPage)
-  }, [currentPage])
-
-  if (isLoading && insights.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-apple-textSec dark:text-white/60">加载中...</div>
-      </div>
-    )
-  }
+  const total = insights.length
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -170,44 +140,35 @@ export function InsightHistoryPage() {
           </div>
 
           {/* 分页 */}
-          {totalPages > 1 && (
+          {hasMore && (
             <div className="flex items-center justify-center gap-2">
               <Button
                 disabled={currentPage === 1}
-                onClick={() => handlePageChange(currentPage - 1)}
+                onClick={() => loadPage(currentPage - 1)}
                 size="sm"
                 variant="outline"
               >
                 上一页
               </Button>
               <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                  let pageNum: number
-                  if (totalPages <= 5) {
-                    pageNum = i + 1
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i
-                  } else {
-                    pageNum = currentPage - 2 + i
-                  }
-
-                  return (
-                    <Button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      size="sm"
-                      variant={currentPage === pageNum ? 'default' : 'outline'}
-                    >
-                      {pageNum}
-                    </Button>
-                  )
-                })}
+                <Button
+                  onClick={() => loadPage(currentPage)}
+                  size="sm"
+                  variant="default"
+                >
+                  {currentPage}
+                </Button>
+                <Button
+                  onClick={() => loadPage(currentPage + 1)}
+                  size="sm"
+                  variant="outline"
+                >
+                  {currentPage + 1}
+                </Button>
               </div>
               <Button
-                disabled={currentPage === totalPages}
-                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={!hasMore}
+                onClick={() => loadPage(currentPage + 1)}
                 size="sm"
                 variant="outline"
               >

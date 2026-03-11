@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   Plus,
   AlertCircle,
@@ -33,6 +33,7 @@ import {
   type BaselineData,
   type Deviation,
 } from '~/renderer/hooks/useDietApi'
+import { usePagination } from '~/renderer/hooks/usePagination'
 import type { MealItem, ScoreHistoryItem } from '~/renderer/api/diet'
 import {
   ScoreHistoryChart,
@@ -187,6 +188,7 @@ export function FuelSystemPage() {
     getDeviations,
     updateDeviation,
     deleteDeviation,
+    getDeviationsPaginated,
     getScoreHistory,
   } = useDietApi()
 
@@ -205,13 +207,23 @@ export function FuelSystemPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [hasTodayData, setHasTodayData] = useState(false)
 
-  // 偏离记录状态
-  const [deviations, setDeviations] = useState<Deviation[]>([])
-  const [displayedDeviations, setDisplayedDeviations] = useState<Deviation[]>(
-    []
-  )
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(false)
+  // 使用分页 hook 加载偏离事件
+  const {
+    data: displayedDeviations,
+    hasMore,
+    isLoadingMore,
+    loadMore,
+    refresh: refreshDeviations,
+  } = usePagination<Deviation>({
+    pageSize: PAGE_SIZE,
+    incremental: true,
+    fetchData: async params => {
+      return await getDeviationsPaginated({
+        page: params.page,
+        page_size: params.page_size,
+      })
+    },
+  })
 
   // 快速记录偏离
   const [quickDescription, setQuickDescription] = useState('')
@@ -221,51 +233,77 @@ export function FuelSystemPage() {
   const [editingDescription, setEditingDescription] = useState('')
 
   const isInitializedRef = useRef(false)
+  const loadScoreHistoryRef = useRef<{
+    promise: Promise<any> | null
+    lastDays: number | null
+  }>({
+    promise: null,
+    lastDays: null,
+  })
 
   // 加载评分历史
-  const loadScoreHistory = async (days: number) => {
-    setIsLoadingHistory(true)
-    try {
-      const { history, currentScore: scoreFromApi } =
-        await getScoreHistory(days)
+  const loadScoreHistory = useCallback(
+    async (days: number) => {
+      // 如果相同的请求正在进行中，直接返回之前的 promise
+      if (
+        loadScoreHistoryRef.current.promise &&
+        loadScoreHistoryRef.current.lastDays === days
+      ) {
+        return loadScoreHistoryRef.current.promise
+      }
 
-      // 使用接口返回的 current_score
-      setCurrentScore(scoreFromApi)
+      setIsLoadingHistory(true)
+      const promise = (async () => {
+        try {
+          const { history, currentScore: scoreFromApi } =
+            await getScoreHistory(days)
 
-      // 按时间正序排列数据（从旧到新）
-      const sortedHistory = [...history].sort(
-        (a, b) => a.timestamp - b.timestamp
-      )
+          // 使用接口返回的 current_score
+          setCurrentScore(scoreFromApi)
 
-      // 按天汇总数据，取每天的最后一个记录（最终分数）
-      const dailyMap = new Map<string, (typeof history)[0]>()
-      sortedHistory.forEach(item => {
-        const dateKey = new Date(item.timestamp).toLocaleDateString('zh-CN')
-        // 同一天的多条记录，只保留最后一条（分数最低的）
-        dailyMap.set(dateKey, item)
-      })
+          // 按时间正序排列数据（从旧到新）
+          const sortedHistory = [...history].sort(
+            (a, b) => a.timestamp - b.timestamp
+          )
 
-      // 转换为图表数据格式
-      const chartData: ScoreHistoryDataPoint[] = Array.from(
-        dailyMap.values()
-      ).map(item => ({
-        date: new Date(item.timestamp).toLocaleDateString('zh-CN'),
-        score: item.new_score,
-        timestamp: item.timestamp,
-      }))
+          // 按天汇总数据，取每天的最后一个记录（最终分数）
+          const dailyMap = new Map<string, (typeof history)[0]>()
+          sortedHistory.forEach(item => {
+            const dateKey = new Date(item.timestamp).toLocaleDateString('zh-CN')
+            // 同一天的多条记录，只保留最后一条（分数最低的）
+            dailyMap.set(dateKey, item)
+          })
 
-      setScoreHistory(chartData)
+          // 转换为图表数据格式
+          const chartData: ScoreHistoryDataPoint[] = Array.from(
+            dailyMap.values()
+          ).map(item => ({
+            date: new Date(item.timestamp).toLocaleDateString('zh-CN'),
+            score: item.new_score,
+            timestamp: item.timestamp,
+          }))
 
-      // 检查今天是否已有数据
-      const today = new Date().toLocaleDateString('zh-CN')
-      const hasDataToday = chartData.some(item => item.date === today)
-      setHasTodayData(hasDataToday)
-    } catch (error) {
-      console.log('Failed to load score history:', error)
-    } finally {
-      setIsLoadingHistory(false)
-    }
-  }
+          setScoreHistory(chartData)
+
+          // 检查今天是否已有数据
+          const today = new Date().toLocaleDateString('zh-CN')
+          const hasDataToday = chartData.some(item => item.date === today)
+          setHasTodayData(hasDataToday)
+        } catch (error) {
+          console.log('Failed to load score history:', error)
+        } finally {
+          setIsLoadingHistory(false)
+          loadScoreHistoryRef.current.promise = null
+          loadScoreHistoryRef.current.lastDays = null
+        }
+      })()
+
+      loadScoreHistoryRef.current.promise = promise
+      loadScoreHistoryRef.current.lastDays = days
+      return promise
+    },
+    [getScoreHistory]
+  )
 
   // 初始化加载数据
   useEffect(() => {
@@ -292,14 +330,8 @@ export function FuelSystemPage() {
           })
         }
 
-        // 加载偏离事件
-        const { deviations: deviationData } = await getDeviations()
-        setDeviations(deviationData)
-        setDisplayedDeviations(deviationData.slice(0, PAGE_SIZE))
-        setHasMore(deviationData.length > PAGE_SIZE)
-
-        // 加载评分历史
-        await loadScoreHistory(30)
+        // 偏离事件由 usePagination hook 自动加载
+        // 评分历史由第二个 useEffect 加载（避免重复调用）
       } catch (error) {
         console.log('Failed to load fuel system data:', error)
       }
@@ -308,13 +340,14 @@ export function FuelSystemPage() {
     loadData()
   }, [])
 
-  // 切换历史天数时重新加载
+  // 切换历史天数时重新加载（包括首次加载）
   useEffect(() => {
     const days = parseInt(historyDays, 10)
     loadScoreHistory(days)
-  }, [historyDays])
+  }, [historyDays, loadScoreHistory])
 
-  const consistencyScore = Math.max(0, 100 - deviations.length * 5)
+  // 使用已加载的偏离事件数量计算一致性评分
+  const consistencyScore = Math.max(0, 100 - displayedDeviations.length * 5)
 
   const addMealItem = (mealType: 'breakfast' | 'lunch' | 'dinner') => {
     setBaselineForm({
@@ -376,10 +409,8 @@ export function FuelSystemPage() {
 
     try {
       const newDev = await createDeviation(quickDescription.trim())
-      const newDeviations = [newDev, ...deviations]
-      setDeviations(newDeviations)
-      setDisplayedDeviations(newDeviations.slice(0, PAGE_SIZE))
-      setHasMore(newDeviations.length > PAGE_SIZE)
+      // 刷新偏离事件列表
+      refreshDeviations()
       setQuickDescription('')
       // 重新加载评分历史
       loadScoreHistory(parseInt(historyDays, 10))
@@ -391,10 +422,8 @@ export function FuelSystemPage() {
   const removeDeviation = async (id: string) => {
     try {
       await deleteDeviation(id)
-      const newDeviations = deviations.filter(d => d.id !== id)
-      setDeviations(newDeviations)
-      setDisplayedDeviations(newDeviations.slice(0, PAGE_SIZE))
-      setHasMore(newDeviations.length > PAGE_SIZE)
+      // 刷新偏离事件列表
+      refreshDeviations()
       // 重新加载评分历史
       loadScoreHistory(parseInt(historyDays, 10))
     } catch (error) {
@@ -415,29 +444,13 @@ export function FuelSystemPage() {
   const saveEdit = async (id: string) => {
     if (!editingDescription.trim()) return
     try {
-      const updated = await updateDeviation(id, editingDescription)
-      const newDeviations = deviations.map(d => (d.id === id ? updated : d))
-      setDeviations(newDeviations)
-      setDisplayedDeviations(newDeviations.slice(0, displayedDeviations.length))
+      await updateDeviation(id, editingDescription)
       cancelEdit()
+      // 刷新偏离事件列表
+      refreshDeviations()
     } catch (error) {
       console.log('Failed to update deviation:', error)
     }
-  }
-
-  const loadMoreDeviations = () => {
-    if (isLoadingMore || !hasMore) return
-    setIsLoadingMore(true)
-    const currentLength = displayedDeviations.length
-    const nextDeviations = deviations.slice(
-      currentLength,
-      currentLength + PAGE_SIZE
-    )
-    setTimeout(() => {
-      setDisplayedDeviations([...displayedDeviations, ...nextDeviations])
-      setHasMore(currentLength + PAGE_SIZE < deviations.length)
-      setIsLoadingMore(false)
-    }, 300)
   }
 
   // 按日期分组偏离事件
@@ -688,7 +701,7 @@ export function FuelSystemPage() {
                 </span>
                 <Badge className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/10">
                   {
-                    deviations.filter(
+                    displayedDeviations.filter(
                       d => d.timestamp > Date.now() - 7 * 24 * 60 * 60 * 1000
                     ).length
                   }{' '}
@@ -838,7 +851,7 @@ export function FuelSystemPage() {
                 <Button
                   className="w-full"
                   disabled={isLoadingMore}
-                  onClick={loadMoreDeviations}
+                  onClick={loadMore}
                   size="sm"
                   variant="outline"
                 >

@@ -58,13 +58,22 @@ class TimelineService:
         if type in ["all", "diary"]:
             diaries = db.query(Diary).filter(Diary.user_id == user.id).all()
             for diary in diaries:
+                # 确保字段不为空
+                title = diary.title or "无标题日记"
+                content = diary.content or ""
+                if diary.created_at:
+                    time_str = diary.created_at.strftime("%H:%M")
+                    ts = int(diary.created_at.timestamp() * 1000)
+                else:
+                    time_str = "00:00"
+                    ts = 0
                 events.append(TimelineEventItem(
                     id=f"diary_{diary.id}",
                     type="diary",
-                    title=diary.title,
-                    content=diary.content,
-                    time=diary.created_at.strftime("%H:%M"),
-                    timestamp=int(diary.created_at.timestamp() * 1000)
+                    title=title,
+                    content=content,
+                    time=time_str,
+                    timestamp=ts
                 ))
 
         # 获取饮食偏离事件（使用 occurred_at 作为事件时间）
@@ -75,13 +84,21 @@ class TimelineService:
             ).all()
 
             for deviation in deviations:
+                # 确保字段不为空
+                description = deviation.description or "未描述饮食偏离事件"
+                if deviation.occurred_at:
+                    time_str = deviation.occurred_at.strftime("%H:%M")
+                    ts = int(deviation.occurred_at.timestamp() * 1000)
+                else:
+                    time_str = "00:00"
+                    ts = 0
                 events.append(TimelineEventItem(
                     id=f"diet_{deviation.id}",
                     type="diet",
                     title="饮食偏离记录",
-                    content=deviation.description,
-                    time=deviation.occurred_at.strftime("%H:%M"),
-                    timestamp=int(deviation.occurred_at.timestamp() * 1000)
+                    content=description,
+                    time=time_str,
+                    timestamp=ts
                 ))
 
         # 按时间戳降序排序（最新事件在前）

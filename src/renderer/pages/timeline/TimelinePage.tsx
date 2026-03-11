@@ -1,109 +1,53 @@
 import type React from 'react'
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { Beef, Sparkles, Calendar as CalendarIcon, Clock } from 'lucide-react'
 import { GlassCard } from '~/renderer/components/GlassCard'
 import { Badge } from '~/renderer/components/ui/badge'
 import {
   useTimelineApi,
-  type TimelineDateGroup,
-  type TimelineEventItem,
+  type FlatTimelineEvent,
 } from '~/renderer/hooks/useTimelineApi'
-
-type TimelineEvent = {
-  id: string
-  timestamp: number
-  type: 'journal' | 'fuel' | 'dimension'
-  title: string
-  content: string
-  icon: React.ReactNode
-  color: string
-  time: string
-}
+import { usePagination } from '~/renderer/hooks/usePagination'
 
 export function TimelinePage() {
-  const { getTimeline } = useTimelineApi()
+  const { getTimelineFlat } = useTimelineApi()
   const [filter, setFilter] = useState<'all' | 'journal' | 'fuel'>('all')
-  const [allTimelineData, setAllTimelineData] = useState<TimelineDateGroup[]>(
-    []
-  )
-  const [currentPage, setCurrentPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const isLoadingRef = useRef(false)
 
-  // 加载时间轴数据
-  const loadTimeline = async (
-    typeFilter?: 'all' | 'journal' | 'fuel',
-    page: number = 1
-  ) => {
-    if (isLoadingRef.current) return
-    isLoadingRef.current = true
+  // 使用分页 hook
+  const { data, hasMore, isLoading, isLoadingMore, loadMore, refresh, reset } =
+    usePagination<FlatTimelineEvent, { type: string }>({
+      pageSize: 10,
+      incremental: true, // 启用增量加载
+      extraParams: {
+        type:
+          filter === 'journal' ? 'diary' : filter === 'fuel' ? 'diet' : 'all',
+      },
+      fetchData: async params => {
+        const result = await getTimelineFlat({
+          page: params.page,
+          page_size: params.page_size,
+          type: params.type as 'all' | 'diary' | 'diet',
+        })
+        return result
+      },
+    })
 
-    if (page === 1) {
-      setIsLoading(true)
-    } else {
-      setIsLoadingMore(true)
-    }
-
-    try {
-      // 转换前端的 filter 到后端的 type
-      const apiType =
-        typeFilter === 'journal'
-          ? 'diary'
-          : typeFilter === 'fuel'
-            ? 'diet'
-            : 'all'
-      const { timeline, hasMore: moreData } = await getTimeline({
-        type: apiType,
-        page,
-        page_size: 10,
-      })
-
-      if (page === 1) {
-        // 首次加载，直接替换
-        setAllTimelineData(timeline)
-        setCurrentPage(1)
-      } else {
-        // 追加数据
-        setAllTimelineData(prev => [...prev, ...timeline])
-        setCurrentPage(page)
+  // 按日期分组数据
+  const groupedData = data.reduce(
+    (acc, item) => {
+      if (!acc[item.date]) {
+        acc[item.date] = []
       }
-
-      setHasMore(moreData)
-    } catch (error) {
-      console.log('Failed to load timeline:', error)
-    } finally {
-      isLoadingRef.current = false
-      setIsLoading(false)
-      setIsLoadingMore(false)
-    }
-  }
-
-  // 加载更多
-  const loadMore = () => {
-    if (isLoadingMore || !hasMore) return
-    loadTimeline(filter, currentPage + 1)
-  }
-
-  // 初始化时加载数据
-  useEffect(() => {
-    loadTimeline(filter)
-  }, [])
-
-  // 当 filter 改变时重新加载数据
-  useEffect(() => {
-    loadTimeline(filter)
-  }, [filter])
+      acc[item.date].push(item)
+      return acc
+    },
+    {} as Record<string, FlatTimelineEvent[]>
+  )
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          {/* <h1 className="text-4xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
-            <History className="text-blue-500" />
-            时间轴
-          </h1> */}
           <p className="text-apple-textSec dark:text-white/40 mt-1 text-lg">
             跨系统的生命足迹聚合审计。
           </p>
@@ -116,7 +60,6 @@ export function TimelinePage() {
               { value: 'journal' as const, label: '日记', color: 'purple' },
               { value: 'fuel' as const, label: '饮食', color: 'orange' },
             ].map(f => {
-              // 选中状态的样式
               const selectedBg =
                 f.color === 'blue'
                   ? 'bg-white dark:bg-blue-600'
@@ -158,7 +101,7 @@ export function TimelinePage() {
               <Clock className="mb-4 opacity-50 animate-pulse" size={64} />
               <p className="text-xl font-bold">加载中...</p>
             </div>
-          ) : allTimelineData.length === 0 ? (
+          ) : data.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-apple-textTer dark:text-white/10">
               <Clock className="mb-4 opacity-50" size={64} />
               <p className="text-xl font-bold">暂无足迹记录</p>
@@ -166,19 +109,19 @@ export function TimelinePage() {
             </div>
           ) : (
             <>
-              {allTimelineData.map(group => (
-                <div className="space-y-6 relative" key={group.date}>
+              {Object.entries(groupedData).map(([date, events]) => (
+                <div className="space-y-6 relative" key={date}>
                   <div className="flex items-center gap-4 sticky top-0 z-10 py-2">
                     <div className="w-[43px] h-[43px] rounded-full bg-apple-bgMain dark:bg-[#050505] border border-apple-border dark:border-white/10 flex items-center justify-center shadow-md">
                       <CalendarIcon className="text-blue-500" size={18} />
                     </div>
                     <h3 className="text-lg font-black text-apple-textMain dark:text-white tracking-tight backdrop-blur-md bg-white/60 dark:bg-[#050505]/80 px-4 py-1 rounded-full border border-apple-border dark:border-white/5">
-                      {group.date}
+                      {date}
                     </h3>
                   </div>
 
                   <div className="ml-[43px] space-y-6 pl-8">
-                    {group.events.map((event: TimelineEventItem) => {
+                    {events.map((event: FlatTimelineEvent) => {
                       const type = event.type === 'diary' ? 'journal' : 'fuel'
                       const icon =
                         type === 'journal' ? (

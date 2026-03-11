@@ -40,10 +40,16 @@ export default {
   // 确保打包所有必要文件
   files: [
     '**/*',
-    '!backend/**/*',
-    '!venv/**/*',
-    '!.git/**/*',
-    '!*.md',
+    '!backend/**/*',       // 排除 Python 源码
+    '!venv/**/*',          // 排除 Python 虚拟环境
+    '!.git/**/*',          // 排除 Git 仓库
+    '!*.md',               // 排除 Markdown 文档
+    '!docs/**/*',          // 排除文档目录
+    '!**/node_modules/.bin/**',  // 排除 bin 目录
+    '!**/*.ts',            // 排除 TypeScript 源码
+    '!**/*.spec.*',        // 排除测试文件
+    '!**/*.test.*',        // 排除测试文件
+    '!**/__tests__/**',    // 排除测试目录
   ],
 
   mac: {

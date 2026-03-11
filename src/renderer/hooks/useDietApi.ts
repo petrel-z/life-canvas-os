@@ -150,7 +150,7 @@ export function useDietApi() {
   )
 
   /**
-   * 获取偏离事件列表
+   * 获取偏离事件列表（返回全部数据，用于旧版本）
    */
   const getDeviations = useCallback(
     async (params?: {
@@ -191,6 +191,58 @@ export function useDietApi() {
       return {
         deviations,
         total: data.total,
+      }
+    },
+    []
+  )
+
+  /**
+   * 获取偏离事件列表（分页模式，用于 usePagination hook）
+   */
+  const getDeviationsPaginated = useCallback(
+    async (params?: {
+      page?: number
+      page_size?: number
+      start_date?: string
+      end_date?: string
+    }): Promise<{ items: Deviation[]; hasMore: boolean }> => {
+      const requestParams = {
+        page: params?.page || 1,
+        page_size: params?.page_size || 10,
+        start_date: params?.start_date,
+        end_date: params?.end_date,
+      }
+
+      const response = await dietApi.getDeviations(requestParams)
+
+      if (!response.ok) {
+        const error = await response.json()
+        toast.error('获取偏离事件列表失败', {
+          description: error.detail?.message || '请稍后重试',
+        })
+        throw error
+      }
+
+      const result = await response.json()
+      const data = result.data as { items: MealDeviation[]; total: number }
+
+      // 转换后端响应到前端格式
+      const deviations: Deviation[] = data.items.map(item => ({
+        id: item.id.toString(),
+        timestamp: item.occurred_at_ts,
+        description: item.description,
+        type: 'other',
+      }))
+
+      // 按时间倒序排列（最新的在前）
+      deviations.sort((a, b) => b.timestamp - a.timestamp)
+
+      // 计算是否有更多数据
+      const hasMore = data.items.length === requestParams.page_size
+
+      return {
+        items: deviations,
+        hasMore,
       }
     },
     []
@@ -291,6 +343,7 @@ export function useDietApi() {
     updateBaseline,
     createDeviation,
     getDeviations,
+    getDeviationsPaginated,
     updateDeviation,
     deleteDeviation,
     getScoreHistory,

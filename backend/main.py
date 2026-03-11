@@ -304,11 +304,14 @@ else:
         # 保留连字符：api_pin_verify-requirements -> /api/pin/verify-requirements
         path = '/' + path_part.replace('_', '/')
 
+        # 从 params 中过滤掉 'action' 和 'id' 字段（这些是 IPC 请求的元数据）
+        filtered_params = {k: v for k, v in params.items() if k not in ('action', 'id')}
+
         # 对于 POST/PUT/PATCH 请求，params 作为 body 传递；对于 GET/DELETE，作为查询参数
         if method in ['POST', 'PUT', 'PATCH']:
-            return api_call_wrapper(method, path, None, params)
+            return api_call_wrapper(method, path, None, filtered_params)
         else:
-            return api_call_wrapper(method, path, params, None)
+            return api_call_wrapper(method, path, filtered_params, None)
 
     def ipc_loop():
         """IPC 通信循环"""
