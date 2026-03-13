@@ -2,6 +2,7 @@
 import os
 import shutil
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -10,6 +11,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
 from backend.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseBackup:
@@ -52,6 +55,15 @@ class DatabaseBackup:
         if not self.db_path.exists():
             raise FileNotFoundError(f"Database file not found: {self.db_path}")
 
+        # 先关闭所有数据库连接，确保数据一致性
+        try:
+            from backend.db.session import DatabaseManager
+            DatabaseManager.close_all_connections()
+            import time
+            time.sleep(0.3)
+        except Exception as e:
+            logger.warning(f"Error closing connections before backup: {e}")
+
         # 生成备份文件名
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_name = name or f"backup_{timestamp}"
@@ -65,6 +77,15 @@ class DatabaseBackup:
             # 复制数据库文件
             temp_db = temp_dir / self.db_path.name
             shutil.copy2(self.db_path, temp_db)
+
+            # 同时复制 WAL 文件（如果存在）
+            wal_file = Path(str(self.db_path) + "-wal")
+            if wal_file.exists():
+                shutil.copy2(wal_file, temp_dir / wal_file.name)
+
+            # 检查复制后的数据库文件是否有内容
+            if temp_db.stat().st_size < 1000:
+                raise ValueError(f"Database file is too small to be valid: {temp_db.stat().st_size} bytes")
 
             # 创建备份元数据
             metadata = {
@@ -114,7 +135,7 @@ class DatabaseBackup:
         # 验证备份文件
         if verify:
             if not self._verify_backup(backup_file):
-                raise ValueError("Invalid backup file")
+                raise ValueError("Invalid backup file: verification failed (missing required files or tables)")
 
         # 创建当前数据库的备份（防止恢复失败）
         safety_backup = None
@@ -130,15 +151,29 @@ class DatabaseBackup:
             with zipfile.ZipFile(backup_file, 'r') as zipf:
                 zipf.extractall(temp_dir)
 
-            # 恢复数据库文件
-            restored_db = temp_dir / self.db_path.name
-            if not restored_db.exists():
+            # 找到恢复的数据库文件（大小写不敏感匹配）
+            files_in_temp = list(temp_dir.iterdir())
+            restored_db = None
+            for f in files_in_temp:
+                if f.is_file() and f.name.lower() == self.db_path.name.lower():
+                    restored_db = f
+                    break
+
+            if not restored_db:
+                logger.error(f"Database file not found after extraction: {self.db_path.name}")
                 raise FileNotFoundError("Database file not found in backup") 
 
             # 关闭所有数据库连接
             self._close_all_connections()
 
-            # Windows 文锁定需要重试机制
+            # 强制垃圾回收以释放文件句柄
+            import gc
+            gc.collect()
+
+            # 额外等待确保文件句柄释放
+            time.sleep(1.0)
+
+            # Windows 文件锁定需要更长的重试机制
             files_to_delete = [
                 self.db_path,
                 Path(str(self.db_path) + "-wal"),
@@ -148,28 +183,35 @@ class DatabaseBackup:
             # 先删除现有数据库文件
             for file_path in files_to_delete:
                 if file_path.exists():
-                    for attempt in range(5):
+                    for attempt in range(10):
                         try:
                             os.remove(file_path)
                             break
                         except PermissionError:
-                            if attempt < 4:
-                                time.sleep(0.5 * (attempt + 1))
+                            if attempt < 9:
+                                time.sleep(1.0 * (attempt + 1))
                             else:
                                 raise
 
             # 复制新数据库文件（带重试）
-            for attempt in range(5):
+            for attempt in range(10):
                 try:
                     shutil.copy2(restored_db, self.db_path)
                     break
                 except PermissionError:
-                    if attempt < 4:
-                        time.sleep(0.5 * (attempt + 1))
+                    if attempt < 9:
+                        time.sleep(1.0 * (attempt + 1))
                     else:
                         raise
 
             print(f"[OK] Database restored from: {backup_path}")
+
+            # 验证恢复后的数据库
+            if not self._verify_restored_database():
+                logger.error("Database verification failed - tables missing or database invalid")
+                raise ValueError("恢复的数据库无效：缺少必需的表")
+
+            logger.info("Database verification passed")
             return True
 
         except Exception as e:
@@ -179,16 +221,31 @@ class DatabaseBackup:
                 try:
                     # 直接复制安全备份，不再递归调用
                     self._close_all_connections()
-                    for attempt in range(5):
+
+                    # 确保 temp_dir 存在
+                    temp_restore_dir = temp_dir or self.backup_dir / "temp"
+                    temp_restore_dir.mkdir(parents=True, exist_ok=True)
+
+                    for attempt in range(10):
                         try:
                             with zipfile.ZipFile(safety_backup, 'r') as zipf:
-                                zipf.extractall(temp_dir or self.backup_dir / "temp")
-                            restored = (temp_dir or self.backup_dir / "temp") / self.db_path.name
+                                zipf.extractall(temp_restore_dir)
+
+                            # 找到正确的数据库文件（大小写不敏感匹配）
+                            restored = None
+                            for f in temp_restore_dir.iterdir():
+                                if f.is_file() and f.name.lower() == self.db_path.name.lower():
+                                    restored = f
+                                    break
+
+                            if not restored:
+                                raise FileNotFoundError(f"Safety backup database file not found: {self.db_path.name}")
+
                             shutil.copy2(restored, self.db_path)
                             break
                         except PermissionError:
-                            if attempt < 4:
-                                time.sleep(0.5 * (attempt + 1))
+                            if attempt < 9:
+                                time.sleep(1.0 * (attempt + 1))
                             else:
                                 raise
                 except Exception as restore_error:
@@ -202,24 +259,153 @@ class DatabaseBackup:
     def _verify_backup(self, backup_path: Path) -> bool:
         """验证备份文件"""
         try:
-            with zipfile.ZipFile(backup_path, 'r') as zipf:
-                # 检查必需文件
-                files = zipf.namelist()
-                if self.db_path.name not in files:
-                    return False
-                if "metadata.json" not in files:
-                    return False
+            import time
+            temp_dir = self.backup_dir / "verify_temp"
+            temp_dir.mkdir(exist_ok=True)
 
-                # 验证元数据
-                metadata_json = zipf.read("metadata.json")
-                metadata = json.loads(metadata_json)
-                if "backup_name" not in metadata:
-                    return False
+            try:
+                with zipfile.ZipFile(backup_path, 'r') as zipf:
+                    # 检查必需文件
+                    files = zipf.namelist()
+                    logger.info(f"Backup file contents: {files}")
 
-                return True
+                    # 找到大小写不敏感匹配的文件名
+                    db_filename = None
+                    for f in files:
+                        if f.lower() == self.db_path.name.lower():
+                            db_filename = f
+                            break
+
+                    if not db_filename:
+                        logger.error(f"Database file {self.db_path.name} not found in backup (case-insensitive search)")
+                        return False
+
+                    if "metadata.json" not in files:
+                        logger.error("metadata.json not found in backup")
+                        return False
+
+                    # 验证元数据
+                    metadata_json = zipf.read("metadata.json")
+                    metadata = json.loads(metadata_json)
+                    if "backup_name" not in metadata:
+                        return False
+
+                    # 额外检查：数据库文件大小
+                    db_file_info = zipf.getinfo(db_filename)
+                    logger.info(f"Backup database file size: {db_file_info.file_size} bytes")
+
+                    if db_file_info.file_size < 1000:
+                        logger.error(f"Backup database file is too small: {db_file_info.file_size} bytes")
+                        return False
+
+                    # 解压并验证数据库表
+                    zipf.extractall(temp_dir)
+                    restored_db = temp_dir / db_filename
+
+                    if not restored_db.exists():
+                        logger.error("Database file not found after extraction")
+                        return False
+
+                    # 验证数据库包含表
+                    connect_args = {"check_same_thread": False} if "sqlite" in str(settings.DATABASE_URL) else {}
+                    temp_engine = create_engine(
+                        f"sqlite:///{str(restored_db).replace(chr(92), '/')}",
+                        connect_args=connect_args
+                    )
+
+                    with temp_engine.connect() as conn:
+                        required_tables = ['users', 'systems', 'diaries']
+                        result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
+                        existing_tables = [row[0] for row in result]
+                        logger.info(f"Tables in backup: {existing_tables}")
+
+                        # 使用大小写不敏感比较（SQLite 表名可能返回不同大小写）
+                        existing_tables_lower = [t.lower() for t in existing_tables]
+                        missing = [t for t in required_tables if t.lower() not in existing_tables_lower]
+                        if missing:
+                            logger.error(f"Backup missing required tables: {missing}")
+                            temp_engine.dispose()
+                            return False
+
+                    temp_engine.dispose()
+                    return True
+
+            finally:
+                # 清理临时目录
+                if temp_dir.exists():
+                    shutil.rmtree(temp_dir)
 
         except Exception as e:
             print(f"[ERROR] Backup verification failed: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
+
+    def _verify_restored_database(self) -> bool:
+        """
+        验证恢复后的数据库是否有效
+
+        检查数据库文件是否存在且包含必要的表
+        """
+        import time
+
+        # 等待文件写入完成
+        time.sleep(0.5)
+
+        # 检查数据库文件是否存在
+        db_path_str = str(self.db_path.resolve())
+        logger.info(f"Verifying database at path: {db_path_str}")
+
+        if not self.db_path.exists():
+            logger.error(f"Restored database file does not exist: {self.db_path}")
+            return False
+
+        # 检查数据库文件大小（空文件或太小的文件可能是无效的）
+        db_size = self.db_path.stat().st_size
+        logger.info(f"Restored database file size: {db_size} bytes")
+        if db_size < 1000:  # 少于1KB的数据库基本是空的或无效的
+            logger.warning(f"Restored database file is too small: {db_size} bytes")
+            # 允许恢复，但记录警告
+
+        # 尝试连接数据库并检查表
+        try:
+            # 创建临时引擎来验证数据库
+            connect_args = {"check_same_thread": False} if "sqlite" in str(settings.DATABASE_URL) else {}
+            # 使用绝对路径并确保正确的 SQLite URL 格式
+            temp_engine = create_engine(
+                f"sqlite:///{db_path_str.replace(chr(92), '/')}",
+                connect_args=connect_args
+            )
+
+            logger.info(f"Created temp engine, checking tables...")
+
+            with temp_engine.connect() as conn:
+                # 检查必需表是否存在
+                required_tables = ['users', 'systems', 'diaries']
+                result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
+                existing_tables = [row[0] for row in result]
+
+                logger.info(f"Existing tables in restored database: {existing_tables}")
+
+                # 使用大小写不敏感比较（SQLite 表名可能返回不同大小写）
+                existing_tables_lower = [t.lower() for t in existing_tables]
+                missing_tables = [t for t in required_tables if t.lower() not in existing_tables_lower]
+                if missing_tables:
+                    logger.error(f"Missing required tables in restored database: {missing_tables}")
+                    temp_engine.dispose()
+                    return False
+
+                # 测试查询
+                conn.execute(text("SELECT 1"))
+                logger.info("Restored database verified successfully")
+
+            temp_engine.dispose()
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to verify restored database: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return False
 
     def _cleanup_old_backups(self):
@@ -313,7 +499,11 @@ def export_to_json(db_path: str, output_dir: str = None, use_classified_dir: boo
         导出文件路径
     """
     from backend.db.session import SessionLocal
-    from backend.models import User, UserSettings, System, Diary, Insight
+    from backend.models import (
+        User, UserSettings, System, Diary, Insight,
+        SystemLog, SystemAction, MealDeviation, SystemScoreLog,
+        DiaryAttachment, DiaryEditHistory
+    )
 
     # 确定输出路径
     if output_dir and not use_classified_dir:
@@ -333,11 +523,17 @@ def export_to_json(db_path: str, output_dir: str = None, use_classified_dir: boo
     try:
         data = {
             "exported_at": datetime.now().isoformat(),
-            "version": "1.0.0",
+            "version": "1.1.0",
             "users": [],
             "user_settings": [],
             "systems": [],
+            "system_logs": [],
+            "system_actions": [],
+            "meal_deviations": [],
+            "system_score_logs": [],
             "diaries": [],
+            "diary_attachments": [],
+            "diary_edit_history": [],
             "insights": []
         }
 
@@ -414,6 +610,72 @@ def export_to_json(db_path: str, output_dir: str = None, use_classified_dir: boo
                 "generated_at": insight.generated_at.isoformat() if insight.generated_at else None
             })
 
+        # 导出系统日志
+        for log in db.query(SystemLog).all():
+            data["system_logs"].append({
+                "id": log.id,
+                "system_id": log.system_id,
+                "label": log.label,
+                "value": log.value,
+                "meta_data": log.meta_data,
+                "created_at": log.created_at.isoformat() if log.created_at else None
+            })
+
+        # 导出系统行动项
+        for action in db.query(SystemAction).all():
+            data["system_actions"].append({
+                "id": action.id,
+                "system_id": action.system_id,
+                "text": action.text,
+                "completed": action.completed,
+                "created_at": action.created_at.isoformat() if action.created_at else None,
+                "updated_at": action.updated_at.isoformat() if action.updated_at else None
+            })
+
+        # 导出饮食偏离事件
+        for deviation in db.query(MealDeviation).all():
+            data["meal_deviations"].append({
+                "id": deviation.id,
+                "system_id": deviation.system_id,
+                "description": deviation.description,
+                "occurred_at": deviation.occurred_at.isoformat() if deviation.occurred_at else None,
+                "created_at": deviation.created_at.isoformat() if deviation.created_at else None
+            })
+
+        # 导出系统评分变化日志
+        for score_log in db.query(SystemScoreLog).all():
+            data["system_score_logs"].append({
+                "id": score_log.id,
+                "system_id": score_log.system_id,
+                "old_score": score_log.old_score,
+                "new_score": score_log.new_score,
+                "change_reason": score_log.change_reason,
+                "related_id": score_log.related_id,
+                "created_at": score_log.created_at.isoformat() if score_log.created_at else None
+            })
+
+        # 导出日记附件
+        for attachment in db.query(DiaryAttachment).all():
+            data["diary_attachments"].append({
+                "id": attachment.id,
+                "diary_id": attachment.diary_id,
+                "filename": attachment.filename,
+                "file_path": attachment.file_path,
+                "file_type": attachment.file_type,
+                "file_size": attachment.file_size,
+                "created_at": attachment.created_at.isoformat() if attachment.created_at else None
+            })
+
+        # 导出日记编辑历史
+        for history in db.query(DiaryEditHistory).all():
+            data["diary_edit_history"].append({
+                "id": history.id,
+                "diary_id": history.diary_id,
+                "title_snapshot": history.title_snapshot,
+                "content_snapshot": history.content_snapshot,
+                "created_at": history.created_at.isoformat() if history.created_at else None
+            })
+
         # 写入文件
         with open(export_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
@@ -437,7 +699,11 @@ def import_from_json(db_path: str, data: dict) -> dict:
         导入结果统计
     """
     from backend.db.session import SessionLocal
-    from backend.models import User, UserSettings, System, Diary, Insight
+    from backend.models import (
+        User, UserSettings, System, Diary, Insight,
+        SystemLog, SystemAction, MealDeviation, SystemScoreLog,
+        DiaryAttachment, DiaryEditHistory
+    )
     from datetime import datetime as dt
 
     # 验证数据格式
@@ -452,7 +718,13 @@ def import_from_json(db_path: str, data: dict) -> dict:
         "users": 0,
         "user_settings": 0,
         "systems": 0,
+        "system_logs": 0,
+        "system_actions": 0,
+        "meal_deviations": 0,
+        "system_score_logs": 0,
         "diaries": 0,
+        "diary_attachments": 0,
+        "diary_edit_history": 0,
         "insights": 0
     }
 
@@ -601,6 +873,133 @@ def import_from_json(db_path: str, data: dict) -> dict:
                     )
                     db.add(insight)
                 stats["insights"] += 1
+
+        # 导入系统日志
+        if "system_logs" in data:
+            for log_data in data["system_logs"]:
+                existing = db.query(SystemLog).filter(SystemLog.id == log_data["id"]).first()
+                if existing:
+                    existing.system_id = log_data.get("system_id")
+                    existing.label = log_data.get("label")
+                    existing.value = log_data.get("value")
+                    existing.meta_data = log_data.get("meta_data")
+                else:
+                    system_log = SystemLog(
+                        id=log_data["id"],
+                        system_id=log_data.get("system_id"),
+                        label=log_data.get("label"),
+                        value=log_data.get("value"),
+                        meta_data=log_data.get("meta_data"),
+                        created_at=dt.fromisoformat(log_data["created_at"]) if log_data.get("created_at") else None
+                    )
+                    db.add(system_log)
+                stats["system_logs"] += 1
+
+        # 导入系统行动项
+        if "system_actions" in data:
+            for action_data in data["system_actions"]:
+                existing = db.query(SystemAction).filter(SystemAction.id == action_data["id"]).first()
+                if existing:
+                    existing.system_id = action_data.get("system_id")
+                    existing.text = action_data.get("text")
+                    existing.completed = action_data.get("completed")
+                    if action_data.get("updated_at"):
+                        existing.updated_at = dt.fromisoformat(action_data["updated_at"])
+                else:
+                    system_action = SystemAction(
+                        id=action_data["id"],
+                        system_id=action_data.get("system_id"),
+                        text=action_data.get("text"),
+                        completed=action_data.get("completed"),
+                        created_at=dt.fromisoformat(action_data["created_at"]) if action_data.get("created_at") else None,
+                        updated_at=dt.fromisoformat(action_data["updated_at"]) if action_data.get("updated_at") else None
+                    )
+                    db.add(system_action)
+                stats["system_actions"] += 1
+
+        # 导入饮食偏离事件
+        if "meal_deviations" in data:
+            for deviation_data in data["meal_deviations"]:
+                existing = db.query(MealDeviation).filter(MealDeviation.id == deviation_data["id"]).first()
+                if existing:
+                    existing.system_id = deviation_data.get("system_id")
+                    existing.description = deviation_data.get("description")
+                    existing.occurred_at = dt.fromisoformat(deviation_data["occurred_at"]) if deviation_data.get("occurred_at") else None
+                else:
+                    meal_deviation = MealDeviation(
+                        id=deviation_data["id"],
+                        system_id=deviation_data.get("system_id"),
+                        description=deviation_data.get("description"),
+                        occurred_at=dt.fromisoformat(deviation_data["occurred_at"]) if deviation_data.get("occurred_at") else None,
+                        created_at=dt.fromisoformat(deviation_data["created_at"]) if deviation_data.get("created_at") else None
+                    )
+                    db.add(meal_deviation)
+                stats["meal_deviations"] += 1
+
+        # 导入系统评分变化日志
+        if "system_score_logs" in data:
+            for score_log_data in data["system_score_logs"]:
+                existing = db.query(SystemScoreLog).filter(SystemScoreLog.id == score_log_data["id"]).first()
+                if existing:
+                    existing.system_id = score_log_data.get("system_id")
+                    existing.old_score = score_log_data.get("old_score")
+                    existing.new_score = score_log_data.get("new_score")
+                    existing.change_reason = score_log_data.get("change_reason")
+                    existing.related_id = score_log_data.get("related_id")
+                else:
+                    system_score_log = SystemScoreLog(
+                        id=score_log_data["id"],
+                        system_id=score_log_data.get("system_id"),
+                        old_score=score_log_data.get("old_score"),
+                        new_score=score_log_data.get("new_score"),
+                        change_reason=score_log_data.get("change_reason"),
+                        related_id=score_log_data.get("related_id"),
+                        created_at=dt.fromisoformat(score_log_data["created_at"]) if score_log_data.get("created_at") else None
+                    )
+                    db.add(system_score_log)
+                stats["system_score_logs"] += 1
+
+        # 导入日记附件
+        if "diary_attachments" in data:
+            for attachment_data in data["diary_attachments"]:
+                existing = db.query(DiaryAttachment).filter(DiaryAttachment.id == attachment_data["id"]).first()
+                if existing:
+                    existing.diary_id = attachment_data.get("diary_id")
+                    existing.filename = attachment_data.get("filename")
+                    existing.file_path = attachment_data.get("file_path")
+                    existing.file_type = attachment_data.get("file_type")
+                    existing.file_size = attachment_data.get("file_size")
+                else:
+                    diary_attachment = DiaryAttachment(
+                        id=attachment_data["id"],
+                        diary_id=attachment_data.get("diary_id"),
+                        filename=attachment_data.get("filename"),
+                        file_path=attachment_data.get("file_path"),
+                        file_type=attachment_data.get("file_type"),
+                        file_size=attachment_data.get("file_size"),
+                        created_at=dt.fromisoformat(attachment_data["created_at"]) if attachment_data.get("created_at") else None
+                    )
+                    db.add(diary_attachment)
+                stats["diary_attachments"] += 1
+
+        # 导入日记编辑历史
+        if "diary_edit_history" in data:
+            for history_data in data["diary_edit_history"]:
+                existing = db.query(DiaryEditHistory).filter(DiaryEditHistory.id == history_data["id"]).first()
+                if existing:
+                    existing.diary_id = history_data.get("diary_id")
+                    existing.title_snapshot = history_data.get("title_snapshot")
+                    existing.content_snapshot = history_data.get("content_snapshot")
+                else:
+                    diary_edit_history = DiaryEditHistory(
+                        id=history_data["id"],
+                        diary_id=history_data.get("diary_id"),
+                        title_snapshot=history_data.get("title_snapshot"),
+                        content_snapshot=history_data.get("content_snapshot"),
+                        created_at=dt.fromisoformat(history_data["created_at"]) if history_data.get("created_at") else None
+                    )
+                    db.add(diary_edit_history)
+                stats["diary_edit_history"] += 1
 
         db.commit()
         print(f"[OK] Data imported from JSON: {stats}")

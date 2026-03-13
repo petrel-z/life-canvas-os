@@ -72,14 +72,6 @@ export const aiApi = {
     return apiRequest('/api/user/ai-config')
   },
 
-  analyze(request: { type: string; data: any }): Promise<Response> {
-    return apiRequest('/api/ai/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    })
-  },
-
   /**
    * 生成洞察
    */

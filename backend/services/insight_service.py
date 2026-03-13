@@ -344,3 +344,27 @@ class InsightService:
             ), 404
 
         return InsightResponse.model_validate(insight).model_dump(), 200
+
+    @staticmethod
+    def get_insight_by_id(db: Session, insight_id: int) -> Tuple[dict, int]:
+        """
+        获取单个洞察详情
+
+        Returns:
+            (response_data, status_code)
+        """
+        user = InsightService.get_user(db)
+
+        insight = db.query(Insight).filter(
+            Insight.id == insight_id,
+            Insight.user_id == user.id
+        ).first()
+
+        if not insight:
+            return error_response(
+                message="洞察不存在",
+                code=404,
+                data={"insight_id": insight_id}
+            ), 404
+
+        return InsightResponse.model_validate(insight).model_dump(), 200

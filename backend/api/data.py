@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/data", tags=["data-management"])
 
 @router.post("/export")
 async def export_data(
-    background_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks = None,
     format: str = Query("json", description="导出格式 (json, zip)"),
     db: Session = Depends(get_db)
 ):
@@ -54,7 +54,8 @@ async def export_data(
                 except:
                     pass
 
-            background_tasks.add_task(cleanup)
+            if background_tasks:
+                background_tasks.add_task(cleanup)
 
             # 返回 JSON 响应，包含导出路径信息
             encoded_path = quote(export_info['export_path'], safe='')
@@ -89,7 +90,8 @@ async def export_data(
                 except:
                     pass
 
-            background_tasks.add_task(cleanup)
+            if background_tasks:
+                background_tasks.add_task(cleanup)
 
             # 返回 JSON 响应，包含导出路径信息
             encoded_path = quote(export_info['export_path'], safe='')

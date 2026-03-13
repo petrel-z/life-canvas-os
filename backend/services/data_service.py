@@ -2,8 +2,10 @@
 数据服务 - 数据管理业务逻辑（导出、导入、备份）
 """
 import json
+import logging
 import os
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Optional, Dict
@@ -14,6 +16,8 @@ from backend.db.backup import DatabaseBackup, export_to_json, import_from_json
 from backend.db.session import DatabaseManager
 from backend.schemas.common import error_response
 from backend.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class DataService:
@@ -116,6 +120,7 @@ class DataService:
 
         try:
             db_path = db.bind.url.database
+            logger.info(f"Starting import. Database path: {db_path}")
 
             # JSON 数据直接导入
             if data:
@@ -149,34 +154,87 @@ class DataService:
                 }, 200
 
             # ZIP 备份文件导入
+            logger.info(f"Closing database session for ZIP import from: {backup_path}")
+
+            # 记录恢复前的数据库状态
+            db_file = Path(db_path)
+            db_existed_before = db_file.exists()
+            db_size_before = db_file.stat().st_size if db_existed_before else 0
+            logger.info(f"Database state before restore: exists={db_existed_before}, size={db_size_before}")
+
             db.close()
             db.expunge_all()
 
             # 关闭所有数据库连接池
+            logger.info("Closing all database connections")
             DatabaseManager.close_all_connections()
 
-            # 等待文件句柄释放
-            import time
-            time.sleep(0.5)
+            # 强制垃圾回收并等待文件句柄释放
+            import gc
+            gc.collect()
+            time.sleep(1.5)
 
             # 使用 zips 类型进行恢复
             backup_mgr = DatabaseBackup(db_path, backup_type="zips")
-            success = backup_mgr.restore_backup(backup_path, verify=verify)
+            logger.info(f"Starting restore from: {backup_path}")
+
+            # 第一次尝试带验证
+            try:
+                success = backup_mgr.restore_backup(backup_path, verify=verify)
+            except Exception as e:
+                logger.warning(f"Restore with verification failed: {e}")
+                success = False
+
+            # 如果验证失败，尝试不带验证重试
+            if not success and verify:
+                logger.warning("Verification failed, retrying without verification")
+                success = backup_mgr.restore_backup(backup_path, verify=False)
 
             if success:
+                # 验证恢复后的数据库文件
+                db_file_after = Path(db_path)
+                db_existed_after = db_file_after.exists()
+                db_size_after = db_file_after.stat().st_size if db_existed_after else 0
+                logger.info(f"Database state after restore: exists={db_existed_after}, size={db_size_after}")
+
+                if db_size_after < 1000:
+                    logger.error(f"Restored database file is too small: {db_size_after} bytes")
+                    return error_response(message="导入失败：恢复的数据库文件无效（文件过小）", code=500), 500
+
+                # 重新创建数据库引擎以指向新的数据库文件
+                logger.info("Recreating database engine")
+                DatabaseManager.recreate_engine()
+
+                # 验证引擎是否正常工作
+                logger.info("Verifying database connection")
+                if not DatabaseManager.test_connection():
+                    logger.error("Database connection test failed after restore")
+                    return error_response(message="数据库恢复成功但连接测试失败", code=500), 500
+
+                # 验证表是否存在
+                logger.info("Verifying database tables")
+                if not DatabaseManager.verify_tables():
+                    logger.error("Database table verification failed after restore")
+                    return error_response(message="数据库恢复成功但表验证失败", code=500), 500
+
+                logger.info("Import completed successfully")
                 return {
                     "import_type": "zip",
                     "backup_path": backup_path,
                     "imported_at": datetime.now().isoformat()
                 }, 200
             else:
+                logger.error("Restore failed - backup_mgr.restore_backup returned False")
                 return error_response(message="导入失败", code=500), 500
 
         except FileNotFoundError:
+            logger.error(f"Backup file not found: {backup_path}")
             return error_response(message="备份文件不存在", code=404), 404
         except ValueError as e:
+            logger.error(f"Value error during import: {e}")
             return error_response(message=str(e), code=400), 400
         except Exception as e:
+            logger.exception(f"Unexpected error during import: {e}")
             return error_response(message=f"导入失败: {str(e)}", code=500), 500
 
     @staticmethod
@@ -286,7 +344,6 @@ class DataService:
             DatabaseManager.close_all_connections()
 
             # 4. 删除数据库文件（包括 -wal 和 -shm 文件）
-            import time
             db_file = Path(db_path)
             wal_file = Path(str(db_file) + "-wal")
             shm_file = Path(str(db_file) + "-shm")

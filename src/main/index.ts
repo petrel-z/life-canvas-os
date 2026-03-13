@@ -55,8 +55,11 @@ makeAppWithSingleInstanceLock(async () => {
   ipcMain.handle(
     'file:save-export-data',
     async (_event, fileData: Uint8Array, format: 'json' | 'zip') => {
-      // 生成默认文件名
-      const defaultFileName = `life_canvas_export_${new Date().toISOString().split('T')[0]}.${format}`
+      // 生成默认文件名（包含日期和时间，支持每天多份导出）
+      const now = new Date()
+      const dateStr = now.toISOString().split('T')[0]
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '')
+      const defaultFileName = `life_canvas_export_${dateStr}_${timeStr}.${format}`
 
       // 让用户选择保存路径
       const result = await dialog.showSaveDialog({

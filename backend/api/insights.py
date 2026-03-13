@@ -87,3 +87,25 @@ async def get_latest_insight_endpoint(db: Session = Depends(get_db)):
         data=data,
         message="获取最新洞察成功"
     )
+
+
+@router.get("/{insight_id}")
+async def get_insight_by_id(
+    insight_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    获取单个洞察详情
+    """
+    data, status_code = InsightService.get_insight_by_id(db, insight_id)
+
+    if status_code >= 400:
+        raise HTTPException(
+            status_code=status_code,
+            detail=data
+        )
+
+    return success_response(
+        data=data,
+        message="获取洞察详情成功"
+    )

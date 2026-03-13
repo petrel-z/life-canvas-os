@@ -1,10 +1,10 @@
 """数据库会话管理（增强版）"""
+import logging
 from sqlalchemy import create_engine, text, event
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 from contextlib import contextmanager
 from typing import Generator
-import logging
 
 from backend.core.config import settings
 
@@ -114,6 +114,10 @@ def get_db():
 class DatabaseManager:
     """数据库管理器"""
 
+    _original_url = settings.DATABASE_URL
+    _engine = engine
+    _session_factory = SessionLocal
+
     @staticmethod
     def test_connection() -> bool:
         """测试数据库连接"""
@@ -124,6 +128,30 @@ class DatabaseManager:
             return True
         except Exception as e:
             logger.error(f"Database connection test failed: {e}")
+            return False
+
+    @staticmethod
+    def verify_tables() -> bool:
+        """
+        验证数据库表是否存在
+
+        Returns:
+            True if all required tables exist, False otherwise
+        """
+        required_tables = ['users', 'systems', 'diaries']
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
+                existing_tables = [row[0] for row in result]
+                logger.info(f"Existing tables: {existing_tables}")
+
+                missing = [t for t in required_tables if t not in existing_tables]
+                if missing:
+                    logger.error(f"Missing required tables: {missing}")
+                    return False
+                return True
+        except Exception as e:
+            logger.error(f"Failed to verify tables: {e}")
             return False
 
     @staticmethod
@@ -151,6 +179,88 @@ class DatabaseManager:
             logger.info("All database connections closed")
         except Exception as e:
             logger.error(f"Error closing connections: {e}")
+
+    @staticmethod
+    def recreate_engine():
+        """
+        重新创建数据库引擎
+
+        在 ZIP 备份恢复后调用，用于指向新的数据库文件
+        """
+        global engine, SessionLocal
+
+        try:
+            # 记录当前引擎状态
+            logger.info(f"Current engine URL: {engine.url}")
+            logger.info(f"Current database path: {engine.url.database}")
+
+            # 关闭旧引擎的所有连接
+            engine.dispose()
+            logger.info("Disposed old engine connections")
+
+            # 重新创建引擎
+            connect_args = {"check_same_thread": False} if "sqlite" in DatabaseManager._original_url else {}
+            logger.info(f"Creating new engine with URL: {DatabaseManager._original_url}")
+
+            engine = create_engine(
+                DatabaseManager._original_url,
+                connect_args=connect_args,
+                poolclass=QueuePool,
+                pool_size=5,
+                max_overflow=10,
+                pool_timeout=30,
+                pool_recycle=1800,
+                pool_pre_ping=True,
+                echo=False,
+                future=True
+            )
+
+            logger.info(f"New engine created with database path: {engine.url.database}")
+
+            # 重新配置 SQLite 本地时间事件监听
+            @event.listens_for(engine, "connect")
+            def set_sqlite_local_time(dbapi_conn, connection_record):
+                if "sqlite" in DatabaseManager._original_url:
+                    from datetime import datetime
+
+                    def local_now():
+                        return datetime.now().isoformat()
+
+                    dbapi_conn.create_function("localnow", 0, local_now)
+
+                    cursor = dbapi_conn.cursor()
+                    try:
+                        cursor.execute("PRAGMA journal_mode=WAL")
+                    except Exception:
+                        pass
+                    cursor.close()
+
+            # 重新创建 SessionLocal
+            SessionLocal = sessionmaker(
+                autocommit=False,
+                autoflush=False,
+                bind=engine,
+                expire_on_commit=False
+            )
+
+            # 更新模块级变量
+            import sys
+            current_module = sys.modules[__name__]
+            current_module.engine = engine
+            current_module.SessionLocal = SessionLocal
+
+            # 测试新引擎
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                logger.info("Database engine recreated and verified successfully")
+            except Exception as e:
+                logger.error(f"Engine recreated but connection test failed: {e}")
+                raise
+
+        except Exception as e:
+            logger.error(f"Error recreating engine: {e}")
+            raise
 
     @staticmethod
     @contextmanager

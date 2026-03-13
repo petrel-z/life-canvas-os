@@ -5,6 +5,7 @@ from .dimension import (
     SystemLog,
     SystemAction,
     MealDeviation,
+    SystemScoreLog,
     SYSTEM_TYPES,
     DEFAULT_SYSTEM_DETAILS
 )

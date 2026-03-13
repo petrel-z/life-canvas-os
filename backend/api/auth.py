@@ -121,6 +121,21 @@ async def get_pin_verify_requirements(db: Session = Depends(get_db)):
     )
 
 
+@router.get("/status")
+async def get_pin_status(db: Session = Depends(get_db)):
+    """
+    获取 PIN 状态（兼容旧版前端）
+
+    此端点已废弃，建议使用 /verify-requirements
+    """
+    data = AuthService.get_pin_verify_requirements(db)
+
+    return success_response(
+        data=data,
+        message="获取PIN状态成功"
+    )
+
+
 # ============ IPC 通信处理器 ============
 
 import asyncio
