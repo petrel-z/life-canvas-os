@@ -97,6 +97,7 @@ backend/__pycache__/
 backend/**/__pycache__/
 backend/*.db
 backend/*.log
+backend/tests
 
 # Build artifacts
 # backend/dist/ is needed for electron-builder extraResources
