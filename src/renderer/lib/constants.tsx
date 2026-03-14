@@ -90,7 +90,7 @@ export const DIMENSIONS: DimensionInfo[] = [
     color: '#F333FF',
   },
   {
-    type: DimensionType.RECOVERY,
+    type: DimensionType.DREAM,
     label: '梦想 (恢复/睡眠)',
     icon: 'Moon',
     color: '#33FFF3',
