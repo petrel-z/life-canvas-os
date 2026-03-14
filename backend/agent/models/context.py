@@ -13,10 +13,16 @@ class ContextState:
 
     session_id: str
     created_at: datetime = field(default_factory=datetime.now)
+    last_accessed: Optional[datetime] = None  # 最后访问时间
     messages: List[Dict[str, Any]] = field(default_factory=list)
     last_operations: List[Dict[str, Any]] = field(default_factory=list)
-    referenced_entities: Dict[str, Any] = field(default_factory=dict)
+    references: Dict[str, Any] = field(default_factory=dict)  # 改名为 references
     token_count: int = 0
+
+    def __post_init__(self):
+        """初始化后设置 last_accessed"""
+        if self.last_accessed is None:
+            self.last_accessed = datetime.now()
 
     def add_message(self, role: str, content: str) -> None:
         """添加消息"""
@@ -27,6 +33,7 @@ class ContextState:
                 "timestamp": datetime.now().isoformat(),
             }
         )
+        self.last_accessed = datetime.now()
 
     def add_operation(self, skill: str, result: Dict[str, Any]) -> None:
         """添加操作记录"""
@@ -36,18 +43,20 @@ class ContextState:
         # 保留最近 10 条操作
         if len(self.last_operations) > 10:
             self.last_operations = self.last_operations[-10:]
+        self.last_accessed = datetime.now()
 
     def set_reference(self, key: str, value: Any) -> None:
         """设置实体引用"""
-        self.referenced_entities[key] = value
+        self.references[key] = value
+        self.last_accessed = datetime.now()
 
     def get_reference(self, key: str, default: Any = None) -> Any:
         """获取实体引用"""
-        return self.referenced_entities.get(key, default)
+        return self.references.get(key, default)
 
     def clear(self) -> None:
         """清空上下文"""
         self.messages.clear()
         self.last_operations.clear()
-        self.referenced_entities.clear()
+        self.references.clear()
         self.token_count = 0

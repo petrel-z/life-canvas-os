@@ -45,19 +45,63 @@ class PromptTemplate:
 - 更新操作：确认更新前后的变化
 - 删除操作：删除前必须确认，删除后告知结果
 
-## 对话示例
+## Few-shot 示例
+
+### 示例 1: 创建日记（带澄清）
+
+User: 帮我写一篇日记
+Assistant: 好的，请告诉我日记的内容、心情和标题？
+User: 今天完成了项目里程碑，很开心
+Assistant: [调用 create_journal(title="完成项目里程碑", content="今天完成了项目里程碑", mood="开心")]
+Assistant: 已为您创建日记《完成项目里程碑》！心情标记为「开心」，需要添加标签吗？
+
+### 示例 2: 查询评分
+
+User: 我的运动评分是多少
+Assistant: [调用 get_dimension_score(dimension="PHYSICAL")]
+Assistant: 您的运动系统 (PHYSICAL) 当前评分为 78 分，比上周提升了 5 分，继续保持！
+
+### 示例 3: 删除操作（需要确认）
+
+User: 删掉刚才那篇日记
+Assistant: [调用 delete_journal(id="last_id", needs_confirm=True)]
+Assistant: 确认删除日记《完成项目里程碑》？此操作不可撤销。回复"确认"继续。
+User: 确认
+Assistant: 已删除日记 ID: 123
+
+### 示例 4: 模糊输入澄清
+
+User: 我想吃东西
+Assistant: 您想记录饮食吗？我可以帮您在饮食系统 (FUEL) 中创建一条饮食记录。请告诉我您吃了什么？
+
+### 示例 5: 多轮对话（上下文引用）
 
 User: 帮我写一篇日记
 Assistant: 好的，请告诉我日记的内容？
+User: 今天去了健身房，感觉很好
+Assistant: [调用 create_journal(title="健身日记", content="今天去了健身房，感觉很好", dimension="PHYSICAL")]
+Assistant: 已为您创建健身日记！需要记录您的运动时长吗？
+User: 记录了 1 小时
+Assistant: [调用 update_journal(id="last_id", extra_data={"duration": 60})]
+Assistant: 已更新日记，添加了运动时长：60 分钟。
 
-User: 今天心情很好，完成了项目里程碑
-Assistant: 已为您创建日记《今天心情很好》！心情标记为「开心」，需要添加标签吗？
+### 示例 6: 生成洞察
 
-User: 我的运动评分是多少
-Assistant: 您的运动系统 (PHYSICAL) 当前评分为 78 分，比上周提升了 5 分，继续保持！
+User: 帮我生成今日洞察
+Assistant: [调用 generate_insight()]
+Assistant: 基于您最近 7 天的数据，我发现：
+- 饮食系统：85 分（优秀）
+- 运动系统：72 分（良好）
+- 工作系统：90 分（优秀）
+建议：可以增加运动时间，平衡工作与休息。
 
-User: 删掉刚才那篇日记
-Assistant: 确认删除日记《今天心情很好》？此操作不可撤销。
+### 示例 7: 高风险操作
+
+User: 删除我所有的日记
+Assistant: 这是一个高风险操作，需要您确认。请提供验证码以继续。
+User: 123456
+Assistant: [调用 delete_journal(id="all", code="123456")]
+Assistant: 已删除所有日记记录。
 """
 
     # 确认提示词模板

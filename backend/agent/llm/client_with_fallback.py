@@ -147,21 +147,21 @@ class LLMClientWithFallback:
                 self.circuit_breaker.record_success(provider_name)
                 return result
 
-            except (RateLimitError, ServerError) as e:
+            except (RateLimitError, ServerError) as exc:
                 self.circuit_breaker.record_failure(provider_name)
-                last_error = e
+                last_error = exc
                 continue
 
-            except AuthenticationError:
+            except AuthenticationError as exc:
                 # 认证错误不切换，直接记录
                 self.circuit_breaker.record_failure(provider_name)
-                last_error = e
+                last_error = exc
                 break
 
-            except Exception as e:
+            except Exception as exc:
                 # 其他错误（包括超时）
                 self.circuit_breaker.record_failure(provider_name)
-                last_error = e
+                last_error = exc
                 continue
 
         # 所有提供商都失败
@@ -200,15 +200,15 @@ class LLMClientWithFallback:
                     yield chunk
                 return
 
-            except (RateLimitError, ServerError) as e:
+            except (RateLimitError, ServerError) as exc:
                 self.circuit_breaker.record_failure(provider_name)
-                last_error = e
+                last_error = exc
                 continue
 
-            except Exception as e:
+            except Exception as exc:
                 # 其他错误（包括超时、认证错误）
                 self.circuit_breaker.record_failure(provider_name)
-                last_error = e
+                last_error = exc
                 continue
 
         from .base import LLMError

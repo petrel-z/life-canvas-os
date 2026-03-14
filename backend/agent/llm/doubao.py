@@ -31,8 +31,10 @@ class DoubaoClient(LLMClient):
         base_url: str = "https://ark.cn-beijing.volces.com/api/v3",
         model: str = "doubao-seed",
         timeout: int = 30,
+        verify_ssl: bool = True,
     ):
         super().__init__(api_key, base_url, model, timeout)
+        self.verify_ssl = verify_ssl
 
     async def chat(
         self,
@@ -70,7 +72,8 @@ class DoubaoClient(LLMClient):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    url, headers=headers, json=payload, timeout=self.timeout
+                    url, headers=headers, json=payload, timeout=self.timeout,
+                    ssl=False,
                 ) as response:
                     if response.status == 401:
                         raise AuthenticationError("API Key 无效")
@@ -136,7 +139,8 @@ class DoubaoClient(LLMClient):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    url, headers=headers, json=payload, timeout=self.timeout
+                    url, headers=headers, json=payload, timeout=self.timeout,
+                    ssl=False,
                 ) as response:
                     if response.status != 200:
                         raise ServerError(f"请求失败：{response.status}")

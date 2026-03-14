@@ -14,6 +14,9 @@ from backend.models.diary import Diary, MOOD_TYPES
 from backend.models.user import User
 from backend.schemas.journal import DiaryCreate, DiaryUpdate
 
+# 导入事件总线
+from backend.agent.utils.event_bus import get_event_bus, AgentEvents
+
 
 class CreateJournalSkill(BaseSkill):
     """创建日记 Skill"""
@@ -95,6 +98,13 @@ class CreateJournalSkill(BaseSkill):
                 db.add(diary)
                 db.commit()
                 db.refresh(diary)
+
+                # 触发事件
+                event_bus = get_event_bus()
+                asyncio.create_task(event_bus.emit(
+                    AgentEvents.JOURNAL_CREATED,
+                    {"id": diary.id, "title": diary.title, "mood": diary.mood}
+                ))
 
                 mood_text = f"心情：{mood}" if mood else ""
                 tags_text = f"，标签：{', '.join(tags)}" if tags else ""

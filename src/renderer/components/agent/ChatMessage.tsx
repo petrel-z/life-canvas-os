@@ -13,6 +13,7 @@ export interface Message {
   content: string
   timestamp: Date
   isError?: boolean
+  isStreaming?: boolean  // 是否正在流式传输
   actionTaken?: {
     skill: string
     params?: Record<string, unknown>
@@ -73,7 +74,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
               message.requiresConfirmation && 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/30'
             )}
           >
-            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm whitespace-pre-wrap flex-1">{message.content}</p>
+              {/* 流式传输指示器 */}
+              {message.isStreaming && (
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-apple-accent animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-apple-accent animate-pulse delay-75" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-apple-accent animate-pulse delay-150" />
+                </span>
+              )}
+            </div>
 
             {/* 确认提示 */}
             {message.requiresConfirmation && (

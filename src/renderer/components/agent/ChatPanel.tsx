@@ -48,7 +48,8 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const { chat, confirm } = useAgentApi()
+  const { chat, chatStream, confirm } = useAgentApi()
+  const [useStreaming, setUseStreaming] = useState(true)
 
   // 确认对话框状态
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -83,7 +84,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     inputRef.current?.focus()
   }, [])
 
-  // 发送消息
+  // 发送消息（流式响应）
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
 
@@ -98,50 +99,153 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     setInput('')
     setIsLoading(true)
 
+    // 添加助手消息占位
+    const assistantMessageId = (Date.now() + 1).toString()
+    const assistantMessage: MessageType = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isStreaming: true,
+    }
+    setMessages(prev => [...prev, assistantMessage])
+
     try {
-      const response = await chat(input.trim())
+      // 尝试流式响应
+      if (useStreaming) {
+        let fullContent = ''
+        let requiresConfirmation = false
+        let confirmationId: string | undefined
+        let confirmationMessage: string | undefined
+        let streamingFailed = false
 
-      // 检查是否需要确认
-      if (response.requires_confirmation && response.confirmation_id) {
-        setConfirmDialog({
-          open: true,
-          confirmationId: response.confirmation_id,
-          riskLevel: 'HIGH',
-          title: '确认操作',
-          description: response.confirmation_message || '此操作需要您的确认',
-          operation: response.action_taken ? JSON.stringify(response.action_taken, null, 2) : '',
-          requireCode: false,
-        })
+        for await (const chunk of chatStream(input.trim())) {
+          if (chunk.type === 'content') {
+            fullContent += chunk.data
+            // 更新消息内容（打字机效果）
+            setMessages(prev =>
+              prev.map(msg =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: fullContent }
+                  : msg
+              )
+            )
+          } else if (chunk.type === 'done') {
+            // 流式完成
+            requiresConfirmation = chunk.data?.requires_confirmation || false
+            confirmationId = chunk.data?.confirmation_id
+            confirmationMessage = chunk.data?.confirmation_message
 
-        // 添加提示消息
-        const confirmMessage: MessageType = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: response.confirmation_message || '请确认此操作',
-          timestamp: new Date(),
-          requiresConfirmation: true,
-          confirmationId: response.confirmation_id,
+            // 处理确认
+            if (requiresConfirmation && confirmationId) {
+              setConfirmDialog({
+                open: true,
+                confirmationId,
+                riskLevel: 'HIGH',
+                title: '确认操作',
+                description: confirmationMessage || '此操作需要您的确认',
+                operation: '',
+                requireCode: false,
+              })
+
+              // 添加确认提示消息
+              const confirmMessage: MessageType = {
+                id: (Date.now() + 2).toString(),
+                role: 'assistant',
+                content: confirmationMessage || '请确认此操作',
+                timestamp: new Date(),
+                requiresConfirmation: true,
+                confirmationId,
+              }
+              setMessages(prev => [...prev, confirmMessage])
+            }
+          } else if (chunk.type === 'error') {
+            // 错误处理
+            setMessages(prev =>
+              prev.map(msg =>
+                msg.id === assistantMessageId
+                  ? {
+                      ...msg,
+                      content: chunk.data || '抱歉，我遇到了一些问题，请稍后重试。',
+                      isError: true,
+                    }
+                  : msg
+              )
+            )
+          }
         }
-        setMessages(prev => [...prev, confirmMessage])
+
+        // 如果没有确认，更新最终消息
+        if (!requiresConfirmation) {
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === assistantMessageId
+                ? { ...msg, content: fullContent, isStreaming: false }
+                : msg
+            )
+          )
+        }
       } else {
-        const agentMessage: MessageType = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: response.response,
-          timestamp: new Date(),
-        }
-        setMessages(prev => [...prev, agentMessage])
+        // 非流式模式
+        const response = await chat(input.trim())
+        const fullContent = response.response
+
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === assistantMessageId
+              ? { ...msg, content: fullContent, isStreaming: false }
+              : msg
+          )
+        )
       }
     } catch (error) {
       console.error('Chat error:', error)
-      const errorMessage: MessageType = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: '抱歉，我遇到了一些问题，请稍后重试。',
-        timestamp: new Date(),
-        isError: true,
+
+      // 流式失败，尝试非流式降级
+      if (useStreaming) {
+        console.log('Streaming failed, falling back to non-streaming mode')
+        setUseStreaming(false)
+
+        // 重试非流式请求
+        try {
+          const response = await chat(input.trim())
+          const fullContent = response.response
+
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === assistantMessageId
+                ? { ...msg, content: fullContent, isStreaming: false }
+                : msg
+            )
+          )
+        } catch (retryError) {
+          console.error('Retry error:', retryError)
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === assistantMessageId
+                ? {
+                    ...msg,
+                    content: '抱歉，我遇到了一些问题，请稍后重试。',
+                    isError: true,
+                  }
+                : msg
+            )
+          )
+        }
+      } else {
+        // 非流式模式也失败
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: '抱歉，我遇到了一些问题，请稍后重试。',
+                  isError: true,
+                }
+              : msg
+          )
+        )
       }
-      setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
     }

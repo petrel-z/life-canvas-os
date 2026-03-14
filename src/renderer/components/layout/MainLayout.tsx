@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { PinLockScreen } from '../auth/PinLockScreen'
 import { PinWelcomePage } from '../auth/PinWelcomePage'
+import { FloatingBall } from '../agent/FloatingBall'
 import { useApp } from '~/renderer/contexts/AppContext'
 import { request } from '~/renderer/api/config'
 import { usePinApi } from '~/renderer/hooks'
@@ -143,6 +144,8 @@ export function MainLayout() {
               <Outlet />
             </div>
           </main>
+          {/* Agent 悬浮球入口 */}
+          <FloatingBall />
         </div>
       )
     }
@@ -173,6 +176,9 @@ export function MainLayout() {
           <Outlet />
         </div>
       </main>
+
+      {/* Agent 悬浮球入口 */}
+      <FloatingBall />
     </div>
   )
 }

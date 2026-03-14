@@ -143,12 +143,19 @@ class ReActExecutor:
                                 True,
                             )
 
+                    # 没有确认请求，返回工具执行结果
+                    # 合并所有工具的响应
+                    responses = [r.get("response", "") for r in tool_results if r.get("response")]
+                    final_response = "\n".join(responses) if responses else "操作已完成"
+
+                    return SkillResult.ok(final_response), False
+
                 else:
                     # 无工具调用，直接返回
-                    final_result = SkillResult.ok(response.content)
+                    final_result = SkillResult.ok(response.content or "我暂时没有更好的建议，换个话题试试吧～")
 
                     # 添加到上下文
-                    context.add_message("assistant", response.content)
+                    context.add_message("assistant", response.content or "我暂时没有更好的建议，换个话题试试吧～")
 
                     return final_result, False
 
