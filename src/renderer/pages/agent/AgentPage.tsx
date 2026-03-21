@@ -7,7 +7,7 @@
  */
 
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { Bot, Plus, Trash2, Clock, MessageCircle } from 'lucide-react'
+import { Bot, Plus, Trash2, Clock, MessageCircle, Square } from 'lucide-react'
 import { cn } from '~/renderer/lib/utils'
 import { Button } from '~/renderer/components/ui/button'
 import { ChatMessage, ConfirmDialog } from '~/renderer/components/agent'
@@ -41,6 +41,7 @@ export function AgentPage() {
     deleteSession,
     chatStream,
     confirm,
+    abortStream,
   } = useAgentApi()
 
   // 会话列表状态
@@ -55,6 +56,22 @@ export function AgentPage() {
 
   // 聊天加载状态
   const [isChatLoading, setIsChatLoading] = useState(false)
+
+  // 流式响应状态
+  const [isStreaming, setIsStreaming] = useState(false)
+
+  // 中文输入状态
+  const [isComposing, setIsComposing] = useState(false)
+
+  // 编辑消息状态
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+  const [editingText, setEditingText] = useState('')
+
+  // 复制成功提示状态
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
+
+  // 输入框值状态（用于重试失败消息）
+  const [inputValue, setInputValue] = useState('')
 
   // 确认对话框状态
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -194,6 +211,7 @@ export function AgentPage() {
 
       setMessages(prev => [...prev, userMessage])
       setIsChatLoading(true)
+      setIsStreaming(true)
 
       // 添加助手消息占位
       const assistantMessageId = (Date.now() + 1).toString()
@@ -319,9 +337,74 @@ export function AgentPage() {
         }
       } finally {
         setIsChatLoading(false)
+        setIsStreaming(false)
       }
     },
     [selectedSessionId, chatStream]
+  )
+
+  // 中断流式响应
+  const handleStop = useCallback(() => {
+    abortStream()
+    setIsStreaming(false)
+    setIsChatLoading(false)
+    // 更新消息状态为已完成
+    setMessages(prev =>
+      prev.map(msg => (msg.isStreaming ? { ...msg, isStreaming: false } : msg))
+    )
+  }, [abortStream])
+
+  // 复制消息内容
+  const handleCopyMessage = useCallback(
+    async (messageId: string, content: string) => {
+      try {
+        await navigator.clipboard.writeText(content)
+        setCopiedMessageId(messageId)
+        setTimeout(() => setCopiedMessageId(null), 2000)
+      } catch (error) {
+        console.error('Copy failed:', error)
+      }
+    },
+    []
+  )
+
+  // 编辑消息
+  const handleEditMessage = useCallback(
+    (messageId: string, content: string) => {
+      setEditingMessageId(messageId)
+      setEditingText(content)
+    },
+    []
+  )
+
+  // 保存编辑的消息
+  const handleSaveEdit = useCallback(() => {
+    if (!editingMessageId || !editingText.trim()) return
+
+    setMessages(prev =>
+      prev.map(msg =>
+        msg.id === editingMessageId
+          ? { ...msg, content: editingText.trim() }
+          : msg
+      )
+    )
+    setEditingMessageId(null)
+    setEditingText('')
+  }, [editingMessageId, editingText])
+
+  // 取消编辑
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessageId(null)
+    setEditingText('')
+  }, [])
+
+  // 重新发送失败消息
+  const handleRetryMessage = useCallback(
+    async (content: string) => {
+      if (isChatLoading) return
+      setInputValue(content)
+    },
+    [isChatLoading]
   )
 
   // 确认操作
@@ -355,7 +438,10 @@ export function AgentPage() {
           const eventBus = getEventBus()
           // 根据 confirmationId 判断操作类型
           if (confirmDialog.confirmationId.startsWith('delete_journal_')) {
-            const journalId = confirmDialog.confirmationId.replace('delete_journal_', '')
+            const journalId = confirmDialog.confirmationId.replace(
+              'delete_journal_',
+              ''
+            )
             eventBus.emit(AgentEvents.JOURNAL_DELETED, { id: journalId })
           }
         }
@@ -527,7 +613,18 @@ export function AgentPage() {
           ) : (
             <>
               {messages.map(message => (
-                <ChatMessage key={message.id} message={message} />
+                <ChatMessage
+                  copied={copiedMessageId === message.id}
+                  editingText={editingText}
+                  isEditing={editingMessageId === message.id}
+                  key={message.id}
+                  message={message}
+                  onCancelEdit={handleCancelEdit}
+                  onCopy={() => handleCopyMessage(message.id, message.content)}
+                  onEdit={() => handleEditMessage(message.id, message.content)}
+                  onRetry={() => handleRetryMessage(message.content)}
+                  onSaveEdit={handleSaveEdit}
+                />
               ))}
 
               <div ref={messagesEndRef} />
@@ -538,7 +635,17 @@ export function AgentPage() {
         {/* 输入区域 */}
         <div className="p-4 border-t border-apple-border bg-apple-bgMain dark:bg-black">
           <div className="max-w-4xl mx-auto">
-            <InputMessage disabled={isChatLoading} onSend={handleSendMessage} />
+            <InputMessage
+              disabled={isChatLoading}
+              isComposing={isComposing}
+              isStreaming={isStreaming}
+              onCompositionEnd={() => setIsComposing(false)}
+              onCompositionStart={() => setIsComposing(true)}
+              onSend={handleSendMessage}
+              onStop={handleStop}
+              onValueChange={setInputValue}
+              value={inputValue}
+            />
           </div>
         </div>
       </main>
@@ -613,24 +720,50 @@ export function AgentPage() {
 // 输入框组件
 interface InputMessageProps {
   onSend: (message: string) => Promise<void>
+  onStop?: () => void
   disabled?: boolean
+  isStreaming?: boolean
+  value?: string
+  onValueChange?: (value: string) => void
+  isComposing?: boolean
+  onCompositionStart?: () => void
+  onCompositionEnd?: () => void
 }
 
-function InputMessage({ onSend, disabled }: InputMessageProps) {
+function InputMessage({
+  onSend,
+  onStop,
+  disabled,
+  isStreaming = false,
+  value,
+  onValueChange,
+  isComposing = false,
+  onCompositionStart,
+  onCompositionEnd,
+}: InputMessageProps) {
   const [input, setInput] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // 判断是否是受控模式
+  const isControlled = value !== undefined && onValueChange !== undefined
+
+  // 如果提供了受控输入值，则使用它
+  const inputValue = isControlled ? value : input
+  const setInputValue = isControlled ? onValueChange : setInput
+
   const handleSend = async () => {
-    if (!input.trim() || disabled) return
-    await onSend(input.trim())
-    setInput('')
+    if (!inputValue.trim() || disabled) return
+    await onSend(inputValue.trim())
+    // 清空输入框
+    setInputValue('')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
       e.preventDefault()
       handleSend()
     }
+    // Shift+Enter 允许换行（默认行为）
   }
 
   return (
@@ -645,28 +778,46 @@ function InputMessage({ onSend, disabled }: InputMessageProps) {
           'focus:outline-none focus:border-apple-accent/50',
           'transition-all'
         )}
-        onChange={e => setInput(e.target.value)}
+        onChange={e => setInputValue(e.target.value)}
+        onCompositionEnd={onCompositionEnd}
+        onCompositionStart={onCompositionStart}
         onKeyDown={handleKeyDown}
         placeholder="输入消息，按 Enter 发送..."
         ref={inputRef}
         type="text"
-        value={input}
+        value={inputValue}
       />
 
-      <Button
-        className={cn(
-          'rounded-xl px-5',
-          'bg-apple-accent text-white',
-          'hover:bg-apple-accent/90',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
-          'transition-all'
-        )}
-        disabled={!input.trim() || disabled}
-        onClick={handleSend}
-        size="default"
-      >
-        发送
-      </Button>
+      {/* 停止按钮 - 在流式响应时显示 */}
+      {isStreaming ? (
+        <Button
+          className={cn(
+            'rounded-xl px-5',
+            'bg-red-500 hover:bg-red-600 text-white',
+            'transition-all'
+          )}
+          onClick={onStop}
+          size="default"
+          title="停止生成"
+        >
+          <Square className="w-4 h-4" />
+        </Button>
+      ) : (
+        <Button
+          className={cn(
+            'rounded-xl px-5',
+            'bg-apple-accent text-white',
+            'hover:bg-apple-accent/90',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            'transition-all'
+          )}
+          disabled={!inputValue.trim() || disabled}
+          onClick={handleSend}
+          size="default"
+        >
+          发送
+        </Button>
+      )}
     </div>
   )
 }

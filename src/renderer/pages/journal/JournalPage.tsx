@@ -140,9 +140,18 @@ export function JournalPage() {
     }
 
     const eventBus = getEventBus()
-    const unsubscribeCreate = eventBus.on(AgentEvents.JOURNAL_CREATED, handleJournalCreated)
-    const unsubscribeUpdate = eventBus.on(AgentEvents.JOURNAL_UPDATED, handleJournalUpdated)
-    const unsubscribeDelete = eventBus.on(AgentEvents.JOURNAL_DELETED, handleJournalDeleted)
+    const unsubscribeCreate = eventBus.on(
+      AgentEvents.JOURNAL_CREATED,
+      handleJournalCreated
+    )
+    const unsubscribeUpdate = eventBus.on(
+      AgentEvents.JOURNAL_UPDATED,
+      handleJournalUpdated
+    )
+    const unsubscribeDelete = eventBus.on(
+      AgentEvents.JOURNAL_DELETED,
+      handleJournalDeleted
+    )
 
     return () => {
       unsubscribeCreate()

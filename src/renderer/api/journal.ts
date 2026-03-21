@@ -31,7 +31,7 @@ export interface JournalResponse {
   title: string
   content: string
   mood: MoodType | null
-  tags: string[] | string | null  // 后端可能返回数组或字符串
+  tags: string[] | string | null // 后端可能返回数组或字符串
   related_system: string | null
   is_private: boolean
   created_at: string

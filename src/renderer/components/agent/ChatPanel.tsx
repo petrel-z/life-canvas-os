@@ -174,7 +174,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     }
 
     updateCurrentSessionMessages(prev => [...prev, userMessage])
-    setInput('')  // 发送后立即清空输入框
+    setInput('') // 发送后立即清空输入框
     setIsLoading(true)
     setIsStreaming(true)
 
@@ -374,11 +374,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     setIsLoading(false)
     // 更新消息状态为已完成
     updateCurrentSessionMessages(prev =>
-      prev.map(msg =>
-        msg.isStreaming
-          ? { ...msg, isStreaming: false }
-          : msg
-      )
+      prev.map(msg => (msg.isStreaming ? { ...msg, isStreaming: false } : msg))
     )
   }, [abortStream])
 
@@ -406,7 +402,10 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         const eventBus = getEventBus()
         // 根据 confirmationId 判断操作类型
         if (confirmDialog.confirmationId.startsWith('delete_journal_')) {
-          const journalId = confirmDialog.confirmationId.replace('delete_journal_', '')
+          const journalId = confirmDialog.confirmationId.replace(
+            'delete_journal_',
+            ''
+          )
           eventBus.emit(AgentEvents.JOURNAL_DELETED, { id: journalId })
         }
       }
@@ -648,9 +647,9 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           <input
             className="flex-1 px-3 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm input-focus focus:outline-none transition-all text-apple-textMain dark:text-white placeholder:text-apple-textTer"
             onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
+            onCompositionStart={handleCompositionStart}
+            onKeyDown={handleKeyDown}
             placeholder="输入消息... (Enter 发送，Shift+Enter 换行)"
             ref={inputRef}
             type="text"
