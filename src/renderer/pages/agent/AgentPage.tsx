@@ -12,7 +12,18 @@ import { cn } from '~/renderer/lib/utils'
 import { Button } from '~/renderer/components/ui/button'
 import { ChatMessage, ConfirmDialog } from '~/renderer/components/agent'
 import type { Message } from '~/renderer/components/agent'
-import { useAgentApi } from '~/renderer/hooks/useAgentApi'
+import { useAgentApi, type ChatResponse } from '~/renderer/hooks/useAgentApi'
+
+// 流式响应 done chunk 的数据类型（包含 risk_level）
+interface StreamDoneData {
+  response?: string
+  action_taken?: ChatResponse['action_taken']
+  requires_confirmation?: boolean
+  confirmation_id?: string
+  confirmation_message?: string
+  risk_level?: string
+  session_id?: string
+}
 import { toast } from '~/renderer/lib/toast'
 import {
   Dialog,
@@ -120,7 +131,7 @@ export function AgentPage() {
     setIsLoading(true)
     try {
       const data = await getSessions()
-      setSessions(data.sessions || [])
+      setSessions(data || [])
     } catch (error) {
       console.error('Failed to load sessions:', error)
     } finally {
@@ -242,11 +253,12 @@ export function AgentPage() {
               )
             )
           } else if (chunk.type === 'done') {
-            requiresConfirmation = chunk.data?.requires_confirmation || false
-            confirmationId = chunk.data?.confirmation_id
-            confirmationMessage = chunk.data?.confirmation_message
-            riskLevel = chunk.data?.risk_level as 'HIGH' | 'CRITICAL'
-            const actionTaken = chunk.data?.action_taken
+            const doneData = chunk.data as StreamDoneData | null
+            requiresConfirmation = doneData?.requires_confirmation || false
+            confirmationId = doneData?.confirmation_id
+            confirmationMessage = doneData?.confirmation_message
+            riskLevel = (doneData?.risk_level as 'HIGH' | 'CRITICAL') || 'HIGH'
+            const actionTaken = doneData?.action_taken
 
             // 如果没有确认，说明操作已直接执行，触发相应事件
             if (!requiresConfirmation && actionTaken) {
@@ -282,7 +294,7 @@ export function AgentPage() {
             }
           } else if (chunk.type === 'error') {
             const errorMsg =
-              chunk.data || '抱歉，我遇到了一些问题，请稍后重试。'
+              (chunk.data as string) || '抱歉，我遇到了一些问题，请稍后重试。'
             setMessages(prev =>
               prev.map(msg =>
                 msg.id === assistantMessageId

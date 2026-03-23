@@ -16,7 +16,11 @@ import {
 } from 'lucide-react'
 import { cn } from '~/renderer/lib/utils'
 import { Button } from '~/renderer/components/ui/button'
-import { useAgentApi, getSessionHistory } from '~/renderer/hooks/useAgentApi'
+import {
+  useAgentApi,
+  getSessionHistory,
+  type SessionSummary,
+} from '~/renderer/hooks/useAgentApi'
 import {
   Dialog,
   DialogContent,
@@ -87,7 +91,7 @@ export function SessionSidebar({
       // 从后端获取有上下文的会话列表（有实际对话的会话）
       const backendSessions = await getSessions()
       const backendSessionMap = new Map(
-        (backendSessions.sessions || []).map((s: any) => [s.session_id, s])
+        backendSessions.map((s: SessionSummary) => [s.session_id, s])
       )
 
       // 合并数据：优先显示有上下文的会话，然后是没有上下文的 session ID
@@ -100,7 +104,7 @@ export function SessionSidebar({
       }> = []
 
       // 先添加有上下文的会话
-      for (const session of backendSessions.sessions || []) {
+      for (const session of backendSessions) {
         mergedSessions.push({
           session_id: session.session_id,
           message_count: session.message_count,

@@ -18,7 +18,22 @@ import {
 import { cn } from '~/renderer/lib/utils'
 import { ChatMessage, type Message as MessageType } from './ChatMessage'
 import { Button } from '~/renderer/components/ui/button'
-import { useAgentApi, getSessionId } from '~/renderer/hooks/useAgentApi'
+import {
+  useAgentApi,
+  getSessionId,
+  type ChatResponse,
+} from '~/renderer/hooks/useAgentApi'
+
+// 流式响应 done chunk 的数据类型（包含 risk_level）
+interface StreamDoneData {
+  response?: string
+  action_taken?: ChatResponse['action_taken']
+  requires_confirmation?: boolean
+  confirmation_id?: string
+  confirmation_message?: string
+  risk_level?: string
+  session_id?: string
+}
 import { ConfirmDialog } from './ConfirmDialog'
 import { toast } from '~/renderer/lib/toast'
 import { getEventBus, AgentEvents } from '~/renderer/lib/event-bus'
@@ -211,12 +226,13 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
             )
           } else if (chunk.type === 'done') {
             // 流式完成
-            requiresConfirmation = chunk.data?.requires_confirmation || false
-            confirmationId = chunk.data?.confirmation_id
-            confirmationMessage = chunk.data?.confirmation_message
+            const doneData = chunk.data as StreamDoneData | null
+            requiresConfirmation = doneData?.requires_confirmation || false
+            confirmationId = doneData?.confirmation_id
+            confirmationMessage = doneData?.confirmation_message
             const riskLevel =
-              (chunk.data?.risk_level as 'HIGH' | 'CRITICAL') || 'HIGH'
-            const actionTaken = chunk.data?.action_taken
+              (doneData?.risk_level as 'HIGH' | 'CRITICAL') || 'HIGH'
+            const actionTaken = doneData?.action_taken
 
             // 如果没有确认，说明操作已直接执行，触发相应事件
             if (!requiresConfirmation && actionTaken) {
@@ -255,7 +271,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           } else if (chunk.type === 'error') {
             // 错误处理
             const errorMsg =
-              chunk.data || '抱歉，我遇到了一些问题，请稍后重试。'
+              (chunk.data as string) || '抱歉，我遇到了一些问题，请稍后重试。'
             updateCurrentSessionMessages(prev =>
               prev.map(msg =>
                 msg.id === assistantMessageId
