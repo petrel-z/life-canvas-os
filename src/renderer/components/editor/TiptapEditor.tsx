@@ -128,7 +128,6 @@ export const TiptapEditor = memo(function TiptapEditor({
   useEffect(() => {
     if (!editor) return
 
-    // 标记正在更新，防止触发 onUpdate
     isUpdatingRef.current = true
 
     const currentMarkdown = getMarkdownWithEmptyLines(editor)

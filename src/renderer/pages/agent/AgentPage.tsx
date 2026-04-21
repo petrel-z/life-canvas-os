@@ -755,7 +755,7 @@ function InputMessage({
 }: InputMessageProps) {
   const [input, setInput] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-
+  
   // 判断是否是受控模式
   const isControlled = value !== undefined && onValueChange !== undefined
 

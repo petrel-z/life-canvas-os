@@ -231,7 +231,7 @@ class ReActExecutor:
                     self.context_manager.add_message_to_context(session_id, "assistant", thought or "我暂时没有更好的建议，换个话题试试吧～")
 
                     return final_result, False
-
+ 
             except Exception as e:
                 logger.error(f"[ReAct] 执行出错：{e}", exc_info=True)
                 return SkillResult.fail(f"执行出错：{str(e)}"), False

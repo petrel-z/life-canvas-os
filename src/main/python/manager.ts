@@ -29,10 +29,7 @@ export class PythonManager {
 
     if (isDev) {
       // 开发环境：使用虚拟环境中的 Python
-      // __dirname 在开发模式下指向 node_modules/.dev/main
-      // 需要回到项目根目录
       const projectRoot = path.resolve(__dirname, '../../..')
-      // Windows: venv/Scripts/python.exe, Linux/macOS: venv/bin/python3
       const isWindows = process.platform === 'win32'
       const pythonBinDir = isWindows ? 'Scripts' : 'bin'
       const pythonExe = isWindows ? 'python.exe' : 'python3'
@@ -48,8 +45,6 @@ export class PythonManager {
       })
     } else {
       // 生产环境：使用打包的 Python 可执行文件
-      // electron-builder extraResources 配置:
-      // from: 'backend/dist/backend' -> to: 'python-runtime/backend'
       const backendName =
         process.platform === 'win32' ? 'backend.exe' : 'backend'
       pythonPath = path.join(
@@ -72,8 +67,6 @@ export class PythonManager {
     this.process = spawn(pythonPath, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, PYTHONUNBUFFERED: '1' },
-      // 不使用 detached 模式，确保子进程随父进程退出
-      // detached: false 是默认值，但显式设置以明确意图
     })
 
     // 记录启动的 PID，用于后续清理

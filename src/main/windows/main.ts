@@ -64,16 +64,6 @@ export async function MainWindow() {
     }
   )
 
-  // 移除 close 事件监听器，避免意外关闭
-  // window.on('close', () => {
-  //   console.log('[MainWindow] Window closing')
-  //   for (const w of BrowserWindow.getAllWindows()) {
-  //     if (w !== window) {
-  //       w.destroy()
-  //     }
-  //   }
-  // })
-
   console.log('[MainWindow] Setup complete, returning window')
   return window
 }

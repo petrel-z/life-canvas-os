@@ -21,6 +21,9 @@ export default {
   // 使用本地 Electron 缓存
   electronDist: 'node_modules/electron/dist/',
 
+  // 跳过依赖安装（已安装）
+  npmRebuild: false,
+
   directories: {
     app: getDevFolder(main),
     output: `dist/v${version}`,

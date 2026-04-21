@@ -133,10 +133,6 @@ makeAppWithSingleInstanceLock(async () => {
 
   if (ENVIRONMENT.IS_DEV) {
     await loadReactDevtools()
-    /* This trick is necessary to get the new
-      React Developer Tools working at app initial load.
-      Otherwise, it only works on manual reload.
-    */
     window.webContents.once('devtools-opened', async () => {
       await waitFor(1000)
       window.webContents.reload()

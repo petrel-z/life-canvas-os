@@ -4,7 +4,6 @@
 
 import { apiRequest } from './client'
 
-// ============ 类型定义 ============
 
 /**
  * 聊天响应

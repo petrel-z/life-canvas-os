@@ -31,29 +31,24 @@ export function AppProvider({ children }: AppProviderProps) {
   const isLoadingRef = useRef(false)
   const getUserProfileRef = useRef(getUserProfile)
 
-  // 更新 ref
   useEffect(() => {
     getUserProfileRef.current = getUserProfile
   }, [getUserProfile])
 
   // 从 localStorage 加载初始状态
-  // 注意：isLocked 状态不从 localStorage 恢复，由 MainLayout 根据 PIN 验证状态控制
   const [state, setState] = useState<AppState>(() => {
     try {
       const saved = getCache<AppState>(CACHE_KEYS.LIFE_CANVAS_STATE)
       if (saved) {
-        // 排除 isLocked，使用 INITIAL_STATE 中的默认值
         const { isLocked, ...restSaved } = saved
         return { ...INITIAL_STATE, ...restSaved }
       }
     } catch (_error) {
-      // localStorage 访问失败（隐私模式或配额超满），使用初始状态
-      // 生产环境可以考虑添加错误上报
     }
     return INITIAL_STATE
   })
 
-  // 从后端加载用户信息
+  // 加载用户信息
   useEffect(() => {
     const loadUserProfile = async () => {
       if (isLoadingRef.current) return
@@ -74,7 +69,6 @@ export function AppProvider({ children }: AppProviderProps) {
           }))
         }
       } catch (_error) {
-        // 用户还未设置信息，忽略错误
         console.log('User profile not set yet1')
       } finally {
         isLoadingRef.current = false
@@ -88,7 +82,6 @@ export function AppProvider({ children }: AppProviderProps) {
   useEffect(() => {
     const root = window.document.documentElement
 
-    // 添加主题切换动画类
     root.classList.add('theme-transitioning')
 
     const isDark =
@@ -104,7 +97,6 @@ export function AppProvider({ children }: AppProviderProps) {
       root.classList.remove('dark')
     }
 
-    // 动画完成后移除过渡类
     const timeout = setTimeout(() => {
       root.classList.remove('theme-transitioning')
     }, 300) // 与 CSS 过渡时间匹配
@@ -112,13 +104,11 @@ export function AppProvider({ children }: AppProviderProps) {
     return () => clearTimeout(timeout)
   }, [state.theme])
 
-  // 保存状态到 localStorage（不保存 isLocked 状态）
   useEffect(() => {
     try {
       const { isLocked, ...stateWithoutLock } = state
       setCache(CACHE_KEYS.LIFE_CANVAS_STATE, stateWithoutLock)
     } catch (_error) {
-      // localStorage 保存失败，忽略错误
     }
   }, [state])
 
@@ -166,7 +156,6 @@ export function AppProvider({ children }: AppProviderProps) {
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
 
-// Hook 用于使用 AppContext
 export function useApp() {
   const context = useContext(AppContext)
   if (context === undefined) {
